@@ -1,0 +1,10 @@
+node_modules/
+build/
+playwright-report/
+test-results/
+.wrangler/
+.wrangler.generated.jsonc
+.dev.vars
+.env
+.env.*
+!.env.example
