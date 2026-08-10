@@ -23,6 +23,7 @@
 - 管理者 Gmail 地址與 HMAC Secret 只放 Worker Secret／Apps Script Properties。
 - 交付、取消或暫停後七日，Kamel 手動刪除 Form／Sheet／Gmail 可識別資料，再在後台確認。
 - 清理後 D1 只保留案件編號、服務類型、鎖定價格、日期、狀態。
+- 申請學生優惠時，case_runtime 暫存一般價、學生價與 pending 狀態；Kamel 在 Google Form 人工驗證後由後台確認，隨即清空這些暫存欄位，cases 最後只留實際鎖定價格。
 - 未完成同步且超過 24 小時的孤立 Case／Attempt 全部刪除。
 - 不自動刪除 Kamel 尚未人工確認的 Google 資料。
 
@@ -568,6 +569,11 @@ it("stores only non-PII metadata when Google requires retry", async () => {
 it("reuses the same case only when the payload hash matches", async () => {
   const first = await submitCommission(mailFailureInput);
   expect(first.state).toBe("pending_retry");
+  expect(await readStudentRuntime(first.caseId)).toMatchObject({
+    studentReviewState: "pending",
+    standardPriceMinor: expect.any(Number),
+    studentPriceMinor: expect.any(Number),
+  });
 
   const retry = await submitCommission({
     ...mailFailureInput,
@@ -599,7 +605,15 @@ Expected result: FAIL because gateway and repository are absent.
 CREATE TABLE IF NOT EXISTS case_runtime (
   case_id TEXT PRIMARY KEY REFERENCES cases(case_id) ON DELETE CASCADE,
   cleanup_due_at TEXT,
-  updated_at TEXT NOT NULL
+  student_review_state TEXT NOT NULL DEFAULT 'none'
+    CHECK (student_review_state IN ('none', 'pending')),
+  standard_price_minor INTEGER,
+  student_price_minor INTEGER,
+  updated_at TEXT NOT NULL,
+  CHECK (
+    (student_review_state = 'none') OR
+    (standard_price_minor IS NOT NULL AND student_price_minor IS NOT NULL)
+  )
 );
 
 CREATE INDEX IF NOT EXISTS case_runtime_cleanup_due
@@ -608,6 +622,8 @@ CREATE INDEX IF NOT EXISTS case_runtime_cleanup_due
 ~~~
 
 The cases table itself contains only the permanent record. submission_attempts and case_runtime are deleted at confirmed cleanup.
+
+case_runtime 的 student_review_state 與兩個候選價格不包含身份或證明 URL；完整學生證明只在 Google Form。Plan 06 的管理 action 在 Kamel 選擇接受時保留 student_price_minor、拒絕時把 cases.locked_price_minor 改為 standard_price_minor，之後把三個 runtime 欄位清為 none/null。
 
 Google gateway:
 
@@ -662,7 +678,7 @@ submitCommission:
 4. If existingCaseId is supplied, load attempt and require matching hash.
 5. Otherwise generate Case ID and insert:
    - cases permanent fields.
-   - case_runtime updated_at.
+   - case_runtime updated_at；若 studentRequested=true，另寫 student_review_state=pending、相同幣別的一般價與學生價，否則 state=none 且價格欄為 null。
    - submission_attempts with hash, term IDs, accepted_at, state created.
 6. Call sendToGoogle with the complete payload.
 7. On any recoverable Google transport or mail-pending result, update the attempt state and return SubmitCommissionResult with state pending_retry and the same Case ID; do not clear the draft.
