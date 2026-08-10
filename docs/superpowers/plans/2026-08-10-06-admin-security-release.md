@@ -798,6 +798,20 @@ export function createCspNonce(): string {
 }
 ~~~
 
+app/lib/cloudflare/context.ts 在本 Task 把 security 加入固定 context：
+
+~~~ts
+declare module "react-router" {
+  interface AppLoadContext {
+    cloudflare: {
+      env: Env;
+      ctx: ExecutionContext;
+      security: { nonce: string };
+    };
+  }
+}
+~~~
+
 workers/app.ts 每次 request：
 
 1. 產生 nonce。
