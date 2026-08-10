@@ -1,5 +1,3 @@
-import { createContext } from "react-router";
-
 export interface Env {
   DB: D1Database;
   SUBMISSION_RATE_LIMITER: RateLimit;
@@ -13,18 +11,4 @@ export interface Env {
   APPS_SCRIPT_HMAC_SECRET: string;
   FX_API_URL: string;
   APP_ORIGIN: string;
-}
-
-export const cloudflareContext = createContext<{
-  env: Env;
-  ctx: ExecutionContext;
-}>();
-
-declare module "react-router" {
-  interface AppLoadContext {
-    cloudflare: {
-      env: Env;
-      ctx: ExecutionContext;
-    };
-  }
 }

@@ -2,11 +2,12 @@ import { cloudflare } from "@cloudflare/vite-plugin";
 import { reactRouter } from "@react-router/dev/vite";
 import { defineConfig } from "vite";
 
-export default defineConfig(({ command }) => ({
+export default defineConfig({
   plugins: [
+    cloudflare({
+      configPath: "./wrangler.base.jsonc",
+      viteEnvironment: { name: "ssr" },
+    }),
     reactRouter(),
-    ...(command === "serve"
-      ? [cloudflare({ configPath: "./wrangler.base.jsonc" })]
-      : []),
   ],
-}));
+});
