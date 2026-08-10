@@ -80,7 +80,7 @@ export async function publishVersion(
     .bind(publishedAt, versionId)
     .run();
 
-  if (result.meta.changes !== 1) {
+  if (result.meta.changes === 0) {
     throw new Error("draft_version_not_found");
   }
 }
