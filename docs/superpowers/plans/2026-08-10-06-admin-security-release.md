@@ -704,6 +704,8 @@ admin/cases.tsx：
 - 不顯示 submission attempt、nonce、Google response ID 等技術欄位。
 - 不提供 audit log 頁。
 
+tests/e2e/admin-cases.spec.ts 另驗證 pending 學生案件只出現兩個候選價格與接受／拒絕按鈕；完成選擇後候選資料消失、永久價格正確，頁面從未顯示學生證明 URL。
+
 ### Step 7：執行驗證並提交
 
 Run:
@@ -1105,6 +1107,7 @@ tests/e2e/final-acceptance.spec.ts 必須驗證：
 - email 必填；至少一個常用聯絡平台與至少一個聯絡帳號/方式。
 - 生日不填；使用年齡/監護人授權欄位。
 - 學生證明提示可遮蔽敏感資訊。
+- 學生優惠在送出時顯示一般／學生候選價，Kamel 可於後台人工接受或拒絕；處理後只保留實際鎖定價格，後台從不顯示證明內容。
 - 四步流程：服務、表單、統一條款勾選、審查送出。
 - Turnstile 完成後才可送。
 - 成功只顯示案件編號、日期、服務等有限資訊，不回顯表單。
