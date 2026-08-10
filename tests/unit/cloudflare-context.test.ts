@@ -1,9 +1,9 @@
+import { describe, expect, it } from "vitest";
 import {
   cloudflareContext,
   createCloudflareContextProvider,
 } from "../../app/lib/cloudflare/context";
 import type { Env } from "../../app/lib/env.server";
-import { describe, expect, it } from "vitest";
 
 describe("Cloudflare request context", () => {
   it("round-trips the Worker bindings and execution context", () => {
