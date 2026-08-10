@@ -23,3 +23,5 @@ jobs:
           cache-dependency-path: package-lock.json
       - run: npm ci
       - run: npm run test:unit -- tests/unit/config-contract.test.ts
+      - run: npm run typecheck
+      - run: npm run build
