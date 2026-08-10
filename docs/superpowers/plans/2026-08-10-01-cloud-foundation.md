@@ -1195,18 +1195,32 @@ if (!["preview", "production"].includes(environment)) {
   throw new Error("environment_must_be_preview_or_production");
 }
 
-const required = [
+const commonRequired = [
   "D1_DATABASE_ID",
   "TURNSTILE_SITE_KEY",
   "ACCESS_AUD",
   "ACCESS_TEAM_DOMAIN",
   "ADMIN_EMAIL",
-  "APP_ORIGIN",
 ];
+const environmentRequired =
+  environment === "production"
+    ? ["APP_ORIGIN"]
+    : ["PR_NUMBER", "WORKERS_DEV_SUBDOMAIN"];
 
-for (const name of required) {
+for (const name of [...commonRequired, ...environmentRequired]) {
   if (!process.env[name]) throw new Error(`missing_${name.toLowerCase()}`);
 }
+if (
+  environment === "preview" &&
+  !/^[a-z0-9-]+$/.test(process.env.WORKERS_DEV_SUBDOMAIN ?? "")
+) {
+  throw new Error("invalid_workers_dev_subdomain");
+}
+
+const appOrigin =
+  environment === "production"
+    ? process.env.APP_ORIGIN
+    : `https://kamelkyp-com-pr-${process.env.PR_NUMBER}.${process.env.WORKERS_DEV_SUBDOMAIN}.workers.dev`;
 
 const base = JSON.parse(await readFile("wrangler.base.jsonc", "utf8"));
 const config = {
@@ -1232,7 +1246,7 @@ const config = {
     ACCESS_TEAM_DOMAIN: process.env.ACCESS_TEAM_DOMAIN,
     ADMIN_EMAIL: process.env.ADMIN_EMAIL,
     FX_API_URL: "https://api.frankfurter.dev/v1/latest?base=TWD&symbols=USD",
-    APP_ORIGIN: process.env.APP_ORIGIN,
+    APP_ORIGIN: appOrigin,
   },
 };
 
@@ -1319,16 +1333,16 @@ jobs:
       - name: Build and deploy preview
         env:
           D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
-          TURNSTILE_SITE_KEY: ${{ secrets.TURNSTILE_SITE_KEY }}
-          ACCESS_AUD: ${{ secrets.ACCESS_AUD }}
-          ACCESS_TEAM_DOMAIN: ${{ secrets.ACCESS_TEAM_DOMAIN }}
-          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
-          APP_ORIGIN: ${{ vars.APP_ORIGIN }}
+          TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
+          ACCESS_AUD: ${{ vars.ACCESS_AUD }}
+          ACCESS_TEAM_DOMAIN: ${{ vars.ACCESS_TEAM_DOMAIN }}
+          ADMIN_EMAIL: ${{ vars.ADMIN_EMAIL }}
+          WORKERS_DEV_SUBDOMAIN: ${{ vars.WORKERS_DEV_SUBDOMAIN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: npm run deploy:preview
 ~~~
 
-The preview Environment must contain the exact secrets named above before dispatch. The workflow fails closed when any value is missing.
+The Preview GitHub Environment stores CLOUDFLARE_API_TOKEN、CLOUDFLARE_ACCOUNT_ID、D1_DATABASE_ID as secrets and TURNSTILE_SITE_KEY、ACCESS_AUD、ACCESS_TEAM_DOMAIN、ADMIN_EMAIL、WORKERS_DEV_SUBDOMAIN as vars. config-contract tests cover missing PR_NUMBER, malformed subdomain and the exact derived APP_ORIGIN. The workflow fails closed when any value is missing.
 
 - [ ] **Step 5: Run Preview, E2E smoke and merge gate**
 
