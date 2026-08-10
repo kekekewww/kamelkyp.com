@@ -23,6 +23,7 @@ jobs:
           cache-dependency-path: package-lock.json
       - run: npm ci
       - run: npm run test:unit -- tests/unit/config-contract.test.ts
+      - run: npm run test:worker -- tests/worker/migrations.test.ts tests/worker/content-repository.test.ts
       - run: npm run typecheck
       - run: npm run build
       - run: npx wrangler deploy --dry-run --config build/server/wrangler.json
