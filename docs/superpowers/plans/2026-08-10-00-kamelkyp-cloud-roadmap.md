@@ -32,8 +32,8 @@
 | 1 | `2026-08-10-01-cloud-foundation.md` | `codex/01-cloud-foundation` | 可由 GitHub Actions 建置、測試並部署 Preview 的 React Router 8／Workers／D1 骨架 |
 | 2 | `2026-08-10-02-public-content-design-system.md` | `codex/02-public-content` | 中英文 Landing、分類服務、作品、Blog、條款與響應式 Footer |
 | 3 | `2026-08-10-03-media-preview.md` | `codex/03-media-preview` | 安全的 YouTube、Drive、Direct Audio、GitHub Raw、R2 與外部連結預覽 |
-| 4 | `2026-08-10-04-pricing-commission-flow.md` | `codex/04-commission-flow` | 四種服務的精確報價、瀏覽器草稿、條款、複核與 Turnstile 流程 |
-| 5 | `2026-08-10-05-google-sync-data-lifecycle.md` | `codex/05-google-sync` | HMAC Apps Script、Google Form／Gmail 冪等同步與七日清理流程 |
+| 4 | `2026-08-10-04-commission-pricing-flow.md` | `codex/04-commission-flow` | 四種服務的精確報價、瀏覽器草稿、條款、複核與 Turnstile 流程 |
+| 5 | `2026-08-10-05-google-submission-data.md` | `codex/05-google-sync` | HMAC Apps Script、Google Form／Gmail 冪等同步與七日清理流程 |
 | 6 | `2026-08-10-06-admin-security-release.md` | `codex/06-admin-security-release` | Access 保護的 CMS／案件後台、完整安全檢查與正式部署閘門 |
 
 每個 PR 合併後才開始下一個計畫。若前一計畫尚未通過 CI 與人工 Preview 驗收，不建立後續 branch。
