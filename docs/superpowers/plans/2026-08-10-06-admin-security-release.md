@@ -32,10 +32,10 @@
 - Create: tests/worker/access-jwt.test.ts
 - Create: tests/worker/csrf.test.ts
 - Create: tests/worker/admin-guard.test.ts
-- Modify: app/lib/cloudflare/context.ts
+- Create: app/lib/cloudflare/context.ts
+- Create: tests/helpers/test-env.ts
 - Modify: app/routes.ts
 - Modify: scripts/render-wrangler-config.mjs
-- Modify: tests/helpers/test-env.ts
 
 ### Step 1：先寫 Access JWT 失敗測試
 
@@ -186,7 +186,7 @@ Run:
 
 - npm run typecheck
 - npm run test:worker -- tests/worker/access-jwt.test.ts tests/worker/csrf.test.ts tests/worker/admin-guard.test.ts
-- npm run lint
+- npm run format:check
 
 Expected: 全部 PASS。
 
@@ -216,7 +216,7 @@ git commit -m "feat: protect admin routes with Access JWT and CSRF"
 - Create: app/routes/admin/services.tsx
 - Create: app/routes/admin/terms.tsx
 - Create: app/styles/admin.css
-- Create: migrations/0004_admin_publication.sql
+- Create: migrations/0004_admin_revision.sql
 - Create: tests/worker/admin-publication.test.ts
 - Create: tests/e2e/admin-content.spec.ts
 - Modify: app/routes.ts
@@ -226,34 +226,29 @@ git commit -m "feat: protect admin routes with Access JWT and CSRF"
 
 tests/worker/admin-publication.test.ts 建立以下情境：
 
-1. zh-TW 首頁目前發布 v1。
+1. zh locale 首頁目前發布 v1。
 2. 建立 v2 草稿並編輯時，公開頁仍讀到 v1。
 3. 預覽頁讀到 v2。
 4. 發布 v2 後，公開頁原子切換至 v2。
 5. 再次編輯時建立 v3 草稿，不修改 v2。
 6. 下架後公開 repository 回傳未發布，但 v1、v2、v3 仍可在後台讀取。
-7. en 價格或內容發布不影響 zh-TW 指標。
+7. en 價格或內容發布不影響 zh 指標。
 8. 相同 versionId 重送發布不建立重複版本。
 9. 已發布版本不可 UPDATE 或 DELETE。
 10. 非管理員不能讀草稿與預覽。
 
-新增 migration：
+Plan 01 已建立 content_publications 指標；本 migration 只加入草稿 optimistic locking 與查詢索引，不重建既有資料表：
 
 ~~~sql
-CREATE TABLE content_publications (
-  content_key TEXT NOT NULL,
-  locale TEXT NOT NULL,
-  published_version_id TEXT NOT NULL,
-  published_at TEXT NOT NULL,
-  PRIMARY KEY (content_key, locale),
-  FOREIGN KEY (published_version_id) REFERENCES content_versions(version_id)
-);
+-- migrations/0004_admin_revision.sql
+ALTER TABLE content_versions
+  ADD COLUMN revision INTEGER NOT NULL DEFAULT 0;
 
-CREATE INDEX content_versions_lookup
-  ON content_versions(content_key, locale, state, created_at DESC);
+CREATE INDEX IF NOT EXISTS content_versions_lookup
+  ON content_versions(entry_id, locale, state, created_at DESC);
 ~~~
 
-現有 content_versions 的 state 限定為 draft、published、archived。不可把版本內容直接覆寫。
+content_versions 既有 state 僅為 draft、published。公開狀態由 content_publications 的 entry_id + locale 指標決定；舊 published 版本保持不可變但不再被指標指向。
 
 ### Step 2：確認版本測試為紅燈
 
@@ -268,10 +263,9 @@ app/lib/admin/content-service.server.ts 提供：
 ~~~ts
 export async function createDraft(input: {
   db: D1Database;
-  contentKey: string;
+  entryId: string;
   locale: Locale;
   baseVersionId?: string;
-  actorSubject: string;
 }): Promise<ContentVersion>;
 
 export async function saveDraft(input: {
@@ -290,7 +284,7 @@ export async function publishDraft(input: {
 
 export async function unpublishContent(input: {
   db: D1Database;
-  contentKey: string;
+  entryId: string;
   locale: Locale;
 }): Promise<void>;
 ~~~
@@ -299,7 +293,7 @@ export async function unpublishContent(input: {
 
 - createDraft 複製 base version 成新版本。
 - saveDraft 只允許 state=draft，並以 revision 做 optimistic locking。
-- publishDraft 在 D1 batch 中標記版本 published、把舊版 archived、更新 publication pointer。
+- publishDraft 在 D1 batch 中標記新版本 published 並更新既有 publication pointer；舊 published 版本保持不可變。
 - 失敗時舊公開版本不變。
 - unpublish 只移除 pointer，保留版本。
 - block 只允許既定 union：heading、paragraph、list、cta、media、linkGroup、quote、serviceSummary。
@@ -358,9 +352,9 @@ term-service.server.ts：
 tests/e2e/admin-content.spec.ts 在 Preview 測試專用 Access 驗證器下執行：
 
 - 未驗證 /admin 回 403。
-- 建立 zh-TW 首頁草稿、預覽、發布，再由公開頁讀到。
+- 建立 zh locale 首頁草稿、預覽、發布，再由公開頁讀到。
 - 下架後公開頁使用明確 404 或未發布狀態。
-- en 與 zh-TW 可獨立發布。
+- en 與 zh 可獨立發布。
 - 後台沒有檔案上傳控制項。
 - 第二頁籤以 stale revision 儲存時不覆寫第一頁籤。
 - 條款發布少勾 legalReviewConfirmed 時顯示欄位錯誤。
@@ -371,18 +365,17 @@ tests/e2e/admin-content.spec.ts 在 Preview 測試專用 Access 驗證器下執�
 
 Run:
 
-- npm run db:migrate:test
 - npm run typecheck
 - npm run test:worker -- tests/worker/admin-publication.test.ts
 - npm run test:e2e -- tests/e2e/admin-content.spec.ts
-- npm run lint
+- npm run format:check
 
 Expected: 全部 PASS。
 
 Commit:
 
 ~~~bash
-git add app/lib/admin app/components/admin app/routes/admin app/styles/admin.css app/routes.ts app/root.tsx migrations/0004_admin_publication.sql tests
+git add app/lib/admin app/components/admin app/routes/admin app/styles/admin.css app/routes.ts app/root.tsx migrations/0004_admin_revision.sql tests
 git commit -m "feat: add versioned admin publishing workflow"
 ~~~
 
@@ -477,7 +470,7 @@ admin/links.tsx：
 admin/posts.tsx 與 post-edit.tsx：
 
 - Blog 式文章、個人發布事項、社群貼文摘要、外部內容連結。
-- zh-TW 與 en 獨立草稿及發布。
+- zh 與 en 獨立草稿及發布。
 - 每篇有 slug、標題、摘要、日期、區塊與可選外部參考。
 - slug 只允許小寫 ASCII、數字與連字號；locale 不是 slug 的一部分。
 - 不提供留言系統。
@@ -500,7 +493,7 @@ tests/e2e/admin-media-content.spec.ts：
 - 新增 Dropbox 後只顯示外部連結。
 - 新增 8 個 Footer 連結，desktop 與 mobile 都可到達。
 - 後台所有 media 畫面沒有 file input。
-- Blog 草稿不公開；發布後 /zh-TW/posts/:slug 與 /en/posts/:slug 按各自版本顯示。
+- Blog 草稿不公開；發布後 /zh/posts/:slug 與 /en/posts/:slug 按各自版本顯示。
 
 ### Step 6：執行驗證並提交
 
@@ -510,7 +503,7 @@ Run:
 - npm run test:unit -- tests/unit/admin-block-form.test.ts
 - npm run test:worker -- tests/worker/admin-media-content.test.ts
 - npm run test:e2e -- tests/e2e/admin-media-content.spec.ts
-- npm run lint
+- npm run format:check
 
 Expected: 全部 PASS。
 
@@ -538,9 +531,9 @@ git commit -m "feat: manage external media links works and posts"
 - Create: tests/worker/admin-cleanup.test.ts
 - Create: tests/e2e/admin-cases.spec.ts
 - Modify: app/routes.ts
-- Modify: app/lib/submissions/apps-script-gateway.server.ts
-- Modify: google-apps-script/Code.gs
-- Modify: google-apps-script/tests/Code.test.js
+- Modify: app/lib/integrations/google-submission-gateway.server.ts
+- Modify: integrations/apps-script/Code.gs
+- Modify: tests/apps-script/Code.test.ts
 
 ### Step 1：寫最小揭露測試
 
@@ -655,7 +648,9 @@ export async function confirmCleanup(input: {
     gmailDeleted: true;
     otherSensitiveCopiesDeleted: true;
   };
-  gateway: AppsScriptGateway;
+  gateway: {
+    cleanupLedger(input: { caseId: string; now: string }): Promise<void>;
+  };
   now: Date;
 }): Promise<void>;
 ~~~
@@ -691,14 +686,14 @@ Run:
 - npm run test:worker -- tests/worker/admin-cases.test.ts tests/worker/admin-cleanup.test.ts
 - npm run test:apps-script
 - npm run test:e2e -- tests/e2e/admin-cases.spec.ts
-- npm run lint
+- npm run format:check
 
 Expected: 全部 PASS。
 
 Commit:
 
 ~~~bash
-git add app/lib/admin app/lib/submissions app/routes/admin app/components/admin app/routes.ts google-apps-script tests
+git add app/lib/admin app/lib/integrations app/routes/admin app/components/admin app/routes.ts integrations/apps-script tests
 git commit -m "feat: add minimal case tracking and verified cleanup"
 ~~~
 
@@ -715,7 +710,7 @@ git commit -m "feat: add minimal case tracking and verified cleanup"
 - Create: tests/worker/security-errors.test.ts
 - Create: tests/e2e/security-headers.spec.ts
 - Modify: workers/app.ts
-- Modify: app/entry.server.tsx
+- Create: app/entry.server.tsx
 - Modify: app/root.tsx
 - Modify: app/lib/cloudflare/context.ts
 
@@ -736,6 +731,7 @@ tests/unit/security-headers.test.ts 驗證 production response：
   - img-src 'self' https: data:
   - font-src 'self'
   - style-src 'self'
+- 應用程式不使用 inline style attribute；所有動畫與狀態樣式使用 class 與已打包 CSS。
 - Strict-Transport-Security: max-age=31536000; includeSubDomains。
 - Referrer-Policy: strict-origin-when-cross-origin。
 - X-Content-Type-Options: nosniff。
@@ -774,12 +770,52 @@ export function createCspNonce(): string {
 workers/app.ts 每次 request：
 
 1. 產生 nonce。
-2. 把 nonce 放入 React Router getLoadContext。
-3. 取得 response。
-4. 以 clone headers 加上 buildSecurityHeaders({ nonce, mode })。
-5. 不修改 streaming body。
+2. 把 nonce 放入 AppLoadContext 的 cloudflare.security.nonce。
+3. 取得 React Router response。
+4. 以新的 Headers 加上 buildSecurityHeaders({ nonce, mode })，再用原 body 建立 Response；不讀取或重建 streaming body。
 
-app/root.tsx 從 root loader 取得 nonce 並傳給 Scripts；entry.server.tsx 的 server render 也使用相同 nonce。若 context 缺少 nonce，production 直接 500，不使用固定 fallback。
+建立自訂 app/entry.server.tsx，因嚴格 CSP 必須把同一 nonce 同時交給 React renderer 與 ServerRouter：
+
+~~~tsx
+import { isbot } from "isbot";
+import { renderToReadableStream } from "react-dom/server";
+import {
+  ServerRouter,
+  type AppLoadContext,
+  type EntryContext,
+} from "react-router";
+
+export default async function handleRequest(
+  request: Request,
+  responseStatusCode: number,
+  responseHeaders: Headers,
+  routerContext: EntryContext,
+  loadContext: AppLoadContext,
+) {
+  const nonce = loadContext.cloudflare.security.nonce;
+  if (!nonce) throw new Error("csp_nonce_missing");
+
+  const body = await renderToReadableStream(
+    <ServerRouter
+      context={routerContext}
+      url={request.url}
+      nonce={nonce}
+    />,
+    { nonce },
+  );
+
+  if (isbot(request.headers.get("user-agent") ?? "")) {
+    await body.allReady;
+  }
+  responseHeaders.set("content-type", "text/html; charset=utf-8");
+  return new Response(body, {
+    headers: responseHeaders,
+    status: responseStatusCode,
+  });
+}
+~~~
+
+React Router 8 會由 ServerRouter nonce 傳遞給 Scripts 與 ScrollRestoration；root 不把 nonce 放進 loader data，也不自行產生第二個 nonce。若 context 缺少 nonce，所有環境皆失敗，不使用固定 fallback。
 
 ### Step 4：建立 CSP 與安全錯誤工具
 
@@ -823,7 +859,7 @@ Run:
 - npm run test:unit -- tests/unit/security-headers.test.ts
 - npm run test:worker -- tests/worker/security-errors.test.ts
 - npm run test:e2e -- tests/e2e/security-headers.spec.ts
-- npm run lint
+- npm run format:check
 
 Expected: 全部 PASS。
 
@@ -861,7 +897,6 @@ scripts/verify-production-config.mjs 失敗條件：
 - 缺少 CLOUDFLARE_ACCOUNT_ID、D1_DATABASE_ID、APP_ORIGIN、ACCESS_TEAM_DOMAIN、ACCESS_AUD、ADMIN_EMAIL。
 - APP_ORIGIN 不是 https://kamelkyp.com。
 - TURNSTILE_SITE_KEY 是官方測試 key。
-- APPS_SCRIPT_URL 不是 HTTPS。
 - MODE 不是 production。
 - Wrangler 設定沒有 kamelkyp.com custom domain。
 - production build 含 TEST_ADMIN_BYPASS 或測試 JWT key。
@@ -869,11 +904,14 @@ scripts/verify-production-config.mjs 失敗條件：
 - ACCESS_TEAM_DOMAIN 不是 HTTPS team domain。
 - GitHub Environment 未提供 LEGAL_REVIEW_CONFIRMED=true 時拒絕部署。
 
-敏感 secrets 不由 script 輸出，只列缺少的變數名稱。必備 Worker secrets 由 Cloudflare Dashboard 或一次性 wrangler secret put 設定：
+敏感 secrets 不由 config script 讀取或輸出。部署 workflow 另以 wrangler secret list 只比對名稱，不讀值；必備 Worker secrets 由 Cloudflare Dashboard 或一次性 wrangler secret put 設定：
 
-- TURNSTILE_SECRET_KEY
+- TURNSTILE_SECRET
+- APPS_SCRIPT_URL
 - APPS_SCRIPT_HMAC_SECRET
 - CSRF_SECRET
+
+app/lib/integrations/google-submission-gateway.server.ts 在任何 fetch 前以 URL parser 強制 APPS_SCRIPT_URL 為 HTTPS；tests/worker/google-gateway.test.ts 驗證非 HTTPS secret 會被拒絕。
 
 必備 GitHub Actions secrets：
 
@@ -887,7 +925,6 @@ scripts/verify-production-config.mjs 失敗條件：
 - ACCESS_TEAM_DOMAIN
 - ACCESS_AUD
 - ADMIN_EMAIL
-- APPS_SCRIPT_URL
 - TURNSTILE_SITE_KEY
 - LEGAL_REVIEW_CONFIRMED
 
@@ -911,11 +948,12 @@ Expected: 在沒有 production 環境變數的測試情境中以可預期錯誤�
 - npm run test:worker。
 - npm run test:apps-script。
 - npm run build。
-- 啟動本機 workerd Preview，執行 Playwright desktop chromium 與 mobile chromium。
+- 在 GitHub-hosted runner 啟動短生命週期 loopback workerd，執行 Playwright desktop chromium 與 mobile chromium；不使用 Kamel 的本機環境。
 - 上傳 Playwright report 僅在失敗時；測試 fixtures 不含真實個資。
 - 不使用 production D1、Gmail 或 Google Form。
 - Turnstile 使用官方 always-pass 測試 key。
 - Apps Script 使用測試 stub。
+- playwright.config.ts 的 webServer 只啟動 127.0.0.1:8787，等待 /health；程序由 Playwright 在 job 結束時關閉。
 - workflow 不部署。
 
 package.json 新增：
@@ -923,12 +961,26 @@ package.json 新增：
 ~~~json
 {
   "scripts": {
-    "test:e2e:ci": "playwright test --project=desktop-chromium --project=mobile-chromium",
+    "preview:ci": "wrangler dev --config .wrangler.generated.jsonc --ip 127.0.0.1 --port 8787",
+    "test:e2e:ci": "playwright test --project=chromium-desktop --project=chromium-mobile",
     "verify:production": "node scripts/verify-production-config.mjs",
-    "check:all": "npm run check && npm run test:unit && npm run test:worker && npm run test:apps-script && npm run test:e2e:ci"
+    "check:all": "npm run format:check && npm run typecheck && npm run test:unit && npm run test:worker && npm run test:apps-script && npm run build && npm run test:e2e:ci"
   }
 }
 ~~~
+
+playwright.config.ts 在 E2E_LOOPBACK=1 時使用：
+
+~~~ts
+webServer: {
+  command: "npm run preview:ci",
+  url: "http://127.0.0.1:8787/health",
+  reuseExistingServer: false,
+},
+use: { baseURL: "http://127.0.0.1:8787" },
+~~~
+
+E2E workflow 先以 preview renderer 產生 .wrangler.generated.jsonc，並在 runner 的 .dev.vars 寫入官方 Turnstile 測試 secret、stub Apps Script URL、測試 HMAC 與 CSRF 值；這些全是非正式測試值且 job 結束即銷毀。MODE=test 與 TEST_ADMIN_BYPASS 只在這個 loopback job 啟用，production verifier 發現任一值即拒絕。
 
 ### Step 4：建立正式部署 workflow
 
@@ -937,12 +989,14 @@ package.json 新增：
 - 只由 main 的 workflow_dispatch 啟動。
 - environment: production，GitHub Environment 設 required reviewer，由 Kamel 人工確認。
 - concurrency group: production，cancel-in-progress: false。
-- checkout、npm ci、全測試、build、verify:production。
-- 先執行 D1 time-travel info 取得 migration 前 bookmark，將 bookmark 寫入 GitHub Actions step summary。
-- 再執行 wrangler d1 migrations apply kamelkyp-production --remote。
-- migration 成功後使用 cloudflare/wrangler-action@v3 部署。
+- checkout、npm ci、全測試與 build。
+- 先執行 node scripts/render-wrangler-config.mjs production，再執行 verify:production。
+- 執行 wrangler secret list --config .wrangler.generated.jsonc，只確認 TURNSTILE_SECRET、APPS_SCRIPT_URL、APPS_SCRIPT_HMAC_SECRET、CSRF_SECRET 四個名稱存在；不輸出值。
+- 執行 wrangler d1 time-travel info DB --config .wrangler.generated.jsonc 取得 migration 前 bookmark，將 bookmark 寫入 GitHub Actions step summary。
+- 再執行 wrangler d1 migrations apply DB --remote --config .wrangler.generated.jsonc；Cloudflare 另會為 migration 建立平台備份。
+- migration 成功後使用 cloudflare/wrangler-action@v3 依 .wrangler.generated.jsonc 部署。
 - 部署目標自訂網域 kamelkyp.com。
-- 部署後 health check /healthz 與 public smoke test。
+- 部署後 health check /health 與 public smoke test。
 - 任何 migration、deploy、health check 失敗，job fail；不自動回滾 D1。
 - 回滾 Worker 使用上一個成功 deployment；資料需要時依 runbook 使用部署前 bookmark。
 - 不在 workflow 自動建立、覆寫或列印 Worker secrets。
@@ -967,7 +1021,7 @@ Cloudflare Rate Limiting binding 依帳號建立後，把 namespace ID 由環境
 docs/runbooks/cloudflare-setup.md 必須逐項可操作：
 
 1. 建立 Preview 與 Production D1，填 GitHub Environment ID。
-2. 在 Worker 設三個 secrets。
+2. 在 Worker 設四個 secrets：TURNSTILE_SECRET、APPS_SCRIPT_URL、APPS_SCRIPT_HMAC_SECRET、CSRF_SECRET。
 3. Turnstile 建立 kamelkyp.com widget；確認不是測試 key。
 4. Cloudflare Access application paths：
    - /admin
@@ -1051,7 +1105,7 @@ docs/runbooks/release-checklist.md：
 - 法務審查 gate。
 - 備份目前公開內容版本。
 - Production deploy。
-- /healthz、首頁、四個服務頁、表單、Footer、Blog、Access、CSP 驗收。
+- /health、首頁、四個服務頁、表單、Footer、Blog、Access、CSP 驗收。
 - 不以真實委託資料做 E2E。
 - 記錄 deployment ID 與 D1 bookmark。
 - 發現重大問題時回滾 Worker，資料依 bookmark runbook 人工處理。
