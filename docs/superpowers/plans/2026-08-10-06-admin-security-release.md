@@ -939,7 +939,7 @@ git commit -m "feat: enforce CSP and safe response headers"
 
 scripts/verify-production-config.mjs 失敗條件：
 
-- 缺少 CLOUDFLARE_ACCOUNT_ID、D1_DATABASE_ID、APP_ORIGIN、ACCESS_TEAM_DOMAIN、ACCESS_AUD、ADMIN_EMAIL。
+- 缺少 CLOUDFLARE_ACCOUNT_ID、D1_DATABASE_ID、APP_ORIGIN、ACCESS_TEAM_DOMAIN、ACCESS_AUD、ADMIN_EMAIL、RATE_LIMIT_NAMESPACE_ID，或 RATE_LIMIT_NAMESPACE_ID 不是十進位整數。
 - APP_ORIGIN 不是 https://kamelkyp.com。
 - TURNSTILE_SITE_KEY 是官方測試 key。
 - MODE 不是 production。
@@ -971,6 +971,7 @@ app/lib/integrations/google-submission-gateway.server.ts 在任何 fetch 前以 
 - ACCESS_AUD
 - ADMIN_EMAIL
 - TURNSTILE_SITE_KEY
+- RATE_LIMIT_NAMESPACE_ID
 - LEGAL_REVIEW_CONFIRMED
 
 ### Step 2：確認 config contract 為紅燈
@@ -1025,7 +1026,7 @@ webServer: {
 use: { baseURL: "http://127.0.0.1:8787" },
 ~~~
 
-E2E workflow 先以 preview renderer 產生 .wrangler.generated.jsonc，並在 runner 的 .dev.vars 寫入官方 Turnstile 測試 secret、stub Apps Script URL、測試 HMAC 與 CSRF 值；這些全是非正式測試值且 job 結束即銷毀。MODE=test 與 TEST_ADMIN_BYPASS 只在這個 loopback job 啟用，production verifier 發現任一值即拒絕。
+E2E workflow 先以 preview renderer 產生 .wrangler.generated.jsonc；loopback 專用 RATE_LIMIT_NAMESPACE_ID=1001 只用於本次 GitHub-hosted workerd。runner 的 .dev.vars 寫入官方 Turnstile 測試 secret、stub Apps Script URL、測試 HMAC 與 CSRF 值；這些全是非正式測試值且 job 結束即銷毀。MODE=test 與 TEST_ADMIN_BYPASS 只在這個 loopback job 啟用，production verifier 發現任一值即拒絕。
 
 ### Step 4：建立正式部署 workflow
 
@@ -1035,7 +1036,7 @@ E2E workflow 先以 preview renderer 產生 .wrangler.generated.jsonc，並在 r
 - environment: production，GitHub Environment 設 required reviewer，由 Kamel 人工確認。
 - concurrency group: production，cancel-in-progress: false。
 - checkout、npm ci、全測試與 build。
-- 先執行 node scripts/render-wrangler-config.mjs production，再執行 verify:production。
+- 從 production GitHub Environment vars 注入 RATE_LIMIT_NAMESPACE_ID，先執行 node scripts/render-wrangler-config.mjs production，再執行 verify:production；renderer 必須產生一個 SUBMISSION_RATE_LIMITER binding。
 - 執行 wrangler secret list --config .wrangler.generated.jsonc，只確認 TURNSTILE_SECRET、APPS_SCRIPT_URL、APPS_SCRIPT_HMAC_SECRET、CSRF_SECRET 四個名稱存在；不輸出值。
 - 執行 wrangler d1 time-travel info DB --config .wrangler.generated.jsonc 取得 migration 前 bookmark，將 bookmark 寫入 GitHub Actions step summary。
 - 再執行 wrangler d1 migrations apply DB --remote --config .wrangler.generated.jsonc；Cloudflare 另會為 migration 建立平台備份。
@@ -1059,7 +1060,7 @@ scripts/render-wrangler-config.mjs production 輸出加入：
 }
 ~~~
 
-Cloudflare Rate Limiting binding 依帳號建立後，把 namespace ID 由環境變數注入；限制 submission endpoint，admin 不共用公開 rate-limit bucket。
+Preview 與 Production 各使用不同的十進位 Rate Limiting namespace ID，由對應 GitHub Environment var RATE_LIMIT_NAMESPACE_ID 注入；生成設定必須符合 `ratelimits: [{ name: "SUBMISSION_RATE_LIMITER", namespace_id, simple: { limit: 10, period: 60 } }]`。公開 submission endpoint 使用此 binding，admin 不共用公開 bucket；production verifier 拒絕缺少、非數字、重複 binding 或與 Preview 相同的已知 ID。
 
 ### Step 5：撰寫 Cloudflare 設定手冊
 
@@ -1076,7 +1077,7 @@ docs/runbooks/cloudflare-setup.md 必須逐項可操作：
 6. Access session duration 8 小時。
 7. 取得 application audience tag 與 team domain。
 8. 確認未建立 bypass policy。
-9. 建立 rate limiting binding。
+9. 為 Preview 與 Production 指定不同的數字 Rate Limiting namespace ID，分別寫入 GitHub Environment var RATE_LIMIT_NAMESPACE_ID；以生成設定確認 SUBMISSION_RATE_LIMITER 為每 60 秒 10 次。
 10. 將 kamelkyp.com custom domain 指向 Worker。
 11. 驗證 TLS、HSTS、Access 403 與 OTP。
 12. 說明 Cloudflare plugin 未安裝也不影響：實際部署由 Wrangler 與 Dashboard；若未來要在 Codex 直接操作 Cloudflare 再另行安裝。
