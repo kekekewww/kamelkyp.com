@@ -5,7 +5,17 @@ import {
 import { cloudflareContext, type Env } from "../app/lib/env.server";
 
 const requestHandler = createRequestHandler(
-  () => import("virtual:react-router/server-build"),
+  async () => {
+    const build = await import("virtual:react-router/server-build");
+
+    if ("entry" in build) {
+      return build;
+    }
+
+    return typeof build.default === "function"
+      ? build.default()
+      : build.default;
+  },
   import.meta.env.MODE,
 );
 
