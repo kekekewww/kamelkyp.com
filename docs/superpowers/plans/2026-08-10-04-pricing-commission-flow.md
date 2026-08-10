@@ -646,7 +646,6 @@ describe("commission schema", () => {
     expect(withoutConsultation.success).toBe(false);
 
     const withConsultation = CommissionDraftSchema.safeParse({
-      ...withoutConsultation.data,
       ...common,
       serviceId: "simple_transition",
       songs: [{ order: 1, url: "https://example.com/one.wav", transitionAt: "" }],
