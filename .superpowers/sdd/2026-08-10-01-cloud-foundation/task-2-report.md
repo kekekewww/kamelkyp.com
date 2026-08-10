@@ -78,3 +78,38 @@ The final hosted typecheck failure is a Task 1 toolchain baseline issue, not a d
 - Node type declarations are absent for the prescribed `node:fs/promises` test import.
 
 These are prerequisites for a fully passing `npm run typecheck` and therefore the build was not executed. No Task 1/package/tsconfig files were altered while completing Task 2.
+
+## Fix Round 1
+
+### Resolution
+
+The reviewer findings are resolved on `codex/01-cloud-foundation`.
+
+- `package.json`: the existing `typegen` script now runs Wrangler bindings generation before React Router type generation. Dependency names, versions, and `package-lock.json` are unchanged.
+- `tsconfig.json`: preserves `strict: true`, adds the React Router type root and Vite declarations, and explicitly includes `workers/**/*.ts`, `playwright.config.ts`, and generated Cloudflare bindings.
+- `app/types/node-fs-promises.d.ts`: narrowly declares the Node filesystem call and `process.env` surface used by the prescribed config test and Playwright configuration, without changing the dependency contract.
+- `app/types/react-router-server-build.d.ts`: declares the Vite virtual React Router server-build module.
+- `app/lib/env.server.ts` and `workers/app.ts`: use the React Router 8 `RouterContextProvider` / `createContext` API and normalize direct/default server-build modules with runtime narrowing (no cast or strictness relaxation).
+- `vite.config.ts`: keeps the Cloudflare Vite plugin for `serve` and omits it only from `react-router build`, avoiding the pinned plugin pair's competing production build environments that removed React Router's client manifest.
+
+### Verification
+
+- Prior static RED: https://github.com/kekekewww/kamelkyp.com/actions/runs/31399827316 — typecheck failed on unresolved Cloudflare, React Router, Vite, and Node declarations.
+- Final GREEN: https://github.com/kekekewww/kamelkyp.com/actions/runs/31402942487
+  - `npm run test:unit -- tests/unit/config-contract.test.ts`: 2 test files / 3 tests passed.
+  - `npm run typecheck`: passed after generating `worker-configuration.d.ts`.
+  - `npm run build`: passed; client and SSR builds completed.
+
+### Commits
+
+- `4f89f25c23d1bcaa36a4dffd4e52f1f9b8803180` — initial strict type configuration.
+- `e5f85a7afe3c2bfeff6f9411bcab95222bec4efe` — restore the exact dependency and lockfile contract after a transient dependency experiment.
+- `ad5cd0d008c8c17ee332ca6f60587a0bf045620a`, `190b29b5bfe904a52038f74e4286691b9bade0c7`, `742471b3f3167b551b2eba267277b9413dc5461f` — typed Worker context and virtual-build normalization.
+- `b6b5b62e95c846d18248bcfbc9ac964e8090d2b7` — isolate the Cloudflare development plugin so the production React Router build has a single owner.
+
+### Self-review and concerns
+
+- Strictness remains enabled and all Task 2 TypeScript inputs are checked.
+- The final dependency and lockfile contents match the original Task 1 contract; no versions were changed.
+- Wrangler still prints its advisory recommending `@types/node` because of `nodejs_compat`, but the narrow local declarations cover every Node surface used by this scoped project and hosted typecheck passes.
+- E2E remains scheduled for the first Preview in Task 4.
