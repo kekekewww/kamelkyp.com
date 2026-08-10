@@ -40,6 +40,7 @@
 - Modify: scripts/render-worker-secrets.mjs
 - Modify: .github/workflows/deploy-preview.yml
 - Modify: tests/unit/config-contract.test.ts
+- Modify: package.json
 
 ### Step 1：先寫 Access JWT 失敗測試
 
@@ -105,7 +106,7 @@ ADMIN_EMAIL: string;
 CSRF_SECRET: string;
 ~~~
 
-scripts/render-wrangler-config.mjs 只把 ACCESS_TEAM_DOMAIN、ACCESS_AUD、ADMIN_EMAIL 當 vars，並把 secrets.required 擴充為 TURNSTILE_SECRET、APPS_SCRIPT_URL、APPS_SCRIPT_HMAC_SECRET、CSRF_SECRET 四個固定名稱；scripts/render-worker-secrets.mjs 使用相同 allowlist。CSRF_SECRET 只由 Preview GitHub Environment secret 進入 mode-0600 的暫存 secrets file，再透過 `wrangler deploy --secrets-file` 原子部署；值不寫入產生的 Wrangler 設定、Log 或 artifact。tests/unit/config-contract.test.ts 驗證兩份 allowlist 完全一致及缺值時 fail closed。
+scripts/render-wrangler-config.mjs 只把 ACCESS_TEAM_DOMAIN、ACCESS_AUD、ADMIN_EMAIL 當 vars，並把 secrets.required 擴充為 TURNSTILE_SECRET、APPS_SCRIPT_URL、APPS_SCRIPT_HMAC_SECRET、CSRF_SECRET 四個固定名稱；scripts/render-worker-secrets.mjs 使用相同 allowlist，並要求 preview 或 production 參數。Preview workflow 與 package.json deploy:preview 明確傳 preview；CSRF_SECRET 只由 Preview GitHub Environment secret 進入 mode-0600 的暫存 secrets file，再透過 `wrangler deploy --secrets-file` 原子部署。Production 模式拒絕官方 Turnstile 測試 secret、非 HTTPS Apps Script URL、短於 32 字元的 HMAC／CSRF secret；值不寫入產生的 Wrangler 設定、Log 或 artifact。tests/unit/config-contract.test.ts 驗證兩份 allowlist 完全一致、環境參數、測試 key 拒絕及缺值時 fail closed。
 
 app/lib/cloudflare/context.ts 接手 Plan 01 原本放在 env.server.ts 的 React Router module augmentation；env.server.ts 只保留 Env。固定 shape 為 cloudflare.env、cloudflare.ctx，Task 5 再加 cloudflare.security.nonce，避免兩個檔案重複宣告不一致的 AppLoadContext。
 
@@ -938,6 +939,7 @@ git commit -m "feat: enforce CSP and safe response headers"
 - Modify: wrangler.base.jsonc
 - Modify: .github/workflows/deploy-preview.yml
 - Modify: .gitignore
+- Modify: package.json
 - Modify: playwright.config.ts
 - Modify: README.md
 
@@ -947,7 +949,9 @@ scripts/verify-production-config.mjs 失敗條件：
 
 - 缺少 CLOUDFLARE_ACCOUNT_ID、D1_DATABASE_ID、APP_ORIGIN、ACCESS_TEAM_DOMAIN、ACCESS_AUD、ADMIN_EMAIL、RATE_LIMIT_NAMESPACE_ID，或 RATE_LIMIT_NAMESPACE_ID 不是十進位整數。
 - APP_ORIGIN 不是 https://kamelkyp.com。
-- TURNSTILE_SITE_KEY 是官方測試 key。
+- TURNSTILE_SITE_KEY 或 TURNSTILE_SECRET 是官方測試 key。
+- APPS_SCRIPT_URL 不是 HTTPS，或 APPS_SCRIPT_HMAC_SECRET／CSRF_SECRET 少於 32 字元。
+- scripts/render-worker-secrets.mjs 未以 production 模式執行，或四個 secret 任一缺少。
 - MODE 不是 production。
 - Wrangler 設定沒有 kamelkyp.com custom domain。
 - production build 含 TEST_ADMIN_BYPASS 或測試 JWT key。
@@ -1036,7 +1040,7 @@ webServer: {
 use: { baseURL: "http://127.0.0.1:8787" },
 ~~~
 
-E2E workflow 先以 preview renderer 產生 .wrangler.generated.jsonc；loopback 專用 RATE_LIMIT_NAMESPACE_ID=1001 只用於本次 GitHub-hosted workerd。runner 的 .dev.vars 寫入官方 Turnstile 測試 secret、stub Apps Script URL、測試 HMAC 與 CSRF 值；這些全是非正式測試值且 job 結束即銷毀。MODE=test 與 TEST_ADMIN_BYPASS 只在這個 loopback job 啟用，production verifier 發現任一值即拒絕。
+E2E workflow 先以 preview renderer 產生 .wrangler.generated.jsonc；loopback 專用 RATE_LIMIT_NAMESPACE_ID=1001 只用於本次 GitHub-hosted workerd。runner 的 .dev.vars 寫入官方 Turnstile 測試 secret、stub Apps Script URL、測試 HMAC 與 CSRF 值；Preview deploy 另以 `node scripts/render-worker-secrets.mjs preview` 產生 secrets file。這些全是非正式測試值且 job 結束即銷毀。MODE=test 與 TEST_ADMIN_BYPASS 只在這個 loopback job 啟用，production verifier 發現任一值即拒絕。
 
 ### Step 4：建立正式部署 workflow
 
@@ -1046,7 +1050,7 @@ E2E workflow 先以 preview renderer 產生 .wrangler.generated.jsonc；loopback
 - environment: production，GitHub Environment 設 required reviewer，由 Kamel 人工確認。
 - concurrency group: production，cancel-in-progress: false。
 - checkout、npm ci、全測試與 build。
-- 從 production GitHub Environment vars 注入 RATE_LIMIT_NAMESPACE_ID，先執行 node scripts/render-wrangler-config.mjs production 與 node scripts/render-worker-secrets.mjs，再執行 verify:production；renderer 必須產生一個 SUBMISSION_RATE_LIMITER binding 與四個 secrets.required 名稱。
+- 從 production GitHub Environment vars 注入 RATE_LIMIT_NAMESPACE_ID，先執行 node scripts/render-wrangler-config.mjs production 與 node scripts/render-worker-secrets.mjs production，再執行 verify:production；renderer 必須產生一個 SUBMISSION_RATE_LIMITER binding 與四個 secrets.required 名稱。
 - verify:production 只檢查 required secret 名稱與環境變數是否存在，不輸出值；.wrangler.secrets.json 已在 .gitignore，且 workflow 禁止把它加入 artifact。
 - 執行 wrangler d1 time-travel info DB --config .wrangler.generated.jsonc 取得 migration 前 bookmark，將 bookmark 寫入 GitHub Actions step summary。
 - 再執行 wrangler d1 migrations apply DB --remote --config .wrangler.generated.jsonc；Cloudflare 另會為 migration 建立平台備份。
