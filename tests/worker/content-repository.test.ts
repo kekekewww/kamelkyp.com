@@ -31,12 +31,14 @@ describe("content publication", () => {
       draftInput("home", "第二版草稿"),
     );
 
-    expect((await getPublishedContent(env.DB, "page", "home", "zh"))?.title)
-      .toBe("第一版");
+    expect(
+      (await getPublishedContent(env.DB, "page", "home", "zh"))?.title,
+    ).toBe("第一版");
 
     await publishVersion(env.DB, second.versionId, "2026-08-11T00:00:00Z");
-    expect((await getPublishedContent(env.DB, "page", "home", "zh"))?.title)
-      .toBe("第二版草稿");
+    expect(
+      (await getPublishedContent(env.DB, "page", "home", "zh"))?.title,
+    ).toBe("第二版草稿");
   });
 
   it("assigns unique sequential draft numbers to concurrent drafts", async () => {
@@ -46,11 +48,10 @@ describe("content publication", () => {
     ]);
 
     expect(first.versionId).not.toBe(second.versionId);
-    const rows = await env.DB
-      .prepare(
-        "SELECT version_number FROM content_versions " +
-          "WHERE entry_id = ? AND locale = ? ORDER BY version_number",
-      )
+    const rows = await env.DB.prepare(
+      "SELECT version_number FROM content_versions " +
+        "WHERE entry_id = ? AND locale = ? ORDER BY version_number",
+    )
       .bind("parallel-drafts", "zh")
       .all<{ version_number: number }>();
 
@@ -77,14 +78,13 @@ describe("content publication", () => {
       results.filter((result) => result.status === "rejected"),
     ).toHaveLength(1);
 
-    const pointer = await env.DB
-      .prepare(
-        "SELECT p.published_at AS pointer_published_at, " +
-          "v.published_at AS version_published_at " +
-          "FROM content_publications p " +
-          "JOIN content_versions v ON v.id = p.version_id " +
-          "WHERE p.entry_id = ? AND p.locale = ?",
-      )
+    const pointer = await env.DB.prepare(
+      "SELECT p.published_at AS pointer_published_at, " +
+        "v.published_at AS version_published_at " +
+        "FROM content_publications p " +
+        "JOIN content_versions v ON v.id = p.version_id " +
+        "WHERE p.entry_id = ? AND p.locale = ?",
+    )
       .bind("parallel-publication", "zh")
       .first<{
         pointer_published_at: string;
@@ -95,62 +95,45 @@ describe("content publication", () => {
     expect(times).toContain(pointer?.pointer_published_at);
   });
 
-  it(
-    "rejects a content publication pointer with a mismatched version tuple",
-    async () => {
-      await createDraftVersion(env.DB, draftInput("content-a", "A"));
-      const other = await createDraftVersion(
-        env.DB,
-        draftInput("content-b", "B"),
-      );
+  it("rejects a content publication pointer with a mismatched version tuple", async () => {
+    await createDraftVersion(env.DB, draftInput("content-a", "A"));
+    const other = await createDraftVersion(
+      env.DB,
+      draftInput("content-b", "B"),
+    );
 
-      await expect(
-        env.DB
-          .prepare(
-            "INSERT INTO content_publications " +
-              "(entry_id, locale, version_id, published_at) VALUES (?, ?, ?, ?)",
-          )
-          .bind("content-a", "zh", other.versionId, "2026-08-14T00:00:00Z")
-          .run(),
-      ).rejects.toThrow();
-    },
-  );
+    await expect(
+      env.DB.prepare(
+        "INSERT INTO content_publications " +
+          "(entry_id, locale, version_id, published_at) VALUES (?, ?, ?, ?)",
+      )
+        .bind("content-a", "zh", other.versionId, "2026-08-14T00:00:00Z")
+        .run(),
+    ).rejects.toThrow();
+  });
 
-  it(
-    "rejects a term publication pointer with a mismatched version tuple",
-    async () => {
-      await env.DB.batch([
-        env.DB
-          .prepare("INSERT INTO term_documents (id, kind) VALUES (?, ?)")
-          .bind("term-a", "common"),
-        env.DB
-          .prepare("INSERT INTO term_documents (id, kind) VALUES (?, ?)")
-          .bind("term-b", "common"),
-        env.DB
-          .prepare(
-            "INSERT INTO term_versions " +
-              "(id, document_id, locale, version_number, body_json, created_at) " +
-              "VALUES (?, ?, ?, ?, ?, ?)",
-          )
-          .bind(
-            "term-version-b",
-            "term-b",
-            "zh",
-            1,
-            "[]",
-            "2026-08-14T00:00:00Z",
-          ),
-      ]);
+  it("rejects a term publication pointer with a mismatched version tuple", async () => {
+    await env.DB.batch([
+      env.DB.prepare(
+        "INSERT INTO term_documents (id, kind) VALUES (?, ?)",
+      ).bind("term-a", "common"),
+      env.DB.prepare(
+        "INSERT INTO term_documents (id, kind) VALUES (?, ?)",
+      ).bind("term-b", "common"),
+      env.DB.prepare(
+        "INSERT INTO term_versions " +
+          "(id, document_id, locale, version_number, body_json, created_at) " +
+          "VALUES (?, ?, ?, ?, ?, ?)",
+      ).bind("term-version-b", "term-b", "zh", 1, "[]", "2026-08-14T00:00:00Z"),
+    ]);
 
-      await expect(
-        env.DB
-          .prepare(
-            "INSERT INTO term_publications " +
-              "(document_id, locale, version_id, effective_from) VALUES (?, ?, ?, ?)",
-          )
-          .bind("term-a", "zh", "term-version-b", "2026-08-14T00:00:00Z")
-          .run(),
-      ).rejects.toThrow();
-    },
-  );
+    await expect(
+      env.DB.prepare(
+        "INSERT INTO term_publications " +
+          "(document_id, locale, version_id, effective_from) VALUES (?, ?, ?, ?)",
+      )
+        .bind("term-a", "zh", "term-version-b", "2026-08-14T00:00:00Z")
+        .run(),
+    ).rejects.toThrow();
+  });
 });

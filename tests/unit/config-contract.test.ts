@@ -1,11 +1,5 @@
 import { spawnSync } from "node:child_process";
-import {
-  mkdir,
-  mkdtemp,
-  readFile,
-  rm,
-  writeFile,
-} from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -76,17 +70,14 @@ describe("cloud project configuration", () => {
     expect(wranglerConfig.compatibility_flags).toContain("nodejs_compat");
   });
 
-  it(
-    "keeps resource identifiers and secrets out of the committed base config",
-    async () => {
-      const source = await readFile("wrangler.base.jsonc", "utf8");
+  it("keeps resource identifiers and secrets out of the committed base config", async () => {
+    const source = await readFile("wrangler.base.jsonc", "utf8");
 
-      expect(source).not.toContain("database_id");
-      expect(source.toLowerCase()).not.toContain("api_token");
-      expect(source.toLowerCase()).not.toContain("hmac");
-      expect(source.toLowerCase()).not.toContain("secret");
-    },
-  );
+    expect(source).not.toContain("database_id");
+    expect(source.toLowerCase()).not.toContain("api_token");
+    expect(source.toLowerCase()).not.toContain("hmac");
+    expect(source.toLowerCase()).not.toContain("secret");
+  });
 
   it("renders preview configuration from the generated SSR Worker artifact", async () => {
     const result = await render("preview", {
@@ -103,8 +94,7 @@ describe("cloud project configuration", () => {
         main: "./index.js",
         assets: { directory: "../client" },
         vars: {
-          APP_ORIGIN:
-            "https://kamelkyp-com-pr-42.example-workers.workers.dev",
+          APP_ORIGIN: "https://kamelkyp-com-pr-42.example-workers.workers.dev",
         },
       });
       expect(config.d1_databases).toEqual([

@@ -11,18 +11,13 @@ const requestHandler = createRequestHandler(
     }
 
     const defaultBuild = build.default;
-    return typeof defaultBuild === "function"
-      ? defaultBuild()
-      : defaultBuild;
+    return typeof defaultBuild === "function" ? defaultBuild() : defaultBuild;
   },
   import.meta.env.MODE,
 );
 
 export default {
   fetch(request, env, ctx) {
-    return requestHandler(
-      request,
-      createCloudflareContextProvider(env, ctx),
-    );
+    return requestHandler(request, createCloudflareContextProvider(env, ctx));
   },
 } satisfies ExportedHandler<Env>;
