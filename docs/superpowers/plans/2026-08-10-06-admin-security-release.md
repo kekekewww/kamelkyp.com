@@ -13,8 +13,8 @@
 - 2026-08-10-01-cloud-foundation.md
 - 2026-08-10-02-public-content-design-system.md
 - 2026-08-10-03-media-preview.md
-- 2026-08-10-04-pricing-commission-flow.md
-- 2026-08-10-05-google-sync-data-lifecycle.md
+- 2026-08-10-04-commission-pricing-flow.md
+- 2026-08-10-05-google-submission-data.md
 
 **分支：** codex/06-admin-security-release
 
@@ -197,12 +197,7 @@ Run:
 
 Expected: 全部 PASS。
 
-Commit:
-
-~~~bash
-git add app/lib/auth app/routes/admin app/routes.ts app/lib/cloudflare/context.ts scripts/render-wrangler-config.mjs tests
-git commit -m "feat: protect admin routes with Access JWT and CSRF"
-~~~
+Cloud commit message: feat: protect admin routes with Access JWT and CSRF.
 
 ---
 
@@ -379,12 +374,7 @@ Run:
 
 Expected: 全部 PASS。
 
-Commit:
-
-~~~bash
-git add app/lib/admin app/components/admin app/routes/admin app/styles/admin.css app/routes.ts app/root.tsx migrations/0004_admin_revision.sql tests
-git commit -m "feat: add versioned admin publishing workflow"
-~~~
+Cloud commit message: feat: add versioned admin publishing workflow.
 
 ---
 
@@ -516,12 +506,7 @@ Run:
 
 Expected: 全部 PASS。
 
-Commit:
-
-~~~bash
-git add app/lib/admin app/components/admin app/routes/admin app/routes.ts app/lib/content app/lib/media tests
-git commit -m "feat: manage external media links works and posts"
-~~~
+Cloud commit message: feat: manage external media links works and posts.
 
 ---
 
@@ -725,12 +710,7 @@ Run:
 
 Expected: 全部 PASS。
 
-Commit:
-
-~~~bash
-git add app/lib/admin app/lib/integrations app/routes/admin app/components/admin app/routes.ts integrations/apps-script tests
-git commit -m "feat: add minimal case tracking and verified cleanup"
-~~~
+Cloud commit message: feat: add minimal case tracking and verified cleanup.
 
 ---
 
@@ -912,12 +892,7 @@ Run:
 
 Expected: 全部 PASS。
 
-Commit:
-
-~~~bash
-git add app/lib/security workers/app.ts app/entry.server.tsx app/root.tsx app/lib/cloudflare/context.ts tests
-git commit -m "feat: enforce CSP and safe response headers"
-~~~
+Cloud commit message: feat: enforce CSP and safe response headers.
 
 ---
 
@@ -1183,12 +1158,7 @@ Run:
 
 Expected: 全部 PASS，且 production config 不含測試 key 或 bypass。
 
-Commit:
-
-~~~bash
-git add scripts .github/workflows tests/e2e docs package.json wrangler.base.jsonc playwright.config.ts README.md
-git commit -m "chore: add secure cloud release workflow and runbooks"
-~~~
+Cloud commit message: chore: add secure cloud release workflow and runbooks.
 
 ---
 
