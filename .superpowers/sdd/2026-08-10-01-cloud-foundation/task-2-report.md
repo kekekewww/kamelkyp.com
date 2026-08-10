@@ -113,3 +113,51 @@ The reviewer findings are resolved on `codex/01-cloud-foundation`.
 - The final dependency and lockfile contents match the original Task 1 contract; no versions were changed.
 - Wrangler still prints its advisory recommending `@types/node` because of `nodejs_compat`, but the narrow local declarations cover every Node surface used by this scoped project and hosted typecheck passes.
 - E2E remains scheduled for the first Preview in Task 4.
+
+
+## Fix Round 2
+
+### Source fix
+
+Cloudflare's Vite Environments reference identifies the correct React Router 8 integration: merge the Worker into the `ssr` Vite environment. The implementation now uses:
+
+```ts
+cloudflare({
+  configPath: "./wrangler.base.jsonc",
+  viteEnvironment: { name: "ssr" },
+}),
+reactRouter(),
+```
+
+The conditional production omission added in Fix Round 1 has been removed.
+
+A focused `app/lib/cloudflare/context.ts` now contains the single typed `cloudflareContext` token and `createCloudflareContextProvider(env, ctx)` factory. `workers/app.ts` uses that factory to populate `RouterContextProvider`; `app/lib/env.server.ts` now contains only the `Env` binding shape, with the contradictory `AppLoadContext.cloudflare` augmentation removed. Loaders can obtain the values through `context.get(cloudflareContext)`.
+
+### RED
+
+- Test commit: `b85297e9c9eb0a0336cb26f0efed89e9aee119c6` — `test: require SSR Worker context integration`.
+- GitHub Actions: https://github.com/kekekewww/kamelkyp.com/actions/runs/31403985572
+- Provider behavior failed as expected because `app/lib/cloudflare/context` did not yet exist.
+- The actual source-config dry-run failed as expected because Wrangler could not resolve `virtual:react-router/server-build`.
+
+### GREEN
+
+- Source commit: `bc38fa44a13abb7357b3183a388519b260eb85c0` — `fix: integrate Worker with SSR Vite environment`.
+- Deployment-boundary test commit: `63491ea4528365c2ae65f37c1f6054447d3f933a` — `test: deploy generated SSR Worker`.
+- GitHub Actions: https://github.com/kekekewww/kamelkyp.com/actions/runs/31404395306
+- Result: all steps passed:
+  - Focused unit suite: 3 files and 4 tests passed, including the context provider round trip.
+  - `npm run typecheck`: passed.
+  - `npm run build`: passed and emitted `build/server/wrangler.json`, `build/server/index.js`, and the generated server-build module.
+  - `npx wrangler deploy --dry-run --config build/server/wrangler.json`: passed, attached the generated SSR modules, read the client assets, and exited at dry-run.
+
+### Changed files and self-review
+
+- `.github/workflows/config-contract.yml`
+- `tests/unit/cloudflare-context.test.ts`
+- `app/lib/cloudflare/context.ts`
+- `app/lib/env.server.ts`
+- `workers/app.ts`
+- `vite.config.ts`
+
+The change follows the official SSR-environment configuration rather than omitting the Cloudflare Vite plugin from production. Dependencies, versions, lockfile, and TypeScript strictness remain unchanged. The source `wrangler.base.jsonc` is intentionally not dry-run directly: it is Vite source with a virtual React Router import. The generated `build/server/wrangler.json` is the deployment artifact and is validated by the successful dry-run. Wrangler continues to emit its non-failing `@types/node` advisory.
