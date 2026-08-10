@@ -1,6 +1,9 @@
 name: Cloud configuration contract
 
 on:
+  pull_request:
+    branches:
+      - main
   push:
     branches:
       - codex/01-cloud-foundation
