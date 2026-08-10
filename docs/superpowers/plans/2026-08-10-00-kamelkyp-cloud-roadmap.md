@@ -12,11 +12,11 @@
 
 - 完整規格：`docs/superpowers/specs/2026-08-10-kamelkyp-introduction-site-design.md`。
 - 所有程式碼、commit、CI、Preview、部署與正式資料都在 GitHub、Cloudflare 或 Google 雲端完成。
-- 不以本機 checkout、localhost、本機資料庫或本機檔案作為執行步驟。
+- 不以使用者裝置上的 checkout、本機資料庫或本機檔案作為執行步驟；GitHub-hosted runner 內的短生命週期 loopback 測試服務屬雲端 CI，可用於 E2E。
 - 唯一瀏覽器端例外是未送出的委託草稿；草稿不跨裝置，送出成功後清除。
 - 中文使用 `zh` URL 與 TWD；英文使用 `en` URL 與送出時鎖定的 USD。
 - 不接受訪客或管理員直接上傳檔案；媒體與委託素材全部使用外部 HTTPS URL。
-- D1 永久案件欄位只有案件編號、服務類型、鎖定價格、日期、狀態。
+- D1 永久案件欄位只有案件編號、服務類型、鎖定價格（含幣別）、日期、狀態。
 - 管理區只能位於 `/admin`，並同時通過 Cloudflare Access 與 Worker JWT 驗證。
 - 不加入訪客分析、廣告追蹤、自動翻譯、客戶帳號、網站內付款或淺色主題。
 - 自訂 CSS，不採用 Bootstrap CSS 或 Tailwind。
@@ -34,7 +34,7 @@
 | 3 | `2026-08-10-03-media-preview.md` | `codex/03-media-preview` | 安全的 YouTube、Drive、Direct Audio、GitHub Raw、R2 與外部連結預覽 |
 | 4 | `2026-08-10-04-pricing-commission-flow.md` | `codex/04-commission-flow` | 四種服務的精確報價、瀏覽器草稿、條款、複核與 Turnstile 流程 |
 | 5 | `2026-08-10-05-google-sync-data-lifecycle.md` | `codex/05-google-sync` | HMAC Apps Script、Google Form／Gmail 冪等同步與七日清理流程 |
-| 6 | `2026-08-10-06-admin-security-release.md` | `codex/06-admin-release` | Access 保護的 CMS／案件後台、完整安全檢查與正式部署閘門 |
+| 6 | `2026-08-10-06-admin-security-release.md` | `codex/06-admin-security-release` | Access 保護的 CMS／案件後台、完整安全檢查與正式部署閘門 |
 
 每個 PR 合併後才開始下一個計畫。若前一計畫尚未通過 CI 與人工 Preview 驗收，不建立後續 branch。
 
@@ -125,6 +125,7 @@ export interface Env {
   SUBMISSION_RATE_LIMITER: RateLimit;
   TURNSTILE_SECRET: string;
   TURNSTILE_SITE_KEY: string;
+  CSRF_SECRET: string;
   ACCESS_AUD: string;
   ACCESS_TEAM_DOMAIN: string;
   ADMIN_EMAIL: string;
