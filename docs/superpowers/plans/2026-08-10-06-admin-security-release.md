@@ -34,6 +34,7 @@
 - Create: tests/worker/admin-guard.test.ts
 - Create: app/lib/cloudflare/context.ts
 - Create: tests/helpers/test-env.ts
+- Modify: app/lib/env.server.ts
 - Modify: app/routes.ts
 - Modify: scripts/render-wrangler-config.mjs
 
@@ -102,6 +103,8 @@ CSRF_SECRET: string;
 ~~~
 
 scripts/render-wrangler-config.mjs 只把 ACCESS_TEAM_DOMAIN、ACCESS_AUD、ADMIN_EMAIL 當 vars；CSRF_SECRET 必須是 Worker secret，不寫入產生的設定檔。
+
+app/lib/cloudflare/context.ts 接手 Plan 01 原本放在 env.server.ts 的 React Router module augmentation；env.server.ts 只保留 Env。固定 shape 為 cloudflare.env、cloudflare.ctx，Task 5 再加 cloudflare.security.nonce，避免兩個檔案重複宣告不一致的 AppLoadContext。
 
 ### Step 4：先寫 CSRF 紅燈測試
 
