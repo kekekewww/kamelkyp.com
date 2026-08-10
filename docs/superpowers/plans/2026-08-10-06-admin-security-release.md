@@ -1158,6 +1158,8 @@ docs/runbooks/release-checklist.md：
 - D1 migration bookmark。
 - Preview 人工驗收 desktop、iOS Safari 尺寸、Android Chrome 尺寸。
 - Cloudflare Access OTP 人工驗收。
+- 對照 Preview／Production GitHub Environments，確認 RATE_LIMIT_NAMESPACE_ID 都是數字且彼此不同；生成設定各只有一個 SUBMISSION_RATE_LIMITER。
+- 確認 Preview／Production 生成設定的 secrets.required 恰為四個核准名稱，.wrangler.secrets.json 未被追蹤或上傳為 artifact。
 - Google 正式 integration 小額/測試案件驗收後刪除測試資料。
 - 法務審查 gate。
 - 備份目前公開內容版本。
