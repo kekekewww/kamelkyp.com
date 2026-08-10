@@ -34,6 +34,7 @@
 - react-router.config.ts
 - vite.config.ts
 - vitest.config.ts
+- vitest.worker.config.ts
 - playwright.config.ts
 - wrangler.base.jsonc
 - app/root.tsx
@@ -42,8 +43,8 @@
 - app/routes/language-redirect.tsx
 - app/lib/env.server.ts
 - app/lib/services/service-id.ts
-- app/lib/db/migrations.ts
 - app/lib/db/content-repository.server.ts
+- tests/helpers/apply-migrations.ts
 - app/styles/tokens.css
 - app/styles/global.css
 - workers/app.ts
@@ -77,6 +78,7 @@ export interface Env {
   SUBMISSION_RATE_LIMITER: RateLimit;
   TURNSTILE_SECRET: string;
   TURNSTILE_SITE_KEY: string;
+  CSRF_SECRET: string;
   ACCESS_AUD: string;
   ACCESS_TEAM_DOMAIN: string;
   ADMIN_EMAIL: string;
@@ -167,8 +169,8 @@ Expected result: FAIL because app/lib/services/service-id.ts does not exist.
     "format:check": "biome ci .",
     "typegen": "react-router typegen",
     "typecheck": "npm run typegen && tsc -b",
-    "test:unit": "vitest run tests/unit",
-    "test:worker": "vitest run tests/worker",
+    "test:unit": "vitest run --config vitest.config.ts tests/unit",
+    "test:worker": "vitest run --config vitest.worker.config.ts tests/worker",
     "test:e2e": "playwright test",
     "deploy:preview": "node scripts/render-wrangler-config.mjs preview && wrangler deploy --config .wrangler.generated.jsonc",
     "deploy:production": "node scripts/render-wrangler-config.mjs production && wrangler deploy --config .wrangler.generated.jsonc"
@@ -414,6 +416,7 @@ export interface Env {
   SUBMISSION_RATE_LIMITER: RateLimit;
   TURNSTILE_SECRET: string;
   TURNSTILE_SITE_KEY: string;
+  CSRF_SECRET: string;
   ACCESS_AUD: string;
   ACCESS_TEAM_DOMAIN: string;
   ADMIN_EMAIL: string;
@@ -608,7 +611,7 @@ test("health endpoint is deterministic", async ({ request }) => {
 test("root chooses Chinese for zh browser language", async ({ page }) => {
   await page.setExtraHTTPHeaders({ "accept-language": "zh-TW,zh;q=0.9" });
   await page.goto("/");
-  await expect(page).toHaveURL(//zh$/);
+  await expect(page).toHaveURL(/\/zh$/);
 });
 ~~~
 
@@ -630,11 +633,12 @@ Cloud commit message: feat: add Worker request context and health route.
 
 **Files:**
 - Create: migrations/0001_core.sql
-- Create: app/lib/db/migrations.ts
 - Create: app/lib/db/content-repository.server.ts
+- Create: tests/helpers/apply-migrations.ts
 - Create: tests/worker/migrations.test.ts
 - Create: tests/worker/content-repository.test.ts
 - Create: vitest.config.ts
+- Create: vitest.worker.config.ts
 - Modify: wrangler.base.jsonc
 - Modify: workers/app.ts
 
@@ -664,12 +668,7 @@ export interface PublishedContent {
 ~~~ts
 // tests/worker/migrations.test.ts
 import { env } from "cloudflare:workers";
-import { beforeAll, describe, expect, it } from "vitest";
-import { applyProjectMigrations } from "../../app/lib/db/migrations";
-
-beforeAll(async () => {
-  await applyProjectMigrations(env.DB);
-});
+import { describe, expect, it } from "vitest";
 
 describe("D1 schema privacy boundary", () => {
   it("does not create PII columns in cases", async () => {
@@ -677,16 +676,14 @@ describe("D1 schema privacy boundary", () => {
       name: string;
     }>();
     const names = rows.results.map((row) => row.name);
-    expect(names).not.toEqual(
-      expect.arrayContaining([
-        "name",
-        "email",
-        "contact",
-        "student_proof",
-        "project_url",
-        "form_payload",
-      ]),
-    );
+    expect(names).toEqual([
+      "case_id",
+      "service_id",
+      "locked_price_minor",
+      "currency",
+      "submitted_at",
+      "status",
+    ]);
   });
 });
 ~~~
@@ -694,18 +691,12 @@ describe("D1 schema privacy boundary", () => {
 ~~~ts
 // tests/worker/content-repository.test.ts
 import { env } from "cloudflare:workers";
-import { beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   createDraftVersion,
   getPublishedContent,
   publishVersion,
 } from "../../app/lib/db/content-repository.server";
-import { applyProjectMigrations } from "../../app/lib/db/migrations";
-
-beforeEach(async () => {
-  await applyProjectMigrations(env.DB);
-});
-
 describe("content publication", () => {
   it("keeps the previous publication live until the draft is published", async () => {
     const first = await createDraftVersion(env.DB, {
@@ -747,7 +738,7 @@ Cloud commit message: test: define D1 privacy and publication boundaries.
 npm run test:worker -- tests/worker/migrations.test.ts tests/worker/content-repository.test.ts
 ~~~
 
-Expected result: FAIL because migration and repository modules do not exist.
+Expected result: FAIL because the repository and Worker test configuration do not exist.
 
 - [ ] **Step 3: Create the core migration**
 
@@ -909,10 +900,7 @@ CREATE TABLE IF NOT EXISTS cases (
       'paused',
       'cancelled'
     )
-  ),
-  cleanup_due_at TEXT,
-  cleanup_confirmed_at TEXT,
-  updated_at TEXT NOT NULL
+  )
 );
 
 CREATE TABLE IF NOT EXISTS submission_attempts (
@@ -938,18 +926,24 @@ INSERT OR IGNORE INTO service_definitions (id, category, sort_order) VALUES
 - [ ] **Step 4: Add migration and repository implementations**
 
 ~~~ts
-// app/lib/db/migrations.ts
-import { readD1Migrations } from "@cloudflare/vitest-pool-workers/config";
+// tests/helpers/apply-migrations.ts
+import { env } from "cloudflare:workers";
+import { applyD1Migrations } from "cloudflare:test";
+import { beforeAll } from "vitest";
 
-const migrations = await readD1Migrations("./migrations");
+beforeAll(async () => {
+  await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
+});
 
-export async function applyProjectMigrations(db: D1Database) {
-  const { applyD1Migrations } = await import("cloudflare:test");
-  await applyD1Migrations(db, migrations);
+declare module "cloudflare:workers" {
+  interface ProvidedEnv {
+    DB: D1Database;
+    TEST_MIGRATIONS: D1Migration[];
+  }
 }
 ~~~
 
-The production code must not import app/lib/db/migrations.ts; it is test-only and excluded from the Worker bundle by import graph.
+Migration loading stays in the Node-evaluated Worker test configuration. Production application modules never import Cloudflare test packages.
 
 ~~~ts
 // app/lib/db/content-repository.server.ts
@@ -1107,20 +1101,37 @@ export function isLocale(value: string): value is Locale {
 }
 ~~~
 
-Configure the Workers test pool:
+Configure Node tests separately from the current Cloudflare Workers Vitest plugin so tests that import node:fs never run inside workerd:
 
 ~~~ts
 // vitest.config.ts
-import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
+import { defineConfig } from "vitest/config";
 
-export default defineWorkersConfig({
-  test: {
-    poolOptions: {
-      workers: {
-        wrangler: { configPath: "./wrangler.base.jsonc" },
-        miniflare: { d1Databases: ["DB"] },
+export default defineConfig({
+  test: { environment: "node" },
+});
+~~~
+
+~~~ts
+// vitest.worker.config.ts
+import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
+import { readD1Migrations } from "@cloudflare/vitest-pool-workers/config";
+import { defineConfig } from "vitest/config";
+
+export default defineConfig({
+  plugins: [
+    cloudflareTest(async () => ({
+      wrangler: { configPath: "./wrangler.base.jsonc" },
+      miniflare: {
+        d1Databases: ["DB"],
+        bindings: {
+          TEST_MIGRATIONS: await readD1Migrations("./migrations"),
+        },
       },
-    },
+    })),
+  ],
+  test: {
+    setupFiles: ["./tests/helpers/apply-migrations.ts"],
   },
 });
 ~~~
