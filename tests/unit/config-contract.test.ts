@@ -134,17 +134,16 @@ describe("cloud project configuration", () => {
     }
   });
 
-  it("fails closed for missing required variables", async () => {
+  it("fails closed when the preview PR number is missing", async () => {
     const result = await render("preview", {
       ...required,
-      PR_NUMBER: "42",
+      PR_NUMBER: undefined,
       WORKERS_DEV_SUBDOMAIN: "example-workers",
-      ADMIN_EMAIL: undefined,
     });
 
     try {
       expect(result.status).not.toBe(0);
-      expect(result.stderr).toContain("missing_admin_email");
+      expect(result.stderr).toContain("missing_pr_number");
     } finally {
       await rm(result.directory, { recursive: true, force: true });
     }
@@ -190,9 +189,24 @@ describe("cloud project configuration", () => {
     expect(preview).toContain("name: preview");
     expect(preview).toMatch(/jobs:\s*\n\s+deploy:/);
     expect(preview).not.toContain("\\${");
+    expect(preview).not.toMatch(/^ {4}env:\r?\n {6}CLOUDFLARE_API_TOKEN:/m);
     // biome-ignore lint/suspicious/noTemplateCurlyInString: verifies literal GitHub expression syntax
     expect(preview).toContain("${{ secrets.CLOUDFLARE_API_TOKEN }}");
     expect(preview).toContain('"$CLOUDFLARE_API_TOKEN"');
     expect(preview).toContain("$PR_NUMBER.$WORKERS_DEV_SUBDOMAIN");
+    expect(preview).toMatch(
+      /name: Apply preview migrations[\s\S]*?env:\r?\n\s+CLOUDFLARE_API_TOKEN:/,
+    );
+    expect(preview).toMatch(
+      /name: Deploy preview Worker[\s\S]*?env:\r?\n\s+CLOUDFLARE_API_TOKEN:/,
+    );
+    expect(ci).toContain("scripts/render-wrangler-config.mjs preview");
+    expect(ci).toContain("--config build/server/.wrangler.generated.jsonc");
+  });
+
+  it("normalizes repository text files to LF for cross-platform checks", async () => {
+    const attributes = await readFile(".gitattributes", "utf8");
+
+    expect(attributes).toContain("* text=auto eol=lf");
   });
 });
