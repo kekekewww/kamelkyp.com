@@ -4,13 +4,6 @@
   "main": "./workers/app.ts",
   "compatibility_date": "2026-08-10",
   "compatibility_flags": ["nodejs_compat"],
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "kamelkyp-com",
-      "migrations_dir": "migrations"
-    }
-  ],
   "observability": {
     "enabled": true,
     "head_sampling_rate": 0.1
