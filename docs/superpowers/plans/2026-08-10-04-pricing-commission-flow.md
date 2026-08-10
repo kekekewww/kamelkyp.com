@@ -626,9 +626,37 @@ describe("commission schema", () => {
       targetDuration: "03:00",
       seamless: true,
       transitionStyle: "Smooth",
+      sequenceConfirmed: true,
       consultation: false,
     });
     expect(result.success).toBe(false);
+  });
+
+  it("requires the 50% consultation option when simple transition order or points are missing", () => {
+    const withoutConsultation = CommissionDraftSchema.safeParse({
+      ...common,
+      serviceId: "simple_transition",
+      songs: [{ order: 1, url: "https://example.com/one.wav", transitionAt: "" }],
+      sequenceConfirmed: false,
+      targetDuration: "03:00",
+      seamless: true,
+      transitionStyle: "Smooth",
+      consultation: false,
+    });
+    expect(withoutConsultation.success).toBe(false);
+
+    const withConsultation = CommissionDraftSchema.safeParse({
+      ...withoutConsultation.data,
+      ...common,
+      serviceId: "simple_transition",
+      songs: [{ order: 1, url: "https://example.com/one.wav", transitionAt: "" }],
+      sequenceConfirmed: false,
+      targetDuration: "03:00",
+      seamless: true,
+      transitionStyle: "Smooth",
+      consultation: true,
+    });
+    expect(withConsultation.success).toBe(true);
   });
 
   it("does not contain birthday, legal name or file fields", () => {
@@ -705,8 +733,9 @@ const SimpleTransition = Common.extend({
   songs: z.array(z.object({
     order: z.number().int().positive(),
     url: HttpsUrl,
-    transitionAt: z.string().trim().min(1).max(40),
+    transitionAt: z.string().trim().max(40),
   })).min(1).max(100),
+  sequenceConfirmed: z.boolean(),
   targetDuration: z.string().trim().min(1).max(40),
   seamless: z.boolean(),
   transitionStyle: z.string().trim().min(1).max(1000),
@@ -753,10 +782,24 @@ export const CommissionDraftSchema = z
         message: "student_proof_required",
       });
     }
+    if (
+      draft.serviceId === "simple_transition" &&
+      (!draft.sequenceConfirmed ||
+        draft.songs.some((song) => !song.transitionAt)) &&
+      !draft.consultation
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["consultation"],
+        message: "consultation_required_without_sequence_and_points",
+      });
+    }
   });
 
 export type CommissionDraft = z.infer<typeof CommissionDraftSchema>;
 ~~~
+
+Simple transition 的歌曲順序由可拖曳清單及 order 欄位表示；若 sequenceConfirmed=false 或任何 transitionAt 為空，consultation 必須為 true，報價引擎才加收服務基價 50%。
 
 - [ ] **Step 4: Implement local-only versioned draft storage**
 
