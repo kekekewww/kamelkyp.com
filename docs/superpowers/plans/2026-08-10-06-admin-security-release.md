@@ -1060,7 +1060,7 @@ scripts/render-wrangler-config.mjs production 輸出加入：
 }
 ~~~
 
-Preview 與 Production 各使用不同的十進位 Rate Limiting namespace ID，由對應 GitHub Environment var RATE_LIMIT_NAMESPACE_ID 注入；生成設定必須符合 `ratelimits: [{ name: "SUBMISSION_RATE_LIMITER", namespace_id, simple: { limit: 10, period: 60 } }]`。公開 submission endpoint 使用此 binding，admin 不共用公開 bucket；production verifier 拒絕缺少、非數字、重複 binding 或與 Preview 相同的已知 ID。
+Preview 與 Production 各使用不同的十進位 Rate Limiting namespace ID，由對應 GitHub Environment var RATE_LIMIT_NAMESPACE_ID 注入；生成設定必須符合 `ratelimits: [{ name: "SUBMISSION_RATE_LIMITER", namespace_id, simple: { limit: 10, period: 60 } }]`。公開 submission endpoint 使用此 binding，admin 不共用公開 bucket；production verifier 拒絕缺少、非數字或重複 binding；Preview／Production ID 不同則由 release checklist 的雙環境比對 gate 驗證。
 
 ### Step 5：撰寫 Cloudflare 設定手冊
 
