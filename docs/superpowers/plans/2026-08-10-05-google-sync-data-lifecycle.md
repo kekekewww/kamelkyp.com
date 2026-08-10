@@ -55,6 +55,7 @@
 
 ### Modify
 
+- package.json
 - app/lib/commission/prepare-submission.server.ts
 - app/components/commission/commission-wizard.tsx
 - app/routes.ts
@@ -84,6 +85,10 @@ export interface SubmissionSuccess {
   serviceId: ServiceId;
   submittedAt: string;
 }
+
+export type SubmitCommissionResult =
+  | ({ state: "complete" } & SubmissionSuccess)
+  | ({ state: "pending_retry" } & SubmissionSuccess);
 
 export interface PermanentCaseRecord {
   caseId: string;
@@ -311,6 +316,7 @@ Cloud commit message: feat: add signed submission envelopes.
 - Create: integrations/apps-script/appsscript.json
 - Create: integrations/apps-script/README.md
 - Create: tests/apps-script/Code.test.ts
+- Modify: package.json
 
 **Interfaces:**
 - Consumes: SignedEnvelope V1 and Script Properties.
@@ -347,10 +353,20 @@ it("rejects expired timestamp and changed payload", () => {
 });
 ~~~
 
-- [ ] **Step 2: Run Apps Script tests and verify failure**
+- [ ] **Step 2: Add the Node test command, run Apps Script tests and verify failure**
+
+Add the script to package.json so Apps Script sandbox tests never use the Workers runtime:
+
+~~~json
+{
+  "scripts": {
+    "test:apps-script": "vitest run --config vitest.config.ts tests/apps-script"
+  }
+}
+~~~
 
 ~~~bash
-npx vitest run tests/apps-script/Code.test.ts
+npm run test:apps-script
 ~~~
 
 Expected result: FAIL because Code.gs is absent.
@@ -507,7 +523,7 @@ appsscript.json:
 - [ ] **Step 5: Run tests and commit**
 
 ~~~bash
-npx vitest run tests/apps-script/Code.test.ts
+npm run test:apps-script
 npm run format:check
 ~~~
 
@@ -538,10 +554,10 @@ Cloud commit message: feat: add idempotent Google Form and Gmail relay.
 
 ~~~ts
 // tests/worker/commission-submit.test.ts
-it("stores only non-PII metadata when Google fails", async () => {
-  await expect(submitCommission(failingGoogleInput)).rejects.toThrow(
-    "google_sync_pending",
-  );
+it("stores only non-PII metadata when Google requires retry", async () => {
+  const result = await submitCommission(failingGoogleInput);
+  expect(result.state).toBe("pending_retry");
+  expect(result.caseId).toMatch(/^KAM-/);
   const columns = await env.DB.prepare("PRAGMA table_info(submission_attempts)")
     .all<{ name: string }>();
   expect(columns.results.map((row) => row.name)).not.toEqual(
@@ -583,7 +599,6 @@ Expected result: FAIL because gateway and repository are absent.
 CREATE TABLE IF NOT EXISTS case_runtime (
   case_id TEXT PRIMARY KEY REFERENCES cases(case_id) ON DELETE CASCADE,
   cleanup_due_at TEXT,
-  cleanup_confirmed_at TEXT,
   updated_at TEXT NOT NULL
 );
 
@@ -650,10 +665,12 @@ submitCommission:
    - case_runtime updated_at.
    - submission_attempts with hash, term IDs, accepted_at, state created.
 6. Call sendToGoogle with the complete payload.
-7. On mail pending, update attempt to form_written and return retryable error plus Case ID; do not clear draft.
-8. On complete, update attempt to complete/google response ID and return SubmissionSuccess.
+7. On any recoverable Google transport or mail-pending result, update the attempt state and return SubmitCommissionResult with state pending_retry and the same Case ID; do not clear the draft.
+8. On complete, update attempt to complete/google response ID and return SubmitCommissionResult with state complete.
 9. Never store the complete payload.
 10. Never include googleResponseId in the public success response.
+
+The route maps internal state pending_retry to the public retry_required error envelope and maps complete to success; submitCommission itself does not both throw and return for the same recoverable condition.
 
 POST response:
 
