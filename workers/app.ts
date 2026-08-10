@@ -12,9 +12,10 @@ const requestHandler = createRequestHandler(
       return build;
     }
 
-    return typeof build.default === "function"
-      ? build.default()
-      : build.default;
+    const defaultBuild = build.default;
+    return typeof defaultBuild === "function"
+      ? defaultBuild()
+      : defaultBuild;
   },
   import.meta.env.MODE,
 );
