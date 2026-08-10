@@ -566,14 +566,23 @@ it("stores only non-PII metadata when Google requires retry", async () => {
   );
 });
 
-it("reuses the same case only when the payload hash matches", async () => {
-  const first = await submitCommission(mailFailureInput);
-  expect(first.state).toBe("pending_retry");
-  expect(await readStudentRuntime(first.caseId)).toMatchObject({
+it("stores only temporary non-PII student price alternatives", async () => {
+  const result = await submitCommission(studentPendingInput);
+  expect(await readStudentRuntime(result.caseId)).toMatchObject({
     studentReviewState: "pending",
     standardPriceMinor: expect.any(Number),
     studentPriceMinor: expect.any(Number),
   });
+  const runtimeColumns = await env.DB.prepare("PRAGMA table_info(case_runtime)")
+    .all<{ name: string }>();
+  expect(runtimeColumns.results.map((row) => row.name)).not.toEqual(
+    expect.arrayContaining(["student_name", "student_proof_url", "email"]),
+  );
+});
+
+it("reuses the same case only when the payload hash matches", async () => {
+  const first = await submitCommission(mailFailureInput);
+  expect(first.state).toBe("pending_retry");
 
   const retry = await submitCommission({
     ...mailFailureInput,
