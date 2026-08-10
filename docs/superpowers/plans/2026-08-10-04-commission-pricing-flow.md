@@ -72,6 +72,7 @@
 - tests/e2e/commission-navigation.spec.ts
 - tests/e2e/commission-review.spec.ts
 - tests/e2e/commission-mobile.spec.ts
+- scripts/render-worker-secrets.mjs
 
 ### Modify
 
@@ -80,6 +81,8 @@
 - wrangler.base.jsonc
 - scripts/render-wrangler-config.mjs
 - .github/workflows/deploy-preview.yml
+- package.json
+- .gitignore
 - app/styles/global.css
 
 ### Produced Interfaces
@@ -1082,9 +1085,12 @@ Cloud commit message: feat: add reviewable commission wizard.
 - Create: app/routes/api/commission-prepare.ts
 - Create: tests/worker/turnstile.test.ts
 - Create: tests/worker/commission-prepare.test.ts
+- Create: scripts/render-worker-secrets.mjs
 - Modify: app/routes.ts
 - Modify: scripts/render-wrangler-config.mjs
 - Modify: .github/workflows/deploy-preview.yml
+- Modify: package.json
+- Modify: .gitignore
 
 **Interfaces:**
 - Consumes: CommissionDraftSchema, PriceRule, FxSnapshot, term publications.
@@ -1218,9 +1224,32 @@ config.ratelimits = [
     simple: { limit: 10, period: 60 },
   },
 ];
+config.secrets = { required: ["TURNSTILE_SECRET"] };
 ~~~
 
-Preview and Production use distinct namespace IDs supplied by their GitHub Environments. deploy-preview.yml passes vars.RATE_LIMIT_NAMESPACE_ID to the renderer. The committed base contains neither account resource ID.
+Preview and Production use distinct namespace IDs supplied by their GitHub Environments. deploy-preview.yml passes vars.RATE_LIMIT_NAMESPACE_ID to the renderer. The committed base contains neither account resource ID nor secret value.
+
+scripts/render-worker-secrets.mjs requires TURNSTILE_SECRET, writes only `.wrangler.secrets.json` with mode 0600, and never prints its contents:
+
+~~~js
+import { writeFile } from "node:fs/promises";
+
+const names = ["TURNSTILE_SECRET"];
+const values = Object.fromEntries(
+  names.map((name) => {
+    const value = process.env[name];
+    if (!value) throw new Error(`missing_${name.toLowerCase()}`);
+    return [name, value];
+  }),
+);
+await writeFile(
+  ".wrangler.secrets.json",
+  JSON.stringify(values),
+  { mode: 0o600 },
+);
+~~~
+
+.gitignore adds `.wrangler.secrets.json`. deploy-preview.yml receives TURNSTILE_SECRET only from the Preview GitHub Environment secret, renders both generated files, and runs `wrangler deploy --config .wrangler.generated.jsonc --secrets-file .wrangler.secrets.json` through wrangler-action. package.json deploy:preview uses the same sequence. The secret file is never uploaded as an artifact and is destroyed with the GitHub-hosted runner. Preview uses the official always-pass Turnstile test secret; Production rejects it in Plan 06.
 
 POST /api/commission/prepare calls SUBMISSION_RATE_LIMITER before Turnstile with a route-scoped, one-way SHA-256 digest of CF-Connecting-IP as the anonymous Rate Limit key. The raw address and digest are never logged or stored. Ten attempts per minute are allowed; the eleventh returns 429 with a localized generic retry response while preserving the browser draft. requestIp is mandatory at the route boundary in deployed environments; tests inject a fixed documentation-only address. Response:
 
@@ -1246,6 +1275,7 @@ Expected:
 - Failed or duplicate Turnstile preserves draft.
 - An injected limiter permits ten attempts and returns 429 on the eleventh; a missing deployed request IP fails closed.
 - Preview config contains exactly one SUBMISSION_RATE_LIMITER binding with the Preview namespace ID, while the committed base contains no namespace ID.
+- Generated Preview config declares TURNSTILE_SECRET as required; deployment fails closed when the GitHub Environment secret is missing, and the ephemeral secrets file is ignored by Git and absent from artifacts.
 - English stale FX blocks prepare; Chinese remains available.
 - No D1 row contains email, contact, project URL, student proof or form JSON.
 - Neither the raw IP, its digest, nor any full form value appears in Worker logs.
