@@ -60,6 +60,32 @@ BEGIN
     published_at = excluded.published_at;
 END;
 
+CREATE TRIGGER content_publications_require_matching_version_insert
+BEFORE INSERT ON content_publications
+WHEN NOT EXISTS (
+  SELECT 1
+  FROM content_versions
+  WHERE id = NEW.version_id
+    AND entry_id = NEW.entry_id
+    AND locale = NEW.locale
+)
+BEGIN
+  SELECT RAISE(ABORT, 'content_publication_version_mismatch');
+END;
+
+CREATE TRIGGER content_publications_require_matching_version_update
+BEFORE UPDATE OF entry_id, locale, version_id ON content_publications
+WHEN NOT EXISTS (
+  SELECT 1
+  FROM content_versions
+  WHERE id = NEW.version_id
+    AND entry_id = NEW.entry_id
+    AND locale = NEW.locale
+)
+BEGIN
+  SELECT RAISE(ABORT, 'content_publication_version_mismatch');
+END;
+
 CREATE TABLE IF NOT EXISTS service_definitions (
   id TEXT PRIMARY KEY CHECK (
     id IN ('full_mix', 'vocal_mix', 'simple_transition', 'edit_transition')
@@ -108,6 +134,32 @@ CREATE TABLE IF NOT EXISTS term_publications (
   FOREIGN KEY (version_id, document_id, locale)
     REFERENCES term_versions(id, document_id, locale)
 );
+
+CREATE TRIGGER term_publications_require_matching_version_insert
+BEFORE INSERT ON term_publications
+WHEN NOT EXISTS (
+  SELECT 1
+  FROM term_versions
+  WHERE id = NEW.version_id
+    AND document_id = NEW.document_id
+    AND locale = NEW.locale
+)
+BEGIN
+  SELECT RAISE(ABORT, 'term_publication_version_mismatch');
+END;
+
+CREATE TRIGGER term_publications_require_matching_version_update
+BEFORE UPDATE OF document_id, locale, version_id ON term_publications
+WHEN NOT EXISTS (
+  SELECT 1
+  FROM term_versions
+  WHERE id = NEW.version_id
+    AND document_id = NEW.document_id
+    AND locale = NEW.locale
+)
+BEGIN
+  SELECT RAISE(ABORT, 'term_publication_version_mismatch');
+END;
 
 CREATE TABLE IF NOT EXISTS media_items (
   id TEXT PRIMARY KEY,
