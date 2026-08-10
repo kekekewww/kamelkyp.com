@@ -33,13 +33,6 @@ export async function createDraftVersion(
 ): Promise<{ versionId: string }> {
   const now = new Date().toISOString();
   const versionId = crypto.randomUUID();
-  const version = await db
-    .prepare(
-      "SELECT COALESCE(MAX(version_number), 0) + 1 AS next_version " +
-        "FROM content_versions WHERE entry_id = ? AND locale = ?",
-    )
-    .bind(input.entryId, input.locale)
-    .first<{ next_version: number }>();
 
   await db.batch([
     db
@@ -53,17 +46,21 @@ export async function createDraftVersion(
       .prepare(
         "INSERT INTO content_versions " +
           "(id, entry_id, locale, version_number, state, title, summary, " +
-          "body_json, created_at) VALUES (?, ?, ?, ?, 'draft', ?, ?, ?, ?)",
+          "body_json, created_at) " +
+          "SELECT ?, ?, ?, COALESCE(MAX(version_number), 0) + 1, 'draft', " +
+          "?, ?, ?, ? FROM content_versions " +
+          "WHERE entry_id = ? AND locale = ?",
       )
       .bind(
         versionId,
         input.entryId,
         input.locale,
-        version?.next_version ?? 1,
         input.title,
         input.summary,
         JSON.stringify(input.body),
         now,
+        input.entryId,
+        input.locale,
       ),
   ]);
 
@@ -75,32 +72,17 @@ export async function publishVersion(
   versionId: string,
   publishedAt: string,
 ): Promise<void> {
-  const version = await db
+  const result = await db
     .prepare(
-      "SELECT entry_id, locale FROM content_versions " +
+      "UPDATE content_versions SET state = 'published', published_at = ? " +
         "WHERE id = ? AND state = 'draft'",
     )
-    .bind(versionId)
-    .first<{ entry_id: string; locale: Locale }>();
+    .bind(publishedAt, versionId)
+    .run();
 
-  if (!version) throw new Error("draft_version_not_found");
-
-  await db.batch([
-    db
-      .prepare(
-        "UPDATE content_versions SET state = 'published', published_at = ? " +
-          "WHERE id = ? AND state = 'draft'",
-      )
-      .bind(publishedAt, versionId),
-    db
-      .prepare(
-        "INSERT INTO content_publications " +
-          "(entry_id, locale, version_id, published_at) VALUES (?, ?, ?, ?) " +
-          "ON CONFLICT(entry_id, locale) DO UPDATE SET " +
-          "version_id = excluded.version_id, published_at = excluded.published_at",
-      )
-      .bind(version.entry_id, version.locale, versionId, publishedAt),
-  ]);
+  if (result.meta.changes !== 1) {
+    throw new Error("draft_version_not_found");
+  }
 }
 
 export async function getPublishedContent(
