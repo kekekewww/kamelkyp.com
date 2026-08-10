@@ -1239,7 +1239,7 @@ const config = {
 await writeFile(".wrangler.generated.jsonc", JSON.stringify(config, null, 2));
 ~~~
 
-Secrets TURNSTILE_SECRET、APPS_SCRIPT_URL、APPS_SCRIPT_HMAC_SECRET、CSRF_SECRET are uploaded with Wrangler secret commands in Plans 04–06 and never written into generated JSON.
+Plans 04–06 declare TURNSTILE_SECRET、APPS_SCRIPT_URL、APPS_SCRIPT_HMAC_SECRET、CSRF_SECRET through Wrangler `secrets.required` and provide their values only through an ephemeral GitHub Actions secrets file passed to `wrangler deploy --secrets-file`; neither values nor the generated secrets file enter the repository or workflow artifacts.
 
 - [ ] **Step 4: Add CI and Preview workflows**
 
