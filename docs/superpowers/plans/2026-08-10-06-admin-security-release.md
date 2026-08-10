@@ -411,6 +411,7 @@ tests/unit/admin-block-form.test.ts 涵蓋：
 - link group 可有任意數量項目，不限制三個。
 - social、workRepository、otherWebsite、footer、postReference 均為合法 link group 類型。
 - 所有媒體欄位皆選填；只有在新增某個媒體項目時 URL 必填。
+- 作品層級的標題、日期、服務類型、說明、Credit、封面、Tags、精選、媒體與 SEO 也全部選填；沒有媒體仍可發布文字作品，完全沒有標題時公開元件使用中英文 Untitled／未命名作品作為 accessible fallback，不強迫寫回資料。
 - parser 不接受任何 File、Blob 或 base64 欄位。
 
 ### Step 2：確認測試為紅燈
@@ -485,6 +486,7 @@ tests/worker/admin-media-content.test.ts：
 - link group 超過三個仍全部保留。
 - 空 Footer 分組不公開。
 - 已發布作品修改建立新草稿。
+- 所有作品欄位留空仍可建立版本並發布；公開頁使用未命名 fallback，沒有破版或空 accessible name。
 - Blog slug 在同 locale 唯一。
 
 tests/e2e/admin-media-content.spec.ts：
