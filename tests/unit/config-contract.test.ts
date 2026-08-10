@@ -25,7 +25,12 @@ async function render(
 ) {
   const directory = await mkdtemp(join(tmpdir(), "wrangler-render-"));
   const source = join(directory, "build", "server", "wrangler.json");
-  const output = join(directory, "build", "server", ".wrangler.generated.jsonc");
+  const output = join(
+    directory,
+    "build",
+    "server",
+    ".wrangler.generated.jsonc",
+  );
 
   await mkdir(join(directory, "build", "server"), { recursive: true });
   await writeFile(
@@ -71,14 +76,17 @@ describe("cloud project configuration", () => {
     expect(wranglerConfig.compatibility_flags).toContain("nodejs_compat");
   });
 
-  it("keeps resource identifiers and secrets out of the committed base config", async () => {
-    const source = await readFile("wrangler.base.jsonc", "utf8");
+  it(
+    "keeps resource identifiers and secrets out of the committed base config",
+    async () => {
+      const source = await readFile("wrangler.base.jsonc", "utf8");
 
-    expect(source).not.toContain("database_id");
-    expect(source.toLowerCase()).not.toContain("api_token");
-    expect(source.toLowerCase()).not.toContain("hmac");
-    expect(source.toLowerCase()).not.toContain("secret");
-  });
+      expect(source).not.toContain("database_id");
+      expect(source.toLowerCase()).not.toContain("api_token");
+      expect(source.toLowerCase()).not.toContain("hmac");
+      expect(source.toLowerCase()).not.toContain("secret");
+    },
+  );
 
   it("renders preview configuration from the generated SSR Worker artifact", async () => {
     const result = await render("preview", {
