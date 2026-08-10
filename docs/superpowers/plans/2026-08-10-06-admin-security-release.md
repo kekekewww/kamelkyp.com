@@ -955,7 +955,7 @@ scripts/verify-production-config.mjs 失敗條件：
 - ACCESS_TEAM_DOMAIN 不是 HTTPS team domain。
 - GitHub Environment 未提供 LEGAL_REVIEW_CONFIRMED=true 時拒絕部署。
 
-敏感 secrets 不由 config script 讀取或輸出。部署 workflow 另以 wrangler secret list 只比對名稱，不讀值；必備 Worker secrets 由 Cloudflare Dashboard 或一次性 wrangler secret put 設定：
+敏感值不由 config script 讀取或輸出；生成設定只宣告以下 `secrets.required` 名稱。scripts/render-worker-secrets.mjs 只從受保護的 GitHub Environment 讀值並寫入 runner 暫存檔，部署後 wrangler secret list 只比對名稱：
 
 - TURNSTILE_SECRET
 - APPS_SCRIPT_URL
