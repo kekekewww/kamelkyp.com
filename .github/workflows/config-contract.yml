@@ -25,3 +25,5 @@ jobs:
       - run: npm run test:unit -- tests/unit/config-contract.test.ts
       - run: npm run typecheck
       - run: npm run build
+      - if: always()
+        run: npx wrangler deploy --dry-run --config wrangler.base.jsonc
