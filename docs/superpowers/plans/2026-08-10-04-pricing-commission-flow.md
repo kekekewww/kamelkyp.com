@@ -948,6 +948,16 @@ tests/fixtures/term-publications.ts 建立 zh／en 測試版本，內容直接�
 - progress_contact：甲方可用任何有效聯絡方式詢問進度。
 - purpose_no_price_effect：說明用途不影響報價。
 
+每個 service fixture 另有完整欄位與義務：
+
+- full_mix：不限軌、完整混音與母帶、Vocal 完整編輯／修音；交付 24-bit / 48 kHz WAV Final Master、Vocal Stem、Instrumental Mix Stem；預估 7–14 工作日。
+- vocal_mix：不限軌、和音編輯、修音、對拍、效果設計、與既有伴奏融合及混音／母帶；同樣交付三種 24-bit / 48 kHz WAV；預估 5–7 工作日。
+- mixing_source：提交乾／原始未處理檔案，盡可能使用 24-bit / 48 kHz WAV 並正確命名；其他格式造成的音質下降由委託者承擔；未整理素材可退回，或經同意後加收服務基價 5%。
+- simple_transition：1–5 首 NT$1,000，第 6 首起每首 NT$200；只做銜接與必要效果，不做結構編輯；順序與銜接時間點必填，若需要 Kamel 協助決策，加收服務基價 50% 諮詢費；目標總長度、是否無縫、銜接風格必填；預估 3–5 工作日。
+- edit_transition：1–5 首 NT$4,000，第 6 首起每首 NT$800；包含刪減、重排、速度／音高、音效、延長開頭／結尾、混音平衡與重新母帶；時長、銜接點、總長度、風格必填，參考連結選填；預估 7–14 工作日。
+- transition_delivery：來源需盡可能高音質；因來源品質造成的損失由委託者承擔；交付 24-bit / 48 kHz WAV、MP3、AAC。
+- schedule_adjustment：所有完工日會依實際排程與素材狀態調整；急件需先協議並加收服務基價 50%。
+
 這個 fixture 只供 Preview／E2E；Production 不自動發布法律文字。Kamel 必須在 Plan 06 後台輸入或審閱同內容，通過法務 gate 後自行發布。
 
 ReviewStep displays every entered field, selected options, price components, term version labels and separate Edit buttons. It does not hide project links or student proof from the submitting client.
