@@ -936,7 +936,9 @@ tests/fixtures/term-publications.ts 建立 zh／en 測試版本，內容直接�
 - minor_revisions：前 5 次小範圍修改免費，第 6 次起每次為鎖定初始報價 10%。
 - major_revisions：第 1 次重大修改免費，第 2 次起每次為鎖定初始報價 50%，重大變更先告知。
 - client_cancellation：中途取消不退訂金。
-- provider_failure：Kamel 因自身原因無法完成時，依設計規格的「總金額六折」退款公式顯示完整範例，且上線前必須經法律審閱。
+- provider_delay_completed：Kamel 因自身原因延遲但仍完成時，總價調整為原應付總額的 60%。
+- provider_failure：Kamel 因自身原因確定無法完成時，退還訂金。
+- client_inactivity：委託者連續 7 天未回覆、未提供素材或未付款時暫停，恢復後重新排隊。
 - queue_and_timing：須排隊，預估工作日依服務，完工時間依實際情況調整。
 - delivery_and_retention：正式成品交付後工程至少保存 7 日，不保證永久保存。
 - project_file_purchase：正式交付後要求工程檔為鎖定初始報價 50%。
