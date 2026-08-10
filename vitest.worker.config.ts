@@ -9,6 +9,7 @@ export default defineConfig({
     cloudflareTest(async () => ({
       wrangler: { configPath: "./wrangler.base.jsonc" },
       miniflare: {
+        compatibilityDate: "2026-06-30",
         d1Databases: ["DB"],
         bindings: {
           TEST_MIGRATIONS: await readD1Migrations("./migrations"),
