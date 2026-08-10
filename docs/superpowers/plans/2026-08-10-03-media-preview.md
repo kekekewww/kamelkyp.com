@@ -237,13 +237,14 @@ export function parseMediaUrl(
 
   const videoId = youtubeId(url);
   if (videoId && /^[A-Za-z0-9_-]{6,20}$/.test(videoId)) {
-    const params = new URLSearchParams({ autoplay: "0" });
+    const params = new URLSearchParams();
     if (options.startSeconds !== null) {
       params.set("start", String(Math.floor(options.startSeconds)));
     }
     if (options.endSeconds !== null) {
       params.set("end", String(Math.floor(options.endSeconds)));
     }
+    params.set("autoplay", "0");
     return {
       kind: "youtube",
       canonicalUrl: `https://www.youtube.com/watch?v=${videoId}`,
