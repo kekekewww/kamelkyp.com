@@ -37,6 +37,9 @@
 - Modify: app/lib/env.server.ts
 - Modify: app/routes.ts
 - Modify: scripts/render-wrangler-config.mjs
+- Modify: scripts/render-worker-secrets.mjs
+- Modify: .github/workflows/deploy-preview.yml
+- Modify: tests/unit/config-contract.test.ts
 
 ### Step 1：先寫 Access JWT 失敗測試
 
@@ -102,7 +105,7 @@ ADMIN_EMAIL: string;
 CSRF_SECRET: string;
 ~~~
 
-scripts/render-wrangler-config.mjs 只把 ACCESS_TEAM_DOMAIN、ACCESS_AUD、ADMIN_EMAIL 當 vars；CSRF_SECRET 必須是 Worker secret，不寫入產生的設定檔。
+scripts/render-wrangler-config.mjs 只把 ACCESS_TEAM_DOMAIN、ACCESS_AUD、ADMIN_EMAIL 當 vars，並把 secrets.required 擴充為 TURNSTILE_SECRET、APPS_SCRIPT_URL、APPS_SCRIPT_HMAC_SECRET、CSRF_SECRET 四個固定名稱；scripts/render-worker-secrets.mjs 使用相同 allowlist。CSRF_SECRET 只由 Preview GitHub Environment secret 進入 mode-0600 的暫存 secrets file，再透過 `wrangler deploy --secrets-file` 原子部署；值不寫入產生的 Wrangler 設定、Log 或 artifact。tests/unit/config-contract.test.ts 驗證兩份 allowlist 完全一致及缺值時 fail closed。
 
 app/lib/cloudflare/context.ts 接手 Plan 01 原本放在 env.server.ts 的 React Router module augmentation；env.server.ts 只保留 Env。固定 shape 為 cloudflare.env、cloudflare.ctx，Task 5 再加 cloudflare.security.nonce，避免兩個檔案重複宣告不一致的 AppLoadContext。
 
@@ -931,7 +934,10 @@ git commit -m "feat: enforce CSP and safe response headers"
 - Create: docs/legal/review-checklist.md
 - Modify: package.json
 - Modify: scripts/render-wrangler-config.mjs
+- Modify: scripts/render-worker-secrets.mjs
 - Modify: wrangler.base.jsonc
+- Modify: .github/workflows/deploy-preview.yml
+- Modify: .gitignore
 - Modify: playwright.config.ts
 - Modify: README.md
 
@@ -958,11 +964,15 @@ scripts/verify-production-config.mjs 失敗條件：
 
 app/lib/integrations/google-submission-gateway.server.ts 在任何 fetch 前以 URL parser 強制 APPS_SCRIPT_URL 為 HTTPS；tests/worker/google-gateway.test.ts 驗證非 HTTPS secret 會被拒絕。
 
-必備 GitHub Actions secrets：
+必備 GitHub Environment secrets（Preview 與 Production 分開設定；Production 使用正式值）：
 
 - CLOUDFLARE_API_TOKEN
 - CLOUDFLARE_ACCOUNT_ID
 - D1_DATABASE_ID
+- TURNSTILE_SECRET
+- APPS_SCRIPT_URL
+- APPS_SCRIPT_HMAC_SECRET
+- CSRF_SECRET
 
 必備 GitHub Environment production vars：
 
@@ -1036,16 +1046,16 @@ E2E workflow 先以 preview renderer 產生 .wrangler.generated.jsonc；loopback
 - environment: production，GitHub Environment 設 required reviewer，由 Kamel 人工確認。
 - concurrency group: production，cancel-in-progress: false。
 - checkout、npm ci、全測試與 build。
-- 從 production GitHub Environment vars 注入 RATE_LIMIT_NAMESPACE_ID，先執行 node scripts/render-wrangler-config.mjs production，再執行 verify:production；renderer 必須產生一個 SUBMISSION_RATE_LIMITER binding。
-- 執行 wrangler secret list --config .wrangler.generated.jsonc，只確認 TURNSTILE_SECRET、APPS_SCRIPT_URL、APPS_SCRIPT_HMAC_SECRET、CSRF_SECRET 四個名稱存在；不輸出值。
+- 從 production GitHub Environment vars 注入 RATE_LIMIT_NAMESPACE_ID，先執行 node scripts/render-wrangler-config.mjs production 與 node scripts/render-worker-secrets.mjs，再執行 verify:production；renderer 必須產生一個 SUBMISSION_RATE_LIMITER binding 與四個 secrets.required 名稱。
+- verify:production 只檢查 required secret 名稱與環境變數是否存在，不輸出值；.wrangler.secrets.json 已在 .gitignore，且 workflow 禁止把它加入 artifact。
 - 執行 wrangler d1 time-travel info DB --config .wrangler.generated.jsonc 取得 migration 前 bookmark，將 bookmark 寫入 GitHub Actions step summary。
 - 再執行 wrangler d1 migrations apply DB --remote --config .wrangler.generated.jsonc；Cloudflare 另會為 migration 建立平台備份。
-- migration 成功後使用 cloudflare/wrangler-action@v3 依 .wrangler.generated.jsonc 部署。
+- migration 成功後使用 cloudflare/wrangler-action@v3 執行 `deploy --config .wrangler.generated.jsonc --secrets-file .wrangler.secrets.json`，在同一次部署更新程式與四個 Worker secrets；部署後 `wrangler secret list` 只驗證四個名稱。
 - 部署目標自訂網域 kamelkyp.com。
 - 部署後 health check /health 與 public smoke test。
 - 任何 migration、deploy、health check 失敗，job fail；不自動回滾 D1。
 - 回滾 Worker 使用上一個成功 deployment；資料需要時依 runbook 使用部署前 bookmark。
-- 不在 workflow 自動建立、覆寫或列印 Worker secrets。
+- workflow 會從受保護的 GitHub Environment secrets 原子更新 Worker secrets，但不列印值、不保存 secrets file，也不從 repository 讀取真實值。
 
 scripts/render-wrangler-config.mjs production 輸出加入：
 
@@ -1067,7 +1077,7 @@ Preview 與 Production 各使用不同的十進位 Rate Limiting namespace ID，
 docs/runbooks/cloudflare-setup.md 必須逐項可操作：
 
 1. 建立 Preview 與 Production D1，填 GitHub Environment ID。
-2. 在 Worker 設四個 secrets：TURNSTILE_SECRET、APPS_SCRIPT_URL、APPS_SCRIPT_HMAC_SECRET、CSRF_SECRET。
+2. 在 Preview／Production GitHub Environment 分別設定 TURNSTILE_SECRET、APPS_SCRIPT_URL、APPS_SCRIPT_HMAC_SECRET、CSRF_SECRET；workflow 以 `--secrets-file` 原子部署至對應 Worker，Cloudflare Dashboard 只用來核對名稱。
 3. Turnstile 建立 kamelkyp.com widget；確認不是測試 key。
 4. Cloudflare Access application paths：
    - /admin
