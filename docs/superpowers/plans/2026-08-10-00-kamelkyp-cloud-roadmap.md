@@ -45,7 +45,7 @@
 1. 在該計畫 branch 直接建立失敗測試並 commit。
 2. 由 GitHub Actions 執行指定指令，確認失敗原因符合計畫。
 3. 直接在 GitHub branch 建立最小實作並 commit。
-4. GitHub Actions 再次執行，確認測試、型別、Lint 與 Build 通過。
+4. GitHub Actions 再次執行，確認格式、測試、型別與 Build 通過。
 5. 部署 Cloudflare Preview，執行該 Task 的瀏覽器或人工驗收。
 6. 保留小而可審查的 commit；不把整個子計畫壓成單一 commit。
 7. 子計畫全部完成後建立 PR，通過審查才合併 main。
@@ -60,11 +60,11 @@ Lockfile 由 GitHub Actions 的 `lockfile.yml` 工作流在雲端產生或更新
 - `package-lock.json`：雲端 lockfile 工作流產生。
 - `react-router.config.ts`：SSR 與 React Router build 設定。
 - `vite.config.ts`：React Router 與 Cloudflare Vite Plugin。
-- `wrangler.jsonc`：Worker、D1、Rate Limit、Cron 與環境設定。
+- `wrangler.base.jsonc` 與 CI 產生的 `.wrangler.generated.jsonc`：Worker、D1、Rate Limit、Cron 與環境設定；資源 ID 不進版控。
 - `workers/app.ts`：React Router request handler 與 scheduled handler。
 - `worker-configuration.d.ts`：Wrangler 產生的 Cloudflare binding types。
 - `.github/workflows/ci.yml`：Biome、TypeScript、Vitest、Build。
-- `.github/workflows/e2e.yml`：Cloudflare Preview 上的 Playwright 與 axe。
+- `.github/workflows/e2e.yml`：GitHub-hosted loopback workerd 的 Playwright 與 axe；另對 Cloudflare Preview 執行 smoke test。
 - `.github/workflows/lockfile.yml`：雲端更新 package-lock。
 - `.github/workflows/deploy-preview.yml`：PR Preview。
 - `.github/workflows/deploy-production.yml`：main 正式部署。
