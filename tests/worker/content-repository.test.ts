@@ -20,7 +20,10 @@ function draftInput(entryId: string, title: string) {
 
 describe("content publication", () => {
   it("keeps the previous publication live until the draft is published", async () => {
-    const first = await createDraftVersion(env.DB, draftInput("home", "第一版"));
+    const first = await createDraftVersion(
+      env.DB,
+      draftInput("home", "第一版"),
+    );
     await publishVersion(env.DB, first.versionId, "2026-08-10T00:00:00Z");
 
     const second = await createDraftVersion(
@@ -67,8 +70,12 @@ describe("content publication", () => {
       ),
     );
 
-    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
-    expect(results.filter((result) => result.status === "rejected")).toHaveLength(1);
+    expect(
+      results.filter((result) => result.status === "fulfilled"),
+    ).toHaveLength(1);
+    expect(
+      results.filter((result) => result.status === "rejected"),
+    ).toHaveLength(1);
 
     const pointer = await env.DB
       .prepare(
@@ -88,46 +95,62 @@ describe("content publication", () => {
     expect(times).toContain(pointer?.pointer_published_at);
   });
 
-  it("rejects a content publication pointer with a mismatched version tuple", async () => {
-    await createDraftVersion(env.DB, draftInput("content-a", "A"));
-    const other = await createDraftVersion(env.DB, draftInput("content-b", "B"));
+  it(
+    "rejects a content publication pointer with a mismatched version tuple",
+    async () => {
+      await createDraftVersion(env.DB, draftInput("content-a", "A"));
+      const other = await createDraftVersion(
+        env.DB,
+        draftInput("content-b", "B"),
+      );
 
-    await expect(
-      env.DB
-        .prepare(
-          "INSERT INTO content_publications " +
-            "(entry_id, locale, version_id, published_at) VALUES (?, ?, ?, ?)",
-        )
-        .bind("content-a", "zh", other.versionId, "2026-08-14T00:00:00Z")
-        .run(),
-    ).rejects.toThrow();
-  });
+      await expect(
+        env.DB
+          .prepare(
+            "INSERT INTO content_publications " +
+              "(entry_id, locale, version_id, published_at) VALUES (?, ?, ?, ?)",
+          )
+          .bind("content-a", "zh", other.versionId, "2026-08-14T00:00:00Z")
+          .run(),
+      ).rejects.toThrow();
+    },
+  );
 
-  it("rejects a term publication pointer with a mismatched version tuple", async () => {
-    await env.DB.batch([
-      env.DB
-        .prepare("INSERT INTO term_documents (id, kind) VALUES (?, ?)")
-        .bind("term-a", "common"),
-      env.DB
-        .prepare("INSERT INTO term_documents (id, kind) VALUES (?, ?)")
-        .bind("term-b", "common"),
-      env.DB
-        .prepare(
-          "INSERT INTO term_versions " +
-            "(id, document_id, locale, version_number, body_json, created_at) " +
-            "VALUES (?, ?, ?, ?, ?, ?)",
-        )
-        .bind("term-version-b", "term-b", "zh", 1, "[]", "2026-08-14T00:00:00Z"),
-    ]);
+  it(
+    "rejects a term publication pointer with a mismatched version tuple",
+    async () => {
+      await env.DB.batch([
+        env.DB
+          .prepare("INSERT INTO term_documents (id, kind) VALUES (?, ?)")
+          .bind("term-a", "common"),
+        env.DB
+          .prepare("INSERT INTO term_documents (id, kind) VALUES (?, ?)")
+          .bind("term-b", "common"),
+        env.DB
+          .prepare(
+            "INSERT INTO term_versions " +
+              "(id, document_id, locale, version_number, body_json, created_at) " +
+              "VALUES (?, ?, ?, ?, ?, ?)",
+          )
+          .bind(
+            "term-version-b",
+            "term-b",
+            "zh",
+            1,
+            "[]",
+            "2026-08-14T00:00:00Z",
+          ),
+      ]);
 
-    await expect(
-      env.DB
-        .prepare(
-          "INSERT INTO term_publications " +
-            "(document_id, locale, version_id, effective_from) VALUES (?, ?, ?, ?)",
-        )
-        .bind("term-a", "zh", "term-version-b", "2026-08-14T00:00:00Z")
-        .run(),
-    ).rejects.toThrow();
-  });
+      await expect(
+        env.DB
+          .prepare(
+            "INSERT INTO term_publications " +
+              "(document_id, locale, version_id, effective_from) VALUES (?, ?, ?, ?)",
+          )
+          .bind("term-a", "zh", "term-version-b", "2026-08-14T00:00:00Z")
+          .run(),
+      ).rejects.toThrow();
+    },
+  );
 });
