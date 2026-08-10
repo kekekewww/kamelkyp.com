@@ -959,7 +959,7 @@ scripts/verify-production-config.mjs 失敗條件：
 - ACCESS_TEAM_DOMAIN 不是 HTTPS team domain。
 - GitHub Environment 未提供 LEGAL_REVIEW_CONFIRMED=true 時拒絕部署。
 
-敏感值不由 config script 讀取或輸出；生成設定只宣告以下 `secrets.required` 名稱。scripts/render-worker-secrets.mjs 只從受保護的 GitHub Environment 讀值並寫入 runner 暫存檔，部署後 wrangler secret list 只比對名稱：
+敏感值不由 config script 讀取或輸出；生成設定只宣告以下 `secrets.required` 名稱。scripts/render-worker-secrets.mjs 只從受保護的 GitHub Environment 讀值並寫入 runner 暫存檔；verify:production 會在記憶體解析該檔，只輸出穩定錯誤碼並驗證名稱、HTTPS、長度與測試 key，絕不輸出值。部署後 wrangler secret list 只比對名稱：
 
 - TURNSTILE_SECRET
 - APPS_SCRIPT_URL
@@ -1051,6 +1051,7 @@ E2E workflow 先以 preview renderer 產生 .wrangler.generated.jsonc；loopback
 - concurrency group: production，cancel-in-progress: false。
 - checkout、npm ci、全測試與 build。
 - 從 production GitHub Environment vars 注入 RATE_LIMIT_NAMESPACE_ID，先執行 node scripts/render-wrangler-config.mjs production 與 node scripts/render-worker-secrets.mjs production，再執行 verify:production；renderer 必須產生一個 SUBMISSION_RATE_LIMITER binding 與四個 secrets.required 名稱。
+- package.json 移除可繞過 migration 與人工 Environment approval 的 deploy:production script；正式部署只能由本 workflow 完成。deploy:preview 則固定呼叫 secrets renderer 的 preview 模式與 `--secrets-file`。
 - verify:production 只檢查 required secret 名稱與環境變數是否存在，不輸出值；.wrangler.secrets.json 已在 .gitignore，且 workflow 禁止把它加入 artifact。
 - 執行 wrangler d1 time-travel info DB --config .wrangler.generated.jsonc 取得 migration 前 bookmark，將 bookmark 寫入 GitHub Actions step summary。
 - 再執行 wrangler d1 migrations apply DB --remote --config .wrangler.generated.jsonc；Cloudflare 另會為 migration 建立平台備份。
