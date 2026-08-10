@@ -176,4 +176,23 @@ describe("cloud project configuration", () => {
     expect(gitignore).toContain("build/");
     expect(tracked.status).not.toBe(0);
   });
+
+  it("keeps deployment expressions executable and check names stable", async () => {
+    const ci = await readFile(".github/workflows/ci.yml", "utf8");
+    const preview = await readFile(
+      ".github/workflows/deploy-preview.yml",
+      "utf8",
+    );
+
+    expect(ci).toContain("name: ci");
+    expect(ci).toMatch(/jobs:\s*\n\s+quality:/);
+    expect(ci).toMatch(/\n\s+worker:/);
+    expect(preview).toContain("name: preview");
+    expect(preview).toMatch(/jobs:\s*\n\s+deploy:/);
+    expect(preview).not.toContain("\\${");
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: verifies literal GitHub expression syntax
+    expect(preview).toContain("${{ secrets.CLOUDFLARE_API_TOKEN }}");
+    expect(preview).toContain('"$CLOUDFLARE_API_TOKEN"');
+    expect(preview).toContain("$PR_NUMBER.$WORKERS_DEV_SUBDOMAIN");
+  });
 });

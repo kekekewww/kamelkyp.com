@@ -4,6 +4,9 @@ playwright-report/
 test-results/
 .wrangler/
 .wrangler.generated.jsonc
+.react-router/
+*.tsbuildinfo
+worker-configuration.d.ts
 .dev.vars
 .env
 .env.*

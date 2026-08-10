@@ -20,7 +20,7 @@ const environmentRequired =
 
 for (const name of [...commonRequired, ...environmentRequired]) {
   if (!process.env[name]) {
-    throw new Error("missing_" + name.toLowerCase());
+    throw new Error(`missing_${name.toLowerCase()}`);
   }
 }
 
@@ -46,11 +46,7 @@ const outputConfig =
 const appOrigin =
   environment === "production"
     ? process.env.APP_ORIGIN
-    : "https://kamelkyp-com-pr-" +
-      process.env.PR_NUMBER +
-      "." +
-      process.env.WORKERS_DEV_SUBDOMAIN +
-      ".workers.dev";
+    : `https://kamelkyp-com-pr-${process.env.PR_NUMBER}.${process.env.WORKERS_DEV_SUBDOMAIN}.workers.dev`;
 
 const generated = JSON.parse(await readFile(sourceConfig, "utf8"));
 const config = {
@@ -58,7 +54,7 @@ const config = {
   name:
     environment === "production"
       ? "kamelkyp-com"
-      : "kamelkyp-com-pr-" + process.env.PR_NUMBER,
+      : `kamelkyp-com-pr-${process.env.PR_NUMBER}`,
   d1_databases: [
     {
       binding: "DB",
@@ -82,4 +78,4 @@ const config = {
 };
 
 await mkdir(dirname(outputConfig), { recursive: true });
-await writeFile(outputConfig, JSON.stringify(config, null, 2) + "\n");
+await writeFile(outputConfig, `${JSON.stringify(config, null, 2)}\n`);
