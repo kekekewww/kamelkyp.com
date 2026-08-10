@@ -127,7 +127,7 @@
 - /:lang/song-transition/edit：編輯／剪輯銜接詳情。
 - /:lang/commission：只顯示「混音」與「歌曲銜接」兩個大類。
 - /:lang/commission/:category：只顯示該大類的兩個服務。
-- /:lang/commission/:service：服務說明與委託流程入口。
+- /:lang/commission/:category/:service：服務說明與委託流程入口。
 - /:lang/works：作品列表。
 - /:lang/works/:slug：作品詳情。
 - /:lang/other：其他內容／Blog 列表。
