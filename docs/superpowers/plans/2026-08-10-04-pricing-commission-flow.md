@@ -413,7 +413,11 @@ Cloud commit message: feat: implement versioned commission pricing.
 **Files:**
 - Create: app/lib/pricing/fx.ts
 - Create: app/lib/pricing/fx-repository.server.ts
+- Create: app/components/pricing/service-price.tsx
 - Create: tests/unit/fx.test.ts
+- Create: tests/e2e/service-currency.spec.ts
+- Modify: app/components/services/service-choice.tsx
+- Modify: app/components/services/service-overview.tsx
 - Modify: workers/app.ts
 - Modify: wrangler.base.jsonc
 - Create: tests/worker/fx-repository.test.ts
@@ -504,6 +508,15 @@ export function businessDaysBetween(from: string, to: string): number {
 
 refreshFxRate receives fetch as an injected dependency for tests. It calls Frankfurter, reads rates.USD, converts String(rates.USD) with parseRateScaled, and upserts by rate_date. getUsableFxSnapshot throws fx_rate_stale when businessDaysBetween(rateDate, submissionDate) > 3.
 
+service-price.tsx receives locale、TWD minor amount 與 FxSnapshot：
+
+- zh renders NT$ with integer grouping。
+- en converts with convertTwdToUsdCents and renders US$ with two decimals。
+- en labels the public value Estimated today; the exact rate is locked when the form is submitted。
+- service-choice 與 service-overview loaders read the same usable FX snapshot，so every English public service price is USD rather than TWD。
+- stale／missing FX does not silently show TWD on an English page；it shows a localized USD temporarily unavailable state and keeps the commission button disabled until the server can calculate a trusted USD quote。
+- tests/e2e/service-currency.spec.ts visits /zh/mixing and /en/mixing，asserts Chinese shows NT$，English shows US$ and no NT$，then confirms the submission response stores the FX date、source、scaled rate and locked USD cents。
+
 ~~~ts
 // workers/app.ts addition
 export default {
@@ -528,9 +541,10 @@ Run:
 ~~~bash
 npm run test:unit -- tests/unit/fx.test.ts
 npm run test:worker -- tests/worker/fx-repository.test.ts
+PREVIEW_URL="${PREVIEW_URL}" npm run test:e2e -- tests/e2e/service-currency.spec.ts
 ~~~
 
-Expected result: PASS, including upstream invalid JSON, missing USD, duplicate date and stale rate cases.
+Expected result: PASS, including upstream invalid JSON, missing USD, duplicate date, stale rate, TWD display and USD display cases.
 
 - [ ] **Step 5: Commit**
 
