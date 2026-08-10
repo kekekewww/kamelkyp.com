@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: \${{ github.ref_name }}
+          ref: codex/01-cloud-foundation
       - uses: actions/setup-node@v5
         with:
           node-version: 24
@@ -37,7 +37,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: \${{ github.ref_name }}
+          ref: codex/01-cloud-foundation
       - uses: actions/setup-node@v5
         with:
           node-version: 24
@@ -52,7 +52,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: \${{ github.ref_name }}
+          ref: codex/01-cloud-foundation
       - uses: actions/setup-node@v5
         with:
           node-version: 24
@@ -75,7 +75,7 @@ jobs:
             tests/helpers/apply-migrations.ts
             scripts/render-wrangler-config.mjs
           )
-          npx biome format --write "\${files[@]}"
+          npx biome format --write "${files[@]}"
       - name: Commit audited formatting
         shell: bash
         run: |
