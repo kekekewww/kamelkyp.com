@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SERVICE_IDS, isServiceId } from "../../app/lib/services/service-id";
+import { isServiceId, SERVICE_IDS } from "../../app/lib/services/service-id";
 
 describe("ServiceId contract", () => {
   it("contains exactly the four approved services", () => {
