@@ -12,4 +12,12 @@ describe("cloud project configuration", () => {
     expect(wranglerConfig.main).toBe("./workers/app.ts");
     expect(wranglerConfig.compatibility_flags).toContain("nodejs_compat");
   });
+
+  it("keeps production D1 identifiers out of the committed base config", async () => {
+    const wranglerConfig = JSON.parse(
+      await readFile("wrangler.base.jsonc", "utf8"),
+    );
+
+    expect(wranglerConfig.d1_databases[0]).not.toHaveProperty("database_id");
+  });
 });
