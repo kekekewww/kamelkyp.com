@@ -7,12 +7,17 @@
     "jsx": "react-jsx",
     "strict": true,
     "skipLibCheck": true,
-    "noEmit": true
+    "noEmit": true,
+    "rootDirs": [".", "./.react-router/types"],
+    "types": ["node", "vite/client"]
   },
   "include": [
     "app/**/*.ts",
     "app/**/*.tsx",
     "tests/**/*.ts",
+    "workers/**/*.ts",
+    "playwright.config.ts",
+    "worker-configuration.d.ts",
     "react-router.config.ts",
     "vite.config.ts"
   ]
