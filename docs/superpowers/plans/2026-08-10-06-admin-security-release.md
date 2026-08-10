@@ -526,10 +526,12 @@ git commit -m "feat: manage external media links works and posts"
 - Create: app/lib/admin/cleanup-service.server.ts
 - Create: app/routes/admin/cases.tsx
 - Create: app/routes/admin/case-status.ts
+- Create: app/routes/admin/student-discount.ts
 - Create: app/routes/admin/cleanup-confirm.ts
 - Create: app/components/admin/CaseTable.tsx
 - Create: app/components/admin/CleanupChecklist.tsx
 - Create: tests/worker/admin-cases.test.ts
+- Create: tests/worker/admin-student-discount.test.ts
 - Create: tests/worker/admin-cleanup.test.ts
 - Create: tests/e2e/admin-cases.spec.ts
 - Modify: app/routes.ts
@@ -549,6 +551,10 @@ tests/worker/admin-cases.test.ts：
 - status 只能是 pending_review、pending_deposit、in_production、preview_approval、pending_balance、paused、delivered、cancelled。
 - 不存在案件回 404。
 - action 必須通過 Access、CSRF 與 Origin 驗證。
+- listCases 的永久列仍只回六欄；listPendingStudentPriceReviews 另從 case_runtime 回 caseId、currency、standardPriceMinor、studentPriceMinor，不回學生姓名、證明 URL 或其他表單內容。
+- resolveStudentDiscount(accepted=true) 保留 studentPriceMinor；accepted=false 把 cases.locked_price_minor 改為 standardPriceMinor。兩種結果都把 student_review_state 改為 none 並把兩個候選價設為 null。
+- 一般價與學生價必須使用送出時同一個 currency 與 FX snapshot；後台不重新抓匯率。
+- 已 resolved 或不存在的案件重送回 409，不可任意改價。
 
 ### Step 2：寫清理紅燈測試
 
@@ -569,7 +575,7 @@ tests/worker/admin-cleanup.test.ts 與 Apps Script test 涵蓋：
 
 Run:
 
-- npm run test:worker -- tests/worker/admin-cases.test.ts tests/worker/admin-cleanup.test.ts
+- npm run test:worker -- tests/worker/admin-cases.test.ts tests/worker/admin-student-discount.test.ts tests/worker/admin-cleanup.test.ts
 - npm run test:apps-script
 
 Expected: FAIL，因案件與清理 service 尚未存在。
@@ -602,6 +608,21 @@ export async function updateCaseStatus(input: {
   status: CaseStatus;
   now: Date;
 }): Promise<void>;
+
+export async function listPendingStudentPriceReviews(
+  db: D1Database,
+): Promise<Array<{
+  caseId: string;
+  currency: Currency;
+  standardPriceMinor: number;
+  studentPriceMinor: number;
+}>>;
+
+export async function resolveStudentDiscount(input: {
+  db: D1Database;
+  caseId: string;
+  accepted: boolean;
+}): Promise<void>;
 ~~~
 
 - select 明列六欄，禁止 SELECT *。
@@ -612,6 +633,8 @@ export async function updateCaseStatus(input: {
 - cases 只更新 status；updatedAt 放在 case_runtime。
 - 列表 UI 顯示有限資訊，使 Kamel 可用編號與日期辨識。
 - 不建立案件詳細內容頁，不讀 Google Form 內容。
+- Kamel 先在 Google Form 人工確認已遮蔽的學生證明，再由 student-discount action 選擇接受或拒絕；網站不自行判定。
+- action 完成後 UI 提醒 Kamel 依原約定用 Email 告知結果；網站不自動寄客戶確認信。
 
 ### Step 5：擴充簽章 gateway 的 ledger 清理操作
 
@@ -659,7 +682,7 @@ export async function confirmCleanup(input: {
 
 D1 transaction 次序：
 
-1. 驗證 due 與 checklist。
+1. 驗證 due、checklist，並確認 student_review_state 已不是 pending。
 2. 呼叫 gateway.cleanupLedger。
 3. gateway 成功後 transaction DELETE submission_attempts 與 case_runtime。
 4. 確認 cases 還在。
@@ -673,6 +696,7 @@ admin/cases.tsx：
 
 - 表格只顯示案件編號、服務、價格、日期、狀態。
 - 狀態 dropdown 透過 case-status action 更新。
+- 若另行查詢到 student review pending，只在相同案件列顯示一般價、學生價與「接受／拒絕學生優惠」；不顯示證明或身份資料，選擇後欄位立即消失。
 - mobile 改為卡片，但欄位相同。
 - 逾期可清理項目顯示「確認清理」。
 - CleanupChecklist 三項全部勾選後才可送出。
@@ -685,7 +709,7 @@ admin/cases.tsx：
 Run:
 
 - npm run typecheck
-- npm run test:worker -- tests/worker/admin-cases.test.ts tests/worker/admin-cleanup.test.ts
+- npm run test:worker -- tests/worker/admin-cases.test.ts tests/worker/admin-student-discount.test.ts tests/worker/admin-cleanup.test.ts
 - npm run test:apps-script
 - npm run test:e2e -- tests/e2e/admin-cases.spec.ts
 - npm run format:check
