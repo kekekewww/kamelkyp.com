@@ -1052,7 +1052,8 @@ export async function verifyTurnstile(input: {
   token: string;
   secret: string;
   remoteIp: string | null;
-  expectedHostname: string;
+  allowedHostnames: ReadonlySet<string>;
+  expectedAction: string;
   fetcher: typeof fetch;
 }): Promise<void> {
   const response = await input.fetcher(
@@ -1076,12 +1077,11 @@ export async function verifyTurnstile(input: {
     throw new Error(duplicate ? "turnstile_expired" : "turnstile_failed");
   }
 
-  if (
-    result.hostname &&
-    result.hostname !== input.expectedHostname &&
-    !input.expectedHostname.endsWith(".workers.dev")
-  ) {
+  if (!result.hostname || !input.allowedHostnames.has(result.hostname)) {
     throw new Error("turnstile_hostname_mismatch");
+  }
+  if (result.action !== input.expectedAction) {
+    throw new Error("turnstile_action_mismatch");
   }
 }
 ~~~
@@ -1092,6 +1092,8 @@ Preview keys:
 - Secret: 1x0000000000000000000000000000000AA
 
 Production workflow must reject these exact values.
+
+The official dummy validation response reports hostname localhost and action test, so Preview passes allowedHostnames = new Set(["localhost"]) and expectedAction = "test". Production passes only new Set(["kamelkyp.com"]) and expectedAction = "commission-submit". There is no workers.dev suffix bypass. tests/worker/turnstile.test.ts must reject a missing hostname, an unlisted hostname and a wrong action even when success is true.
 
 - [ ] **Step 4: Implement prepare endpoint without storing the full form**
 
