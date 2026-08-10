@@ -16,8 +16,8 @@
     "test:unit": "vitest run --config vitest.config.ts tests/unit",
     "test:worker": "vitest run --config vitest.worker.config.ts tests/worker",
     "test:e2e": "playwright test",
-    "deploy:preview": "node scripts/render-wrangler-config.mjs preview && wrangler deploy --config .wrangler.generated.jsonc",
-    "deploy:production": "node scripts/render-wrangler-config.mjs production && wrangler deploy --config .wrangler.generated.jsonc"
+    "deploy:preview": "npm run build && node scripts/render-wrangler-config.mjs preview && wrangler deploy --config build/server/.wrangler.generated.jsonc",
+    "deploy:production": "npm run build && node scripts/render-wrangler-config.mjs production && wrangler deploy --config build/server/.wrangler.generated.jsonc"
   },
   "dependencies": {
     "isbot": "5.2.1",
