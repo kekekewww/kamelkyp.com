@@ -620,8 +620,10 @@ CREATE TABLE IF NOT EXISTS case_runtime (
   student_price_minor INTEGER,
   updated_at TEXT NOT NULL,
   CHECK (
-    (student_review_state = 'none') OR
-    (standard_price_minor IS NOT NULL AND student_price_minor IS NOT NULL)
+    (student_review_state = 'none' AND
+      standard_price_minor IS NULL AND student_price_minor IS NULL) OR
+    (student_review_state = 'pending' AND
+      standard_price_minor IS NOT NULL AND student_price_minor IS NOT NULL)
   )
 );
 
