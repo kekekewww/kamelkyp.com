@@ -19,7 +19,7 @@
   - Edited Transition：1–5 首 NT$4,000，第 6 首起每首 NT$800。
 - 急件 50%、Simple 諮詢 50%、素材整理 5% 各自以服務基價計算，不複利。
 - 服務基價與送出前附加費合計後，學生優惠減少 30%。
-- 第 6 次起小修改 10%、第 2 次起重大修改 50%、工程檔 50%，各自以鎖定初始報價計算。
+- 前 5 次小範圍修改免費，第 6 次起每次 10%；第 1 次重大修改免費，第 2 次起每次 50%；正式交付後工程檔 50%，三者各自以鎖定初始報價計算。
 - 中文顯示 TWD；英文顯示 USD cents；送出時保存 TWD、USD、匯率值、日期與來源。
 - 完整表單不得寫入 D1。
 - 不接受任何 File Input；連結只允許 HTTPS。
@@ -27,6 +27,7 @@
 - Email 必填；聯絡平台／帳號至少一組；未成年必須勾選監護人授權。
 - 學生證明使用選填的外部連結；選擇學生優惠時該連結成為必填。
 - 條款使用一個統一必填勾選，且保存版本 ID 與同意時間到清理日。
+- 條款 fixture 與後台欄位必須覆蓋設計規格第 11–14 節：銀行匯款／PayPal、確認委託後 50% 訂金才開工、確認預覽後付尾款、排隊與時程、修改、取消、工程檔、所有權、credit、保密、作品集許可與聯絡進度；用途可說明但不得改變報價。
 - 複核頁可返回任一區段；送出成功前不清除草稿。
 - Plan 04 Preview 只完成 prepare 驗證，不建立正式案件；Plan 05 接上實際同步後才回傳正式成功畫面。
 
@@ -816,6 +817,8 @@ Cloud commit message: feat: add service-specific commission drafts.
 - Create: app/routes/public/commission-category.tsx
 - Create: app/routes/public/commission-service.tsx
 - Create: app/styles/commission.css
+- Create: tests/fixtures/term-publications.ts
+- Create: tests/fixtures/term-publications.ts
 - Create: tests/e2e/commission-navigation.spec.ts
 - Create: tests/e2e/commission-review.spec.ts
 - Create: tests/e2e/commission-mobile.spec.ts
@@ -863,6 +866,9 @@ test("full mix can be reviewed and edited before validation", async ({ page }) =
   await page.getByLabel("Direction").fill("Clear vocal");
   await page.getByRole("button", { name: "Next" }).click();
 
+  await expect(page.getByText(/Bank transfer|銀行匯款/)).toBeVisible();
+  await expect(page.getByText(/PayPal/)).toBeVisible();
+  await expect(page.getByText(/first 5|前 5 次/)).toBeVisible();
   await page.getByLabel(/I have read and agree/).check();
   await page.getByRole("button", { name: "Review" }).click();
   await expect(page.getByText("Artist K")).toBeVisible();
@@ -921,6 +927,26 @@ function previousStep(current: WizardStep): WizardStep {
 On each valid details change, debounce saveDraft by 300ms. On validation errors, focus the first invalid control and link error summary anchors to field IDs.
 
 TermsStep receives full common, service-specific and privacy blocks plus immutable version IDs. The unified checkbox is not persisted to localStorage and resets whenever any version ID changes.
+
+tests/fixtures/term-publications.ts 建立 zh／en 測試版本，內容直接依設計規格第 11–14 節，不作自動翻譯，並至少包含以下穩定 clause key：
+
+- payment_methods：銀行匯款或 PayPal。
+- deposit：確認委託後支付鎖定初始報價 50% 才開始。
+- final_payment：確認預覽後支付尾款。
+- minor_revisions：前 5 次小範圍修改免費，第 6 次起每次為鎖定初始報價 10%。
+- major_revisions：第 1 次重大修改免費，第 2 次起每次為鎖定初始報價 50%，重大變更先告知。
+- client_cancellation：中途取消不退訂金。
+- provider_failure：Kamel 因自身原因無法完成時，依設計規格的「總金額六折」退款公式顯示完整範例，且上線前必須經法律審閱。
+- queue_and_timing：須排隊，預估工作日依服務，完工時間依實際情況調整。
+- delivery_and_retention：正式成品交付後工程至少保存 7 日，不保證永久保存。
+- project_file_purchase：正式交付後要求工程檔為鎖定初始報價 50%。
+- ownership：甲方保有其人聲、原創歌曲、伴奏與分軌；Kamel 保有工程檔。
+- confidentiality：作品發布前或甲方同意前保密。
+- credit_and_portfolio：公開使用只需 credit；是否允許 Kamel 放入作品集由委託者選擇。
+- progress_contact：甲方可用任何有效聯絡方式詢問進度。
+- purpose_no_price_effect：說明用途不影響報價。
+
+這個 fixture 只供 Preview／E2E；Production 不自動發布法律文字。Kamel 必須在 Plan 06 後台輸入或審閱同內容，通過法務 gate 後自行發布。
 
 ReviewStep displays every entered field, selected options, price components, term version labels and separate Edit buttons. It does not hide project links or student proof from the submitting client.
 
