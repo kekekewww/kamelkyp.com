@@ -47,7 +47,7 @@
 
 ### 3.1 技術選型
 
-- 前端與伺服器框架：React Router 7 Framework Mode、TypeScript、Vite。
+- 前端與伺服器框架：React Router 8 Framework Mode、TypeScript、Vite。
 - 執行環境：Cloudflare Workers。
 - 關聯資料庫：Cloudflare D1。
 - 管理後台保護：Cloudflare Access Email OTP。
