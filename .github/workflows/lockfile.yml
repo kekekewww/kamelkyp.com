@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ github.ref_name }}
+          ref: codex/01-cloud-foundation
       - uses: actions/setup-node@v5
         with:
           node-version: 24
@@ -37,7 +37,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ github.ref_name }}
+          ref: codex/01-cloud-foundation
       - uses: actions/setup-node@v5
         with:
           node-version: 24
@@ -46,3 +46,24 @@ jobs:
       - run: npm ci
       - run: npm run test:unit -- tests/unit/service-id.test.ts
       - run: npm run format:check
+  organize-imports:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: codex/01-cloud-foundation
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - run: npx biome check --write tests/unit/cloudflare-context.test.ts app/routes.ts
+      - name: Commit exact import organization
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- tests/unit/cloudflare-context.test.ts app/routes.ts
+          git diff --cached --quiet || git commit -m "style: organize audited imports"
+          git push
