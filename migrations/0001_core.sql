@@ -25,7 +25,8 @@ CREATE TABLE IF NOT EXISTS content_versions (
   social_image_url TEXT,
   created_at TEXT NOT NULL,
   published_at TEXT,
-  UNIQUE (entry_id, locale, version_number)
+  UNIQUE (entry_id, locale, version_number),
+  UNIQUE (id, entry_id, locale)
 );
 
 CREATE TABLE IF NOT EXISTS content_publications (
@@ -34,8 +35,30 @@ CREATE TABLE IF NOT EXISTS content_publications (
   version_id TEXT NOT NULL UNIQUE
     REFERENCES content_versions(id) ON DELETE RESTRICT,
   published_at TEXT NOT NULL,
-  PRIMARY KEY (entry_id, locale)
+  PRIMARY KEY (entry_id, locale),
+  FOREIGN KEY (version_id, entry_id, locale)
+    REFERENCES content_versions(id, entry_id, locale) ON DELETE RESTRICT
 );
+
+CREATE TRIGGER content_versions_publish_pointer
+AFTER UPDATE OF state ON content_versions
+WHEN OLD.state = 'draft' AND NEW.state = 'published'
+BEGIN
+  INSERT INTO content_publications (
+    entry_id,
+    locale,
+    version_id,
+    published_at
+  ) VALUES (
+    NEW.entry_id,
+    NEW.locale,
+    NEW.id,
+    NEW.published_at
+  )
+  ON CONFLICT(entry_id, locale) DO UPDATE SET
+    version_id = excluded.version_id,
+    published_at = excluded.published_at;
+END;
 
 CREATE TABLE IF NOT EXISTS service_definitions (
   id TEXT PRIMARY KEY CHECK (
@@ -72,7 +95,8 @@ CREATE TABLE IF NOT EXISTS term_versions (
   body_json TEXT NOT NULL,
   created_at TEXT NOT NULL,
   effective_from TEXT,
-  UNIQUE (document_id, locale, version_number)
+  UNIQUE (document_id, locale, version_number),
+  UNIQUE (id, document_id, locale)
 );
 
 CREATE TABLE IF NOT EXISTS term_publications (
@@ -80,7 +104,9 @@ CREATE TABLE IF NOT EXISTS term_publications (
   locale TEXT NOT NULL CHECK (locale IN ('zh', 'en')),
   version_id TEXT NOT NULL UNIQUE REFERENCES term_versions(id),
   effective_from TEXT NOT NULL,
-  PRIMARY KEY (document_id, locale)
+  PRIMARY KEY (document_id, locale),
+  FOREIGN KEY (version_id, document_id, locale)
+    REFERENCES term_versions(id, document_id, locale)
 );
 
 CREATE TABLE IF NOT EXISTS media_items (
