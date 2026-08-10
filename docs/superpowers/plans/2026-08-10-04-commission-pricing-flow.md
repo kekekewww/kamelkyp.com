@@ -79,6 +79,7 @@
 - workers/app.ts
 - wrangler.base.jsonc
 - scripts/render-wrangler-config.mjs
+- .github/workflows/deploy-preview.yml
 - app/styles/global.css
 
 ### Produced Interfaces
@@ -874,7 +875,6 @@ Cloud commit message: feat: add service-specific commission drafts.
 - Create: app/routes/public/commission-service.tsx
 - Create: app/styles/commission.css
 - Create: tests/fixtures/term-publications.ts
-- Create: tests/fixtures/term-publications.ts
 - Create: tests/e2e/commission-navigation.spec.ts
 - Create: tests/e2e/commission-review.spec.ts
 - Create: tests/e2e/commission-mobile.spec.ts
@@ -1208,7 +1208,7 @@ scripts/render-wrangler-config.mjs now requires RATE_LIMIT_NAMESPACE_ID to be a 
 
 ~~~js
 const rateLimitNamespaceId = process.env.RATE_LIMIT_NAMESPACE_ID;
-if (!/^\\d+$/.test(rateLimitNamespaceId ?? "")) {
+if (!/^\d+$/.test(rateLimitNamespaceId ?? "")) {
   throw new Error("invalid_rate_limit_namespace_id");
 }
 config.ratelimits = [
