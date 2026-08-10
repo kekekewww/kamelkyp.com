@@ -42,6 +42,7 @@ jobs:
         with:
           node-version: 24
           cache: npm
-          cache-dependency-path: package.json
-      - run: npm install --ignore-scripts
+          cache-dependency-path: package-lock.json
+      - run: npm ci
       - run: npm run test:unit -- tests/unit/service-id.test.ts
+      - run: npm run format:check
