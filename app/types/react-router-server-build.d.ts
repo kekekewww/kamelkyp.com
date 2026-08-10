@@ -1,6 +1,7 @@
 declare module "virtual:react-router/server-build" {
-  const build: Parameters<
-    typeof import("react-router").createRequestHandler
-  >[0];
-  export default build;
+  import type { createRequestHandler } from "react-router";
+
+  const build: Parameters<typeof createRequestHandler>[0];
+
+  export = build;
 }
