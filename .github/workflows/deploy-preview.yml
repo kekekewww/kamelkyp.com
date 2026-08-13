@@ -1,0 +1,86 @@
+name: preview
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: preview
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - name: Require trusted Preview configuration
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
+          TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
+          ACCESS_AUD: ${{ vars.ACCESS_AUD }}
+          ACCESS_TEAM_DOMAIN: ${{ vars.ACCESS_TEAM_DOMAIN }}
+          ADMIN_EMAIL: ${{ vars.ADMIN_EMAIL }}
+          WORKERS_DEV_SUBDOMAIN: ${{ vars.WORKERS_DEV_SUBDOMAIN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          for value in "$CLOUDFLARE_API_TOKEN" "$CLOUDFLARE_ACCOUNT_ID" "$D1_DATABASE_ID" "$TURNSTILE_SITE_KEY" "$ACCESS_AUD" "$ACCESS_TEAM_DOMAIN" "$ADMIN_EMAIL" "$WORKERS_DEV_SUBDOMAIN" "$PR_NUMBER"; do
+            if [ -z "$value" ]; then
+              echo "required preview deployment configuration is missing" >&2
+              exit 1
+            fi
+          done
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run test:unit
+      - run: npm run test:worker
+      - run: npm run typecheck
+      - run: npm run build
+      - name: Render generated SSR Worker configuration
+        env:
+          D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
+          TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
+          ACCESS_AUD: ${{ vars.ACCESS_AUD }}
+          ACCESS_TEAM_DOMAIN: ${{ vars.ACCESS_TEAM_DOMAIN }}
+          ADMIN_EMAIL: ${{ vars.ADMIN_EMAIL }}
+          WORKERS_DEV_SUBDOMAIN: ${{ vars.WORKERS_DEV_SUBDOMAIN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: node scripts/render-wrangler-config.mjs preview
+      - name: Apply preview migrations
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler d1 migrations apply kamelkyp-preview --remote --config build/server/.wrangler.generated.jsonc
+      - name: Deploy preview Worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler deploy --config build/server/.wrangler.generated.jsonc
+      - name: Remove generated deployment configuration
+        if: always()
+        shell: bash
+        run: rm -f build/server/.wrangler.generated.jsonc
+      - id: preview-url
+        name: Derive preview URL
+        shell: bash
+        env:
+          WORKERS_DEV_SUBDOMAIN: ${{ vars.WORKERS_DEV_SUBDOMAIN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: echo "url=https://kamelkyp-com-pr-$PR_NUMBER.$WORKERS_DEV_SUBDOMAIN.workers.dev" >> "$GITHUB_OUTPUT"
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Smoke test deployed preview
+        env:
+          PREVIEW_URL: ${{ steps.preview-url.outputs.url }}
+        run: npm run test:e2e -- tests/e2e/smoke.spec.ts

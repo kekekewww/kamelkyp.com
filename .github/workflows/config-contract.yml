@@ -1,0 +1,29 @@
+name: Cloud configuration contract
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - codex/01-cloud-foundation
+
+permissions:
+  contents: read
+
+jobs:
+  config-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - run: npm run test:worker -- tests/worker/migrations.test.ts tests/worker/content-repository.test.ts
+      - run: npm run test:unit
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npx wrangler deploy --dry-run --config build/server/wrangler.json

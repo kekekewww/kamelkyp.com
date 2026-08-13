@@ -1,0 +1,47 @@
+name: ci
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, codex/01-cloud-foundation]
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run test:unit
+      - run: npm run typecheck
+      - run: npm run build
+      - name: Render generated SSR Worker configuration for dry-run
+        env:
+          D1_DATABASE_ID: 11111111-1111-4111-8111-111111111111
+          TURNSTILE_SITE_KEY: ci-site-key
+          ACCESS_AUD: ci-access-audience
+          ACCESS_TEAM_DOMAIN: ci.cloudflareaccess.com
+          ADMIN_EMAIL: ci@example.com
+          WORKERS_DEV_SUBDOMAIN: ci-preview
+          PR_NUMBER: "1"
+        run: node scripts/render-wrangler-config.mjs preview
+      - run: npx wrangler deploy --dry-run --config build/server/.wrangler.generated.jsonc
+
+  worker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run test:worker
