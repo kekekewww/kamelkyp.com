@@ -6,7 +6,7 @@ Kamel 的雙語音樂委託網站。專案規劃支援混音、Vocal 混音、�
 
 - Plan 01 Cloud Foundation 已完成原始碼、D1 schema、內容 repository、Cloudflare Worker、CI 與 Preview workflow。
 - Plan 02–06 的完整實作計畫與網站規格已保存在 [`docs/superpowers`](docs/superpowers)。
-- Preview D1、Turnstile 與 GitHub `preview` Environment 已建立；正式 Preview 部署仍需補齊 Cloudflare CI Token 與 Access 設定。
+- Preview D1、Turnstile 與 GitHub `preview` Environment 已建立；正式 Preview 部署仍需補齊 Cloudflare Access 設定。
 
 ## 開發環境
 

@@ -48,16 +48,15 @@ Repository：`https://github.com/kekekewww/kamelkyp.com`
 
 GitHub `preview` Environment 已包含以下設定名稱：
 
-- Secrets：`CLOUDFLARE_ACCOUNT_ID`、`D1_DATABASE_ID`、`TURNSTILE_SECRET`。
+- Secrets：`CLOUDFLARE_ACCOUNT_ID`、`CLOUDFLARE_API_TOKEN`、`D1_DATABASE_ID`、`TURNSTILE_SECRET`。
 - Variables：`ADMIN_EMAIL`、`TURNSTILE_SITE_KEY`、`WORKERS_DEV_SUBDOMAIN`。
 
 Secret 值、D1 UUID、OAuth Token 與 Turnstile Secret 不記錄在這份公開文件。
 
 ## 尚未完成的外部設定
 
-Preview workflow 在合併時仍缺少：
+最新 Preview workflow 已成功讀取並遮罩 `CLOUDFLARE_API_TOKEN`；目前仍缺少：
 
-- Secret：`CLOUDFLARE_API_TOKEN`
 - Variable：`ACCESS_AUD`
 - Variable：`ACCESS_TEAM_DOMAIN`
 
@@ -70,13 +69,11 @@ gh secret list --env preview
 gh variable list --env preview
 ```
 
-不要在終端歷史、issue、PR 或對話中貼出 Secret 值。`CLOUDFLARE_API_TOKEN` 應以互動方式設定：
-
-```powershell
-gh secret set CLOUDFLARE_API_TOKEN --env preview
-```
+不要在終端歷史、issue、PR 或對話中貼出 Secret 值。GitHub Environment 的 Secret 不需要搬移到新電腦；需要輪替時再以互動方式重新設定。
 
 ## 驗證與部署
+
+合併後的 [`main` CI run 31712851358](https://github.com/kekekewww/kamelkyp.com/actions/runs/31712851358) 已通過。最新 [`Deploy Preview` run 31712705490](https://github.com/kekekewww/kamelkyp.com/actions/runs/31712705490) 只因缺少上述兩項 Access Variables 而在明確的設定閘門停止。
 
 本機完整驗證：
 

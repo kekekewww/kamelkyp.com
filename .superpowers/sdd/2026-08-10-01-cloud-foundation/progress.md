@@ -15,4 +15,4 @@ Task 3: fix round 1/5 (current root API, test runtime compatibility/types; commi
 Task 3: fix round 2/5 (all 5 findings addressed, no new breakage; commits 5ae770b..bf67c39)
 Task 3: complete (commits 63491ea..bf67c39, review clean; GREEN https://github.com/kekekewww/kamelkyp.com/actions/runs/31408461684)
 Task 4: implementation complete (commits bf67c39..754d64c; scoped credential review clean)
-Task 4: external deployment pending (CLOUDFLARE_API_TOKEN, ACCESS_AUD and ACCESS_TEAM_DOMAIN; user requested main integration on 2026-08-13 for computer transfer)
+Task 4: external deployment pending (ACCESS_AUD and ACCESS_TEAM_DOMAIN; CLOUDFLARE_API_TOKEN is configured; user requested main integration on 2026-08-13 for computer transfer)

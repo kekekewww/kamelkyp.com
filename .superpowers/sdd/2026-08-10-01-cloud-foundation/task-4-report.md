@@ -2,7 +2,7 @@
 
 ## Status
 
-Implementation and code review fixes are complete. The remote Preview deployment gate remains pending because the external GitHub Environment does not yet have the Cloudflare CI token or Cloudflare Access values.
+Implementation and code review fixes are complete. The remote Preview deployment gate remains pending because the external GitHub Environment does not yet have the Cloudflare Access values.
 
 The user explicitly requested integration to `main` on 2026-08-13 to transfer computer environments. This report preserves the incomplete external configuration as a visible handoff item rather than representing Preview deployment as green.
 
@@ -26,8 +26,8 @@ The re-review kept one external prerequisite open: Preview Environment values an
 
 ## Existing hosted evidence
 
-- CI workflow run `31412957037`: quality and Worker jobs passed.
-- The corresponding Preview run failed at the explicit missing-configuration gate; migration, deployment and E2E did not run.
+- Main CI workflow run [`31712851358`](https://github.com/kekekewww/kamelkyp.com/actions/runs/31712851358) passed after merge commit `6ac051a`.
+- Preview workflow run [`31712705490`](https://github.com/kekekewww/kamelkyp.com/actions/runs/31712705490) loaded the masked Cloudflare API token and failed at the explicit missing-Access gate; migration, deployment and E2E did not run.
 - Earlier focused tests, typecheck, production build and generated SSR Wrangler dry-run passed during Task 4 implementation/review.
 
 ## Cloud resources prepared after implementation
@@ -35,6 +35,7 @@ The re-review kept one external prerequisite open: Preview Environment values an
 - D1 database `kamelkyp-preview` created in APAC.
 - Managed Turnstile widget `kamelkyp-preview` created.
 - GitHub `preview` Environment contains the D1/Turnstile/account settings that can be stored safely through GitHub.
+- The latest Preview workflow successfully loaded the masked `CLOUDFLARE_API_TOKEN` secret.
 - Preview Environment has a PR merge-ref deployment branch policy.
 
 No resource ID or secret value is recorded in this report.
@@ -43,7 +44,6 @@ No resource ID or secret value is recorded in this report.
 
 Required before rerunning Preview deployment:
 
-- `CLOUDFLARE_API_TOKEN` secret.
 - `ACCESS_AUD` variable.
 - `ACCESS_TEAM_DOMAIN` variable.
 
