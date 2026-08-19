@@ -1,19 +1,19 @@
 import { Link } from "react-router";
 import type { Locale } from "../../lib/i18n/locale";
 import { localePath } from "../../lib/i18n/path";
+import type { FxSnapshot } from "../../lib/pricing/fx-repository.server";
 import { getService } from "../../lib/services/catalog";
 import type { ServiceId } from "../../lib/services/service-id";
-
-function formatTwd(amount: number): string {
-  return `NT$${new Intl.NumberFormat("en-US").format(amount)}`;
-}
+import { ServicePrice } from "../pricing/service-price";
 
 export function ServiceOverview({
   serviceId,
   locale,
+  fxSnapshot,
 }: {
   serviceId: ServiceId;
   locale: Locale;
+  fxSnapshot: FxSnapshot | null;
 }) {
   const service = getService(serviceId);
 
@@ -28,9 +28,11 @@ export function ServiceOverview({
         <div>
           <dt>{locale === "zh" ? "基礎價格" : "Base price"}</dt>
           <dd>
-            {locale === "zh"
-              ? formatTwd(service.basePriceTwd)
-              : "USD · daily exchange rate"}
+            <ServicePrice
+              locale={locale}
+              twd={service.basePriceTwd}
+              fxSnapshot={fxSnapshot}
+            />
           </dd>
         </div>
         <div>
@@ -48,12 +50,18 @@ export function ServiceOverview({
           ))}
         </ul>
       </section>
-      <Link
-        className="button"
-        to={`${localePath(locale, "/commission")}?service=${service.id}`}
-      >
-        {locale === "zh" ? "開始委託" : "Start a commission"}
-      </Link>
+      {locale === "en" && !fxSnapshot ? (
+        <span className="button" aria-disabled="true">
+          Start a commission · USD unavailable
+        </span>
+      ) : (
+        <Link
+          className="button"
+          to={`${localePath(locale, "/commission")}?service=${service.id}`}
+        >
+          {locale === "zh" ? "開始委託" : "Start a commission"}
+        </Link>
+      )}
     </main>
   );
 }

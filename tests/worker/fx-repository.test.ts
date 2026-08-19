@@ -7,12 +7,14 @@ import {
 
 describe("daily FX snapshots", () => {
   it("stores a valid Frankfurter TWD to USD response", async () => {
-    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
-      new Response(
-        JSON.stringify({ date: "2026-08-19", rates: { USD: 0.0325 } }),
-        { headers: { "content-type": "application/json" } },
-      ),
-    );
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(
+        new Response(
+          JSON.stringify({ date: "2026-08-19", rates: { USD: 0.0325 } }),
+          { headers: { "content-type": "application/json" } },
+        ),
+      );
 
     const snapshot = await refreshFxRate(
       env.DB,
@@ -28,18 +30,22 @@ describe("daily FX snapshots", () => {
       source: "Frankfurter",
       fetchedAt: "2026-08-19T01:15:00Z",
     });
-    await expect(
-      getUsableFxSnapshot(env.DB, "2026-08-20"),
-    ).resolves.toEqual(snapshot);
+    await expect(getUsableFxSnapshot(env.DB, "2026-08-20")).resolves.toEqual(
+      snapshot,
+    );
   });
 
   it("upserts duplicate dates and rejects an FX rate older than 3 business days", async () => {
-    const first = vi.fn<typeof fetch>().mockResolvedValue(
-      Response.json({ date: "2026-08-03", rates: { USD: 0.03 } }),
-    );
-    const second = vi.fn<typeof fetch>().mockResolvedValue(
-      Response.json({ date: "2026-08-03", rates: { USD: 0.031 } }),
-    );
+    const first = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(
+        Response.json({ date: "2026-08-03", rates: { USD: 0.03 } }),
+      );
+    const second = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(
+        Response.json({ date: "2026-08-03", rates: { USD: 0.031 } }),
+      );
     await refreshFxRate(
       env.DB,
       "https://api.frankfurter.app/latest?from=TWD&to=USD",

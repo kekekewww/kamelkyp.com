@@ -1,9 +1,13 @@
-import { useOutletContext } from "react-router";
+import { type LoaderFunctionArgs, useLoaderData } from "react-router";
 import { ServiceChoice } from "../../components/services/service-choice";
-import type { PublicOutletContext } from "./layout";
+import { getPublicPriceContext } from "../../lib/pricing/public-price.server";
+
+export async function loader(args: LoaderFunctionArgs) {
+  return getPublicPriceContext(args);
+}
 
 export default function TransitionIndexRoute() {
-  const { locale } = useOutletContext<PublicOutletContext>();
+  const { locale, fxSnapshot } = useLoaderData<typeof loader>();
   return (
     <main className="service-page" id="main-content">
       <header className="service-page__header">
@@ -19,7 +23,11 @@ export default function TransitionIndexRoute() {
             : "Choose a simple or edited transition based on whether structural editing is needed."}
         </p>
       </header>
-      <ServiceChoice category="song_transition" locale={locale} />
+      <ServiceChoice
+        category="song_transition"
+        locale={locale}
+        fxSnapshot={fxSnapshot}
+      />
     </main>
   );
 }

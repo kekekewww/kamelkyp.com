@@ -1,6 +1,7 @@
 import { createRequestHandler } from "react-router";
 import { createCloudflareContextProvider } from "../app/lib/cloudflare/context";
 import type { Env } from "../app/lib/env.server";
+import { refreshFxRate } from "../app/lib/pricing/fx-repository.server";
 
 const requestHandler = createRequestHandler(
   async () => {
@@ -19,5 +20,8 @@ const requestHandler = createRequestHandler(
 export default {
   fetch(request, env, ctx) {
     return requestHandler(request, createCloudflareContextProvider(env, ctx));
+  },
+  scheduled(_controller, env, ctx) {
+    ctx.waitUntil(refreshFxRate(env.DB, env.FX_API_URL, fetch));
   },
 } satisfies ExportedHandler<Env>;

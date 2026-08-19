@@ -1,8 +1,18 @@
-import { useOutletContext } from "react-router";
+import { type LoaderFunctionArgs, useLoaderData } from "react-router";
 import { ServiceOverview } from "../../components/services/service-overview";
-import type { PublicOutletContext } from "./layout";
+import { getPublicPriceContext } from "../../lib/pricing/public-price.server";
+
+export async function loader(args: LoaderFunctionArgs) {
+  return getPublicPriceContext(args);
+}
 
 export default function VocalMixRoute() {
-  const { locale } = useOutletContext<PublicOutletContext>();
-  return <ServiceOverview serviceId="vocal_mix" locale={locale} />;
+  const { locale, fxSnapshot } = useLoaderData<typeof loader>();
+  return (
+    <ServiceOverview
+      serviceId="vocal_mix"
+      locale={locale}
+      fxSnapshot={fxSnapshot}
+    />
+  );
 }

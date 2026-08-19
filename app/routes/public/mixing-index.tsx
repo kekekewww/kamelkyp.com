@@ -1,9 +1,13 @@
-import { useOutletContext } from "react-router";
+import { type LoaderFunctionArgs, useLoaderData } from "react-router";
 import { ServiceChoice } from "../../components/services/service-choice";
-import type { PublicOutletContext } from "./layout";
+import { getPublicPriceContext } from "../../lib/pricing/public-price.server";
+
+export async function loader(args: LoaderFunctionArgs) {
+  return getPublicPriceContext(args);
+}
 
 export default function MixingIndexRoute() {
-  const { locale } = useOutletContext<PublicOutletContext>();
+  const { locale, fxSnapshot } = useLoaderData<typeof loader>();
   return (
     <main className="service-page" id="main-content">
       <header className="service-page__header">
@@ -15,7 +19,11 @@ export default function MixingIndexRoute() {
             : "Choose full-song or vocal mixing based on your source material."}
         </p>
       </header>
-      <ServiceChoice category="mixing" locale={locale} />
+      <ServiceChoice
+        category="mixing"
+        locale={locale}
+        fxSnapshot={fxSnapshot}
+      />
     </main>
   );
 }
