@@ -30,7 +30,7 @@ jobs:
           TURNSTILE_SITE_KEY: ci-site-key
           RATE_LIMIT_NAMESPACE_ID: "41003"
           ACCESS_AUD: ci-access-audience
-          ACCESS_TEAM_DOMAIN: ci.cloudflareaccess.com
+          ACCESS_TEAM_DOMAIN: https://ci.cloudflareaccess.com
           ADMIN_EMAIL: ci@example.com
           WORKERS_DEV_SUBDOMAIN: ci-preview
           PR_NUMBER: "1"

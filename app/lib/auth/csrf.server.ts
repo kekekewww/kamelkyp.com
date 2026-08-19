@@ -76,6 +76,9 @@ export async function verifyCsrfToken(input: {
     const [payload, encodedSignature, extra] = input.token.split(".");
     if (!payload || !encodedSignature || extra) throw new Error("token_shape");
     const signature = fromBase64Url(encodedSignature);
+    if (toBase64Url(signature) !== encodedSignature) {
+      throw new Error("signature_encoding_invalid");
+    }
     const valid = await crypto.subtle.verify(
       "HMAC",
       await importHmacKey(input.secret),
