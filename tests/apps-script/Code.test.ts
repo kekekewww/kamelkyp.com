@@ -47,7 +47,9 @@ async function createHarness() {
     ["HMAC_SECRET", secret],
     [
       "FORM_ITEM_MAP",
-      JSON.stringify(Object.fromEntries(formKeys.map((key, index) => [key, index + 1]))),
+      JSON.stringify(
+        Object.fromEntries(formKeys.map((key, index) => [key, index + 1])),
+      ),
     ],
   ]);
   const formSubmit = vi.fn(() => ({ getId: () => "google-response-1" }));
@@ -67,7 +69,9 @@ async function createHarness() {
     base64EncodeWebSafe: (bytes: number[]) => base64Url(Uint8Array.from(bytes)),
     base64DecodeWebSafe: (value: string) => {
       const base64 = value.replaceAll("-", "+").replaceAll("_", "/");
-      const decoded = atob(base64.padEnd(Math.ceil(base64.length / 4) * 4, "="));
+      const decoded = atob(
+        base64.padEnd(Math.ceil(base64.length / 4) * 4, "="),
+      );
       return [...decoded].map((character) => character.charCodeAt(0));
     },
     newBlob: (bytes: number[]) => ({
@@ -135,7 +139,9 @@ async function createHarness() {
 
   function invoke(envelope: Record<string, unknown>) {
     return JSON.parse(
-      runtime.doPost({ postData: { contents: JSON.stringify(envelope) } }).getContent(),
+      runtime
+        .doPost({ postData: { contents: JSON.stringify(envelope) } })
+        .getContent(),
     );
   }
 

@@ -16,9 +16,9 @@ describe("HMAC envelope", () => {
       nonce: "f5dc165c-6f50-40d5-aee3-cc03128cbf58",
     });
 
-    await expect(verifySignedEnvelopeForTest(envelope, secret)).resolves.toEqual(
-      { displayName: "藝名 K", serviceId: "full_mix" },
-    );
+    await expect(
+      verifySignedEnvelopeForTest(envelope, secret),
+    ).resolves.toEqual({ displayName: "藝名 K", serviceId: "full_mix" });
   });
 
   it("rejects any payload change", async () => {
