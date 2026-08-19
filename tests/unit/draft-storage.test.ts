@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   clearDraft,
+  clearRetryCaseId,
   type DraftStorage,
   loadDraft,
+  loadRetryCaseId,
   saveDraft,
+  saveRetryCaseId,
 } from "../../app/lib/commission/draft.client";
 import type { CommissionDraft } from "../../app/lib/commission/schema";
 
@@ -74,5 +77,16 @@ describe("local-only commission drafts", () => {
     expect(serialized).not.toContain("turnstile");
     expect(serialized).not.toContain("termsAcceptedAt");
     expect(serialized).not.toContain("caseId");
+  });
+
+  it("stores only a validated retry Case ID in a separate service key", () => {
+    const storage = memoryStorage();
+    saveRetryCaseId("full_mix", "KAM-20260810-0000000001", storage);
+    expect(loadRetryCaseId("full_mix", storage)).toBe(
+      "KAM-20260810-0000000001",
+    );
+    expect(loadRetryCaseId("vocal_mix", storage)).toBeNull();
+    clearRetryCaseId("full_mix", storage);
+    expect(loadRetryCaseId("full_mix", storage)).toBeNull();
   });
 });
