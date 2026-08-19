@@ -22,6 +22,7 @@ import { QuoteSummary } from "./quote-summary";
 import { ReviewStep } from "./review-step";
 import { SimpleTransitionFields } from "./simple-transition-fields";
 import { TermsStep } from "./terms-step";
+import { TurnstileWidget } from "./turnstile-widget";
 
 type WizardStep = "details" | "terms" | "review" | "verify";
 
@@ -100,12 +101,16 @@ export function CommissionWizard({
   priceRule,
   terms,
   fxSnapshot,
+  turnstileSiteKey,
+  turnstileAction,
 }: {
   locale: Locale;
   serviceId: ServiceId;
   priceRule: PriceRule;
   terms: PublishedTermDocument[];
   fxSnapshot: FxSnapshot | null;
+  turnstileSiteKey: string;
+  turnstileAction: string;
 }) {
   const [draft, setDraft] = useState<CommissionDraft>(() =>
     createEmptyDraft(serviceId),
@@ -114,6 +119,12 @@ export function CommissionWizard({
   const [loaded, setLoaded] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [challengeKey, setChallengeKey] = useState(0);
+  const [submitState, setSubmitState] = useState<
+    "idle" | "submitting" | "ready"
+  >("idle");
+  const [submitMessage, setSubmitMessage] = useState("");
   const service = getService(serviceId);
   const versionKey = terms.map((term) => term.versionId).join("|");
 
@@ -174,6 +185,50 @@ export function CommissionWizard({
     setTermsAccepted(false);
     setErrors([]);
     setStep("details");
+  }
+
+  async function validateEnvelope() {
+    if (!turnstileToken || submitState === "submitting") return;
+    setSubmitState("submitting");
+    setSubmitMessage("");
+    try {
+      const response = await fetch("/api/commission/prepare", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          locale,
+          draft,
+          clientClaimedTotal: quote.lockedInitialTwd,
+          termVersionIds: terms.map((term) => term.versionId),
+          termsAccepted,
+          turnstileToken,
+        }),
+      });
+      const result = (await response.json()) as {
+        ok: boolean;
+        error?: { message?: string };
+      };
+      if (!response.ok || !result.ok) {
+        throw new Error(result.error?.message ?? "prepare_failed");
+      }
+      setSubmitState("ready");
+      setSubmitMessage(
+        isZh
+          ? "驗證完成。草稿仍保留在此裝置，待安全送出閘道啟用。"
+          : "Validation complete. Your draft remains on this device until the secure submission gateway is enabled.",
+      );
+    } catch (error) {
+      setSubmitState("idle");
+      setTurnstileToken("");
+      setChallengeKey((current) => current + 1);
+      setSubmitMessage(
+        error instanceof Error
+          ? error.message
+          : isZh
+            ? "驗證失敗，請再試一次。"
+            : "Verification failed. Please try again.",
+      );
+    }
   }
 
   const isZh = locale === "zh";
@@ -289,9 +344,45 @@ export function CommissionWizard({
               ? "資料已準備完成。下一階段會在此驗證防機器人並安全送出。"
               : "The envelope is ready. The next stage verifies Turnstile and submits it securely."}
           </p>
+          {turnstileSiteKey ? (
+            <TurnstileWidget
+              key={challengeKey}
+              siteKey={turnstileSiteKey}
+              action={turnstileAction}
+              onToken={setTurnstileToken}
+              onError={() => setTurnstileToken("")}
+            />
+          ) : (
+            <p role="alert">
+              {isZh
+                ? "目前無法載入防機器人驗證。"
+                : "Bot verification is currently unavailable."}
+            </p>
+          )}
+          {submitMessage ? (
+            <p
+              className="commission-submit-status"
+              role={submitState === "ready" ? "status" : "alert"}
+            >
+              {submitMessage}
+            </p>
+          ) : null}
           <div className="commission-actions">
             <button type="button" onClick={() => setStep("review")}>
               {isZh ? "返回複核" : "Back to review"}
+            </button>
+            <button
+              type="button"
+              disabled={!turnstileToken || submitState === "submitting"}
+              onClick={validateEnvelope}
+            >
+              {submitState === "submitting"
+                ? isZh
+                  ? "驗證中…"
+                  : "Validating…"
+                : isZh
+                  ? "驗證委託"
+                  : "Validate commission"}
             </button>
           </div>
         </section>

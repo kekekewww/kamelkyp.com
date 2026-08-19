@@ -95,7 +95,9 @@ function validInput() {
 
 describe("trusted commission preparation", () => {
   it("ignores client totals and recomputes the locked quote", async () => {
-    const before = await env.DB.prepare("SELECT COUNT(*) AS total FROM cases").first<{
+    const before = await env.DB.prepare(
+      "SELECT COUNT(*) AS total FROM cases",
+    ).first<{
       total: number;
     }>();
     const result = await prepareSubmission(validInput());
@@ -107,7 +109,9 @@ describe("trusted commission preparation", () => {
     });
     expect(result.termVersionIds).toEqual(activeTermIds);
     expect(result.normalizedDraft.email).toBe("artist@example.com");
-    const after = await env.DB.prepare("SELECT COUNT(*) AS total FROM cases").first<{
+    const after = await env.DB.prepare(
+      "SELECT COUNT(*) AS total FROM cases",
+    ).first<{
       total: number;
     }>();
     expect(after?.total).toBe(before?.total);

@@ -5,6 +5,7 @@ playwright-report/
 test-results/
 .wrangler/
 .wrangler.generated.jsonc
+.wrangler.secrets.json
 .react-router/
 *.tsbuildinfo
 worker-configuration.d.ts

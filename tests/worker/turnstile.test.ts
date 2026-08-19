@@ -22,7 +22,9 @@ describe("Turnstile verification", () => {
       hostname: "localhost",
       action: "test",
     });
-    await expect(verifyTurnstile({ ...base, fetcher })).resolves.toBeUndefined();
+    await expect(
+      verifyTurnstile({ ...base, fetcher }),
+    ).resolves.toBeUndefined();
     const request = fetcher.mock.calls[0]?.[1];
     const payload = JSON.parse(String(request?.body));
     expect(payload).toMatchObject({

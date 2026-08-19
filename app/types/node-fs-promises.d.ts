@@ -50,7 +50,11 @@ declare module "node:fs/promises" {
     path: string | URL,
     options: { force: boolean; recursive: boolean },
   ): Promise<void>;
-  export function writeFile(path: string | URL, data: string): Promise<void>;
+  export function writeFile(
+    path: string | URL,
+    data: string,
+    options?: { mode?: number },
+  ): Promise<void>;
 }
 
 declare module "node:os" {

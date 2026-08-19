@@ -10,8 +10,10 @@ export function getPublicLoaderContext({
     throw new Response("Not Found", { status: 404 });
   }
 
+  const cloudflare = context.get(cloudflareContext);
   return {
     locale: params.lang,
-    db: context.get(cloudflareContext).env.DB,
+    db: cloudflare.env.DB,
+    env: cloudflare.env,
   };
 }

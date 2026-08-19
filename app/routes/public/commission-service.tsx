@@ -18,7 +18,7 @@ export async function loader(args: LoaderFunctionArgs) {
   const serviceId = ROUTE_SERVICES[routeKey];
   if (!serviceId) throw new Response("Not Found", { status: 404 });
 
-  const { locale, db } = getPublicLoaderContext(args);
+  const { locale, db, env } = getPublicLoaderContext(args);
   const now = new Date().toISOString();
   const [priceRule, terms] = await Promise.all([
     getActivePriceRule(db, serviceId, now),
@@ -27,7 +27,18 @@ export async function loader(args: LoaderFunctionArgs) {
   const fxSnapshot =
     locale === "en" ? await getUsableFxSnapshot(db, now.slice(0, 10)) : null;
 
-  return { locale, serviceId, priceRule, terms, fxSnapshot };
+  return {
+    locale,
+    serviceId,
+    priceRule,
+    terms,
+    fxSnapshot,
+    turnstileSiteKey: env.TURNSTILE_SITE_KEY,
+    turnstileAction:
+      env.TURNSTILE_SITE_KEY === "1x00000000000000000000AA"
+        ? "test"
+        : "commission-submit",
+  };
 }
 
 export default function CommissionServiceRoute() {

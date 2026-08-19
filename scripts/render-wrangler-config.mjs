@@ -9,6 +9,7 @@ if (environment !== "preview" && environment !== "production") {
 const commonRequired = [
   "D1_DATABASE_ID",
   "TURNSTILE_SITE_KEY",
+  "RATE_LIMIT_NAMESPACE_ID",
   "ACCESS_AUD",
   "ACCESS_TEAM_DOMAIN",
   "ADMIN_EMAIL",
@@ -36,6 +37,11 @@ if (
   !/^[1-9][0-9]*$/.test(process.env.PR_NUMBER ?? "")
 ) {
   throw new Error("invalid_pr_number");
+}
+
+const rateLimitNamespaceId = process.env.RATE_LIMIT_NAMESPACE_ID;
+if (!/^[1-9][0-9]*$/.test(rateLimitNamespaceId ?? "")) {
+  throw new Error("invalid_rate_limit_namespace_id");
 }
 
 const sourceConfig =
@@ -66,6 +72,14 @@ const config = {
       migrations_dir: "../../migrations",
     },
   ],
+  ratelimits: [
+    {
+      name: "SUBMISSION_RATE_LIMITER",
+      namespace_id: rateLimitNamespaceId,
+      simple: { limit: 10, period: 60 },
+    },
+  ],
+  secrets: { required: ["TURNSTILE_SECRET"] },
   vars: {
     ...generated.vars,
     TURNSTILE_SITE_KEY: process.env.TURNSTILE_SITE_KEY,
