@@ -1,6 +1,9 @@
 import { env } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
-import { listPublishedContent } from "../../app/lib/content/public-content.server";
+import {
+  listPublishedContent,
+  listPublishedTerms,
+} from "../../app/lib/content/public-content.server";
 import {
   createDraftVersion,
   publishVersion,
@@ -22,6 +25,28 @@ async function publishContent(input: {
 }
 
 describe("public content listings", () => {
+  it("parses published legal clauses using the term schema", async () => {
+    await env.DB.batch([
+      env.DB.prepare(
+        "INSERT INTO term_versions (id, document_id, locale, version_number, body_json, created_at, effective_from) VALUES ('common-zh-v1', 'common', 'zh', 1, ?, '2026-08-19T00:00:00Z', '2026-08-19T00:00:00Z')",
+      ).bind(
+        JSON.stringify([
+          { key: "deposit", title: "訂金", text: "確認後支付 50%。" },
+        ]),
+      ),
+      env.DB.prepare(
+        "INSERT INTO term_publications (document_id, locale, version_id, effective_from) VALUES ('common', 'zh', 'common-zh-v1', '2026-08-19T00:00:00Z')",
+      ),
+    ]);
+
+    const terms = await listPublishedTerms(env.DB, "zh", "terms");
+
+    expect(terms).toHaveLength(1);
+    expect(terms[0]?.clauses).toEqual([
+      { key: "deposit", title: "訂金", text: "確認後支付 50%。" },
+    ]);
+  });
+
   it("does not fall back from missing English content to Chinese", async () => {
     await publishContent({
       entryId: "zh-only-post",
