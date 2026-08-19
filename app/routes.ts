@@ -5,6 +5,7 @@ export default [
   route("language/:locale", "routes/language-preference.ts"),
   index("routes/language-redirect.tsx"),
   route(":lang", "routes/public/layout.tsx", [
+    index("routes/public/home.tsx"),
     route("commission", "routes/public/commission-index.tsx"),
     route("mixing", "routes/public/mixing-index.tsx"),
     route("mixing/full", "routes/public/mixing-full.tsx"),

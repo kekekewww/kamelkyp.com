@@ -18,7 +18,7 @@ export function ServiceOverview({
   const service = getService(serviceId);
 
   return (
-    <article className="service-overview">
+    <main className="service-overview" id="main-content">
       <p className="eyebrow">
         {locale === "zh" ? "服務內容" : "Service details"}
       </p>
@@ -54,6 +54,6 @@ export function ServiceOverview({
       >
         {locale === "zh" ? "開始委託" : "Start a commission"}
       </Link>
-    </article>
+    </main>
   );
 }

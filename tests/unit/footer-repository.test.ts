@@ -21,8 +21,9 @@ describe("footer repository", () => {
     const links = groups.flatMap((group) => group.links);
 
     expect(groups[0]?.label).toBe("Navigate");
-    expect(links.some((link) => link.url === "mailto:kevinyaungputra@gmail.com"))
-      .toBe(true);
+    expect(
+      links.some((link) => link.url === "mailto:kevinyaungputra@gmail.com"),
+    ).toBe(true);
     expect(
       links.every(
         (link) =>

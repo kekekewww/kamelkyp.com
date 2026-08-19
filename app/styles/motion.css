@@ -1,0 +1,102 @@
+.site-header__menu-button span,
+.nav-group__disclosure span,
+.landing-services > a,
+.landing-updates__items article,
+.service-choice__item,
+.commission-entry__choices > a,
+button,
+.button {
+  transition:
+    color var(--motion-fast) ease,
+    background-color var(--motion-fast) ease,
+    border-color var(--motion-fast) ease,
+    opacity var(--motion-fast) ease,
+    transform var(--motion-normal) ease;
+}
+
+.nav-group__menu {
+  visibility: hidden;
+  opacity: 0;
+  transform: translateY(-0.5rem) scale(0.98);
+  transform-origin: top left;
+  transition:
+    visibility 0s linear var(--motion-normal),
+    opacity var(--motion-fast) ease,
+    transform var(--motion-normal) ease;
+  pointer-events: none;
+}
+
+.nav-group:hover .nav-group__menu,
+.nav-group:focus-within .nav-group__menu {
+  visibility: visible;
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  transition-delay: 0s;
+  pointer-events: auto;
+}
+
+.landing-services > a:hover,
+.landing-services > a:focus-visible,
+.landing-updates__items article:hover,
+.service-choice__item:hover,
+.commission-entry__choices > a:hover {
+  background: var(--color-console);
+}
+
+.landing-services > a:hover > span:last-child,
+.landing-services > a:focus-visible > span:last-child {
+  transform: translateX(0.25rem);
+}
+
+button:active:not(:disabled),
+.button:active,
+.commission-entry__choices > a:active {
+  transform: scale(0.98);
+}
+
+@media (max-width: 960px) {
+  .site-navigation {
+    transform: translateY(-0.75rem);
+    transition:
+      opacity var(--motion-fast) ease,
+      transform var(--motion-normal) ease;
+  }
+
+  .site-navigation[data-open] {
+    transform: translateY(0);
+  }
+
+  .nav-group__menu,
+  .nav-group:hover .nav-group__menu,
+  .nav-group:focus-within .nav-group__menu {
+    visibility: visible;
+    opacity: 1;
+    transform: none;
+    transition: none;
+    pointer-events: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms;
+    animation-iteration-count: 1;
+    transition-duration: 1ms;
+  }
+
+  .nav-group__menu,
+  .site-navigation,
+  .landing-services > a:hover > span:last-child,
+  .landing-services > a:focus-visible > span:last-child,
+  button:active:not(:disabled),
+  .button:active,
+  .commission-entry__choices > a:active {
+    transform: none;
+  }
+}

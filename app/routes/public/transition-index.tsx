@@ -5,7 +5,7 @@ import type { PublicOutletContext } from "./layout";
 export default function TransitionIndexRoute() {
   const { locale } = useOutletContext<PublicOutletContext>();
   return (
-    <main className="service-page">
+    <main className="service-page" id="main-content">
       <header className="service-page__header">
         <p className="eyebrow">SONG TRANSITION</p>
         <h1>

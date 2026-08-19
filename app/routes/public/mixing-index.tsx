@@ -5,7 +5,7 @@ import type { PublicOutletContext } from "./layout";
 export default function MixingIndexRoute() {
   const { locale } = useOutletContext<PublicOutletContext>();
   return (
-    <main className="service-page">
+    <main className="service-page" id="main-content">
       <header className="service-page__header">
         <p className="eyebrow">MIXING</p>
         <h1>{locale === "zh" ? "選擇混音服務" : "Choose mixing service"}</h1>

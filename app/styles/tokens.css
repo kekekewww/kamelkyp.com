@@ -4,6 +4,13 @@
   --color-chalk: #f3f1ea;
   --color-cool-gray: #a9b3bc;
   --color-coral: #ff5c4d;
+  --color-line: #344652;
+  --color-line-soft: #203643;
+  --color-surface-raised: #0e2839;
+  --font-display: "Barlow Condensed", "Noto Sans TC Variable", sans-serif;
+  --font-body: "Noto Sans TC Variable", "Noto Sans TC", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --content-max: 100rem;
   --motion-fast: 140ms;
   --motion-normal: 220ms;
   --motion-panel: 320ms;

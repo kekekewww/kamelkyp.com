@@ -5,7 +5,7 @@ import type { PublicOutletContext } from "./layout";
 export default function CommissionIndexRoute() {
   const { locale } = useOutletContext<PublicOutletContext>();
   return (
-    <main className="commission-entry">
+    <main className="commission-entry" id="main-content">
       <header>
         <p className="eyebrow">COMMISSION</p>
         <h1>{locale === "zh" ? "選擇委託類型" : "Choose a commission"}</h1>
