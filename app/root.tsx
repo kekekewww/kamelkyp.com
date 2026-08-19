@@ -10,6 +10,7 @@ import {
   useLocation,
 } from "react-router";
 import type { Route } from "./+types/root";
+import { PlaybackProvider } from "./components/media/playback-provider";
 import componentStyles from "./styles/components.css?url";
 import globalStyles from "./styles/global.css?url";
 import layoutStyles from "./styles/layout.css?url";
@@ -49,5 +50,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  return <Outlet />;
+  return (
+    <PlaybackProvider>
+      <Outlet />
+    </PlaybackProvider>
+  );
 }
