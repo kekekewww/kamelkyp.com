@@ -79,3 +79,50 @@ export async function sendToGoogle(input: {
   }
   return result.data;
 }
+
+export async function cleanupGoogleLedger(input: {
+  url: string;
+  secret: string;
+  caseId: string;
+  now: string;
+  fetcher: typeof fetch;
+}): Promise<void> {
+  const envelope = await createSignedEnvelope({
+    caseId: input.caseId,
+    payload: { operation: "cleanup_ledger", caseId: input.caseId },
+    secret: input.secret,
+    now: input.now,
+    nonce: crypto.randomUUID(),
+  });
+  const destination = validateAppsScriptUrl(input.url);
+  let response: Response;
+  try {
+    response = await input.fetcher(destination, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(envelope),
+      redirect: "follow",
+    });
+  } catch {
+    throw new Error("google_transport_failed");
+  }
+  if (!response.ok) throw new Error("google_transport_failed");
+  try {
+    const result = (await response.json()) as {
+      ok?: boolean;
+      data?: { operation?: string; caseId?: string };
+    };
+    if (
+      !result.ok ||
+      result.data?.operation !== "cleanup_ledger" ||
+      result.data.caseId !== input.caseId
+    ) {
+      throw new Error("google_cleanup_failed");
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message === "google_cleanup_failed") {
+      throw error;
+    }
+    throw new Error("google_cleanup_failed");
+  }
+}

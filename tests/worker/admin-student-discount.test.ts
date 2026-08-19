@@ -21,18 +21,37 @@ describe("manual student discount review", () => {
     const caseId = "KAM-20260819-DEFGHJKMNP";
     await seedPending(caseId);
     expect(await listPendingStudentPriceReviews(env.DB)).toEqual([
-      { caseId, currency: "TWD", standardPriceMinor: 8000, studentPriceMinor: 5600 },
+      {
+        caseId,
+        currency: "TWD",
+        standardPriceMinor: 8000,
+        studentPriceMinor: 5600,
+      },
     ]);
     await resolveStudentDiscount({ db: env.DB, caseId, accepted: true });
     expect(await listPendingStudentPriceReviews(env.DB)).toEqual([]);
-    expect(await env.DB.prepare("SELECT locked_price_minor FROM cases WHERE case_id = ?").bind(caseId).first("locked_price_minor")).toBe(5600);
-    await expect(resolveStudentDiscount({ db: env.DB, caseId, accepted: false })).rejects.toThrow("student_review_conflict");
+    expect(
+      await env.DB.prepare(
+        "SELECT locked_price_minor FROM cases WHERE case_id = ?",
+      )
+        .bind(caseId)
+        .first("locked_price_minor"),
+    ).toBe(5600);
+    await expect(
+      resolveStudentDiscount({ db: env.DB, caseId, accepted: false }),
+    ).rejects.toThrow("student_review_conflict");
   });
 
   it("restores the same-currency standard price when rejected", async () => {
     const caseId = "KAM-20260819-EFGHJKMNPQ";
     await seedPending(caseId);
     await resolveStudentDiscount({ db: env.DB, caseId, accepted: false });
-    expect(await env.DB.prepare("SELECT locked_price_minor, currency FROM cases WHERE case_id = ?").bind(caseId).first()).toMatchObject({ locked_price_minor: 8000, currency: "TWD" });
+    expect(
+      await env.DB.prepare(
+        "SELECT locked_price_minor, currency FROM cases WHERE case_id = ?",
+      )
+        .bind(caseId)
+        .first(),
+    ).toMatchObject({ locked_price_minor: 8000, currency: "TWD" });
   });
 });

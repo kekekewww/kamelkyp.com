@@ -10,8 +10,15 @@ describe("Cloudflare request context", () => {
     const env = {} as Env;
     const ctx = {} as ExecutionContext;
 
-    const provider = createCloudflareContextProvider(env, ctx);
+    const provider = createCloudflareContextProvider(env, ctx, {
+      nonce: "test-nonce",
+      requestId: "test-request",
+    });
 
-    expect(provider.get(cloudflareContext)).toEqual({ env, ctx });
+    expect(provider.get(cloudflareContext)).toEqual({
+      env,
+      ctx,
+      security: { nonce: "test-nonce", requestId: "test-request" },
+    });
   });
 });

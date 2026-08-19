@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import type WaveSurfer from "wavesurfer.js";
 import type { Locale } from "../../lib/i18n/locale";
 import type { MediaItem } from "../../lib/media/media-schema";
 import { ExternalMediaLink } from "./external-media-link";
 import { usePlayback } from "./playback-provider";
+
+const WAVEFORM_BARS = Array.from({ length: 32 }, (_, index) => index);
 
 export function enforcePreviewBounds(
   currentSeconds: number,
@@ -23,12 +24,9 @@ export function DirectAudioPreview({
   locale: Locale;
 }) {
   const coordinator = usePlayback();
-  const waveformContainer = useRef<HTMLDivElement>(null);
-  const waveSurfer = useRef<WaveSurfer | null>(null);
-  const nativeAudio = useRef<HTMLAudioElement>(null);
+  const streamAudio = useRef<HTMLAudioElement | null>(null);
+  const fallbackAudio = useRef<HTMLAudioElement>(null);
   const disposed = useRef(false);
-  const playWhenReady = useRef(false);
-  const waveformReady = useRef(false);
   const [activated, setActivated] = useState(false);
   const [loading, setLoading] = useState(false);
   const [nativeFallback, setNativeFallback] = useState(false);
@@ -36,30 +34,45 @@ export function DirectAudioPreview({
   const [currentSeconds, setCurrentSeconds] = useState(0);
 
   function markPaused() {
-    playWhenReady.current = false;
     setPlaying(false);
     coordinator.markPaused(item.id);
   }
 
+  function disposeStream(instance = streamAudio.current) {
+    if (!instance) return;
+    instance.onloadedmetadata = null;
+    instance.onplay = null;
+    instance.onpause = null;
+    instance.onended = null;
+    instance.ontimeupdate = null;
+    instance.onerror = null;
+    instance.pause();
+    instance.removeAttribute("src");
+    instance.load();
+    if (streamAudio.current === instance) streamAudio.current = null;
+  }
+
   function pauseCurrent() {
-    waveSurfer.current?.pause();
-    nativeAudio.current?.pause();
+    streamAudio.current?.pause();
+    fallbackAudio.current?.pause();
     markPaused();
   }
 
-  function resetToStart(instance: WaveSurfer | HTMLAudioElement) {
+  function resetToStart(instance: HTMLAudioElement) {
     const start = item.startSeconds ?? 0;
-    if ("setTime" in instance) instance.setTime(start);
-    else instance.currentTime = start;
+    try {
+      instance.currentTime = start;
+    } catch {
+      // Metadata can still be loading during the first click. The
+      // loadedmetadata handler applies the same bound before playback.
+    }
     setCurrentSeconds(Math.floor(start));
   }
 
-  function handleTimeUpdate(seconds: number) {
+  function handleTimeUpdate(seconds: number, instance: HTMLAudioElement) {
     setCurrentSeconds(Math.floor(seconds));
-    if (waveSurfer.current && !waveformReady.current) return;
     if (item.startSeconds !== null && seconds < item.startSeconds) {
-      const instance = waveSurfer.current ?? nativeAudio.current;
-      if (instance) resetToStart(instance);
+      resetToStart(instance);
       return;
     }
     if (
@@ -67,125 +80,119 @@ export function DirectAudioPreview({
       "stop"
     ) {
       pauseCurrent();
-      const instance = waveSurfer.current ?? nativeAudio.current;
-      if (instance) resetToStart(instance);
+      resetToStart(instance);
     }
+  }
+
+  function showFallback(instance?: HTMLAudioElement) {
+    if (disposed.current) return;
+    if (instance && streamAudio.current !== instance) return;
+    disposeStream(instance);
+    setLoading(false);
+    setPlaying(false);
+    setNativeFallback(true);
+    coordinator.markPaused(item.id);
   }
 
   useEffect(() => {
     disposed.current = false;
     const unregister = coordinator.register(item.id, () => {
-      waveSurfer.current?.pause();
-      nativeAudio.current?.pause();
-      playWhenReady.current = false;
+      streamAudio.current?.pause();
+      fallbackAudio.current?.pause();
       setPlaying(false);
       coordinator.markPaused(item.id);
     });
     return () => {
       disposed.current = true;
       unregister();
-      waveSurfer.current?.destroy();
-      waveSurfer.current = null;
-      nativeAudio.current?.pause();
+      const instance = streamAudio.current;
+      if (instance) {
+        instance.onloadedmetadata = null;
+        instance.onplay = null;
+        instance.onpause = null;
+        instance.onended = null;
+        instance.ontimeupdate = null;
+        instance.onerror = null;
+        instance.pause();
+        instance.removeAttribute("src");
+        instance.load();
+        streamAudio.current = null;
+      }
+      fallbackAudio.current?.pause();
     };
   }, [coordinator, item.id]);
 
-  async function initializeWaveform() {
-    if (!waveformContainer.current || waveSurfer.current) return;
+  async function startStream() {
     setActivated(true);
     setLoading(true);
     setCurrentSeconds(Math.floor(item.startSeconds ?? 0));
-    playWhenReady.current = true;
 
+    const instance = new Audio();
+    instance.preload = "metadata";
+    instance.src = item.url;
+    streamAudio.current = instance;
+    instance.onloadedmetadata = () => resetToStart(instance);
+    instance.onplay = () => {
+      if (disposed.current || streamAudio.current !== instance) return;
+      setLoading(false);
+      setPlaying(true);
+      coordinator.markPlaying(item.id);
+    };
+    instance.onpause = () => {
+      if (!disposed.current && streamAudio.current === instance) markPaused();
+    };
+    instance.onended = markPaused;
+    instance.ontimeupdate = () =>
+      handleTimeUpdate(instance.currentTime, instance);
+    instance.onerror = () => showFallback(instance);
+
+    resetToStart(instance);
+    coordinator.markPlaying(item.id);
     try {
-      const { default: WaveSurferModule } = await import("wavesurfer.js");
-      if (disposed.current || !waveformContainer.current) return;
-
-      const instance = WaveSurferModule.create({
-        container: waveformContainer.current,
-        url: item.url,
-        height: 72,
-        waveColor: "#A9B3BC",
-        progressColor: "#FF5C4D",
-        cursorColor: "#FF5C4D",
-      });
-      waveSurfer.current = instance;
-      waveformReady.current = false;
-
-      instance.on("ready", async () => {
-        if (disposed.current || waveSurfer.current !== instance) return;
-        setLoading(false);
-        const shouldPlay = playWhenReady.current;
-        setCurrentSeconds(Math.floor(item.startSeconds ?? 0));
-        if (!shouldPlay) return;
-        playWhenReady.current = true;
-        coordinator.markPlaying(item.id);
-        await instance.play(
-          item.startSeconds ?? undefined,
-          item.endSeconds ?? undefined,
-        );
-      });
-      instance.on("play", () => {
-        waveformReady.current = true;
-        setPlaying(true);
-        coordinator.markPlaying(item.id);
-      });
-      instance.on("pause", markPaused);
-      instance.on("finish", markPaused);
-      instance.on("timeupdate", handleTimeUpdate);
-      instance.on("error", () => {
-        if (disposed.current || waveSurfer.current !== instance) return;
-        waveSurfer.current = null;
-        waveformReady.current = false;
-        instance.destroy();
-        setLoading(false);
-        setPlaying(false);
-        setNativeFallback(true);
-      });
+      await instance.play();
     } catch {
-      if (!disposed.current) {
-        setLoading(false);
-        setPlaying(false);
-        setNativeFallback(true);
-      }
+      showFallback(instance);
     }
   }
 
   async function togglePlayback() {
     if (!activated) {
-      await initializeWaveform();
+      await startStream();
       return;
     }
 
-    const instance = waveSurfer.current;
+    const instance = streamAudio.current;
     if (instance) {
-      if (instance.isPlaying()) {
+      if (!instance.paused) {
         pauseCurrent();
         return;
       }
       if (
         enforcePreviewBounds(
-          instance.getCurrentTime(),
+          instance.currentTime,
           item.startSeconds,
           item.endSeconds,
         ) === "stop"
       ) {
         resetToStart(instance);
       }
-      playWhenReady.current = true;
       coordinator.markPlaying(item.id);
-      await instance.play(undefined, item.endSeconds ?? undefined);
+      try {
+        await instance.play();
+      } catch {
+        showFallback(instance);
+      }
       return;
     }
 
-    if (nativeFallback && nativeAudio.current) {
-      if (!nativeAudio.current.paused) {
+    if (nativeFallback && fallbackAudio.current) {
+      if (!fallbackAudio.current.paused) {
         pauseCurrent();
         return;
       }
-      resetToStart(nativeAudio.current);
+      resetToStart(fallbackAudio.current);
       coordinator.markPlaying(item.id);
-      await nativeAudio.current.play();
+      await fallbackAudio.current.play();
     }
   }
 
@@ -206,15 +213,15 @@ export function DirectAudioPreview({
       >
         <span aria-hidden="true">{playing ? "Ⅱ" : "▶"}</span>
       </button>
-      <div
-        className="media-waveform"
-        ref={waveformContainer}
-        aria-hidden="true"
-      />
+      <div className="media-waveform" aria-hidden="true">
+        {WAVEFORM_BARS.map((bar) => (
+          <span key={bar} />
+        ))}
+      </div>
       {nativeFallback ? (
         <div className="direct-audio__fallback">
           <audio
-            ref={nativeAudio}
+            ref={fallbackAudio}
             src={item.url}
             controls
             controlsList="nodownload"
@@ -225,7 +232,10 @@ export function DirectAudioPreview({
               coordinator.markPlaying(item.id);
             }}
             onTimeUpdate={(event) =>
-              handleTimeUpdate(event.currentTarget.currentTime)
+              handleTimeUpdate(
+                event.currentTarget.currentTime,
+                event.currentTarget,
+              )
             }
           >
             <track kind="captions" />

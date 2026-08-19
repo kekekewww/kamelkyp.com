@@ -1,8 +1,6 @@
 import { env } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
-import {
-  publishPriceVersion,
-} from "../../app/lib/admin/service-catalog-service.server";
+import { publishPriceVersion } from "../../app/lib/admin/service-catalog-service.server";
 import { publishTermVersion } from "../../app/lib/admin/term-service.server";
 import { listPublishedTerms } from "../../app/lib/content/public-content.server";
 import { getActivePriceRule } from "../../app/lib/pricing/price-repository.server";
@@ -60,12 +58,16 @@ describe("admin price and term publication", () => {
     await publishTermVersion({
       ...input,
       locale: "en",
-      clauses: [{ key: "deposit", title: "Deposit", text: "Pay 50% after acceptance." }],
+      clauses: [
+        { key: "deposit", title: "Deposit", text: "Pay 50% after acceptance." },
+      ],
       legalReviewConfirmed: true,
     });
 
     const active = await listPublishedTerms(env.DB, "zh", "terms");
-    expect(active.find((term) => term.documentId === "common")?.clauses[0]?.title).toBe("訂金");
+    expect(
+      active.find((term) => term.documentId === "common")?.clauses[0]?.title,
+    ).toBe("訂金");
     await expect(
       env.DB.prepare("UPDATE term_versions SET body_json = '[]' WHERE id = ?")
         .bind(version.id)

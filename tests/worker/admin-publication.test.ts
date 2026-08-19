@@ -50,30 +50,49 @@ describe("versioned admin publication", () => {
       },
     });
     expect(saved.revision).toBe(1);
-    expect((await getPublishedContent(env.DB, "page", "home", "zh"))?.title).toBe(
-      "首頁 v1",
-    );
+    expect(
+      (await getPublishedContent(env.DB, "page", "home", "zh"))?.title,
+    ).toBe("首頁 v1");
     expect((await getAdminContentVersion(env.DB, v2.id)).body).toEqual([
       { type: "paragraph", text: "首頁 v2" },
     ]);
 
-    await publishDraft({ db: env.DB, versionId: v2.id, now: new Date("2026-08-19T01:00:00Z") });
-    await publishDraft({ db: env.DB, versionId: v2.id, now: new Date("2026-08-19T01:00:00Z") });
-    expect((await getPublishedContent(env.DB, "page", "home", "zh"))?.title).toBe(
-      "首頁 v2",
-    );
+    await publishDraft({
+      db: env.DB,
+      versionId: v2.id,
+      now: new Date("2026-08-19T01:00:00Z"),
+    });
+    await publishDraft({
+      db: env.DB,
+      versionId: v2.id,
+      now: new Date("2026-08-19T01:00:00Z"),
+    });
+    expect(
+      (await getPublishedContent(env.DB, "page", "home", "zh"))?.title,
+    ).toBe("首頁 v2");
 
-    const v3 = await createDraft({ db: env.DB, entryId: "home", locale: "zh", baseVersionId: v2.id });
+    const v3 = await createDraft({
+      db: env.DB,
+      entryId: "home",
+      locale: "zh",
+      baseVersionId: v2.id,
+    });
     expect(v3.versionNumber).toBe(3);
-    expect((await getPublishedContent(env.DB, "page", "home", "zh"))?.versionId).toBe(v2.id);
+    expect(
+      (await getPublishedContent(env.DB, "page", "home", "zh"))?.versionId,
+    ).toBe(v2.id);
 
     await expect(
-      env.DB.prepare("UPDATE content_versions SET title = 'mutated' WHERE id = ?")
+      env.DB.prepare(
+        "UPDATE content_versions SET title = 'mutated' WHERE id = ?",
+      )
         .bind(v2.id)
         .run(),
     ).rejects.toThrow();
     await expect(
-      env.DB.prepare("DELETE FROM content_versions WHERE id = ?").bind(v2.id).run(),
+      env.DB.prepare("DELETE FROM content_versions WHERE id = ?")
+        .bind(v2.id)
+        .run(),
     ).rejects.toThrow();
 
     await unpublishContent({ db: env.DB, entryId: "home", locale: "zh" });
@@ -86,13 +105,24 @@ describe("versioned admin publication", () => {
   it("keeps locale pointers independent and rejects stale draft saves", async () => {
     await seedPublishedHome("zh", "中文");
     const enV1 = await seedPublishedHome("en", "English");
-    const enV2 = await createDraft({ db: env.DB, entryId: "home", locale: "en", baseVersionId: enV1 });
+    const enV2 = await createDraft({
+      db: env.DB,
+      entryId: "home",
+      locale: "en",
+      baseVersionId: enV1,
+    });
     await saveDraft({
       db: env.DB,
       versionId: enV2.id,
       expectedRevision: 0,
       blocks: [{ type: "paragraph", text: "English v2" }],
-      seo: { title: "English v2", summary: null, seoTitle: null, seoDescription: null, socialImageUrl: null },
+      seo: {
+        title: "English v2",
+        summary: null,
+        seoTitle: null,
+        seoDescription: null,
+        socialImageUrl: null,
+      },
     });
     await expect(
       saveDraft({
@@ -100,11 +130,25 @@ describe("versioned admin publication", () => {
         versionId: enV2.id,
         expectedRevision: 0,
         blocks: [{ type: "paragraph", text: "stale" }],
-        seo: { title: "stale", summary: null, seoTitle: null, seoDescription: null, socialImageUrl: null },
+        seo: {
+          title: "stale",
+          summary: null,
+          seoTitle: null,
+          seoDescription: null,
+          socialImageUrl: null,
+        },
       }),
     ).rejects.toThrow("stale_revision");
-    await publishDraft({ db: env.DB, versionId: enV2.id, now: new Date("2026-08-19T02:00:00Z") });
-    expect((await getPublishedContent(env.DB, "page", "home", "zh"))?.title).toBe("中文");
-    expect((await getPublishedContent(env.DB, "page", "home", "en"))?.title).toBe("English v2");
+    await publishDraft({
+      db: env.DB,
+      versionId: enV2.id,
+      now: new Date("2026-08-19T02:00:00Z"),
+    });
+    expect(
+      (await getPublishedContent(env.DB, "page", "home", "zh"))?.title,
+    ).toBe("中文");
+    expect(
+      (await getPublishedContent(env.DB, "page", "home", "en"))?.title,
+    ).toBe("English v2");
   });
 });

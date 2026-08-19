@@ -1,3 +1,6 @@
+DROP TRIGGER IF EXISTS term_versions_immutable_update;
+DROP TRIGGER IF EXISTS term_versions_immutable_delete;
+
 INSERT OR REPLACE INTO term_versions
   (id, document_id, locale, version_number, body_json, created_at, effective_from)
 VALUES
@@ -29,3 +32,15 @@ VALUES
   ('simple-transition', 'en', 'e2e-simple-en-v1', '2026-08-10T00:00:00Z'),
   ('edit-transition', 'zh', 'e2e-edit-zh-v1', '2026-08-10T00:00:00Z'),
   ('edit-transition', 'en', 'e2e-edit-en-v1', '2026-08-10T00:00:00Z');
+
+CREATE TRIGGER term_versions_immutable_update
+BEFORE UPDATE ON term_versions
+BEGIN
+  SELECT RAISE(ABORT, 'term_version_immutable');
+END;
+
+CREATE TRIGGER term_versions_immutable_delete
+BEFORE DELETE ON term_versions
+BEGIN
+  SELECT RAISE(ABORT, 'term_version_immutable');
+END;

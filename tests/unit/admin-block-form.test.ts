@@ -11,13 +11,16 @@ describe("URL-only admin media forms", () => {
     ["https://www.youtube.com/watch?v=dQw4w9WgXcQ", "youtube"],
     ["https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ", "youtube"],
     ["https://drive.google.com/file/d/abc_123/view", "google_drive"],
-    ["https://raw.githubusercontent.com/kamel/audio/main/demo.wav", "github_raw_audio"],
+    [
+      "https://raw.githubusercontent.com/kamel/audio/main/demo.wav",
+      "github_raw_audio",
+    ],
     ["https://media.kamelkyp.com/demo.mp3", "cloudflare_r2_audio"],
-    ["https://www.dropbox.com/s/example/demo.wav?dl=0", "direct_audio"],
+    ["https://www.dropbox.com/s/example/demo.wav?dl=0", "external_link"],
     ["https://www.mediafire.com/file/example/demo", "external_link"],
     ["https://example.com/project", "external_link"],
   ])("classifies %s without downloading it", (url, kind) => {
-    expect(parseAdminMediaInput({ url }, r2Hosts).kind).toBe(kind);
+    expect(parseAdminMediaInput({ url }, r2Hosts)).toMatchObject({ kind });
   });
 
   it("accepts optional metadata and no media at all", () => {

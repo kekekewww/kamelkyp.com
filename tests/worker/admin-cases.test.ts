@@ -35,7 +35,9 @@ describe("minimal admin case listing", () => {
       "status",
       "submittedAt",
     ]);
-    expect(JSON.stringify(result)).not.toMatch(/email|proof|contact|purpose|project/i);
+    expect(JSON.stringify(result)).not.toMatch(
+      /email|proof|contact|purpose|project/i,
+    );
   });
 
   it("updates only status and schedules terminal cleanup", async () => {
@@ -53,12 +55,19 @@ describe("minimal admin case listing", () => {
         .first("status"),
     ).toBe("delivered");
     expect(
-      await env.DB.prepare("SELECT cleanup_due_at FROM case_runtime WHERE case_id = ?")
+      await env.DB.prepare(
+        "SELECT cleanup_due_at FROM case_runtime WHERE case_id = ?",
+      )
         .bind(caseId)
         .first("cleanup_due_at"),
     ).toBe("2026-08-26T12:00:00.000Z");
     await expect(
-      updateCaseStatus({ db: env.DB, caseId: "missing", status: "paused", now: new Date() }),
+      updateCaseStatus({
+        db: env.DB,
+        caseId: "missing",
+        status: "paused",
+        now: new Date(),
+      }),
     ).rejects.toThrow("case_not_found");
   });
 });

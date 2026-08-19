@@ -31,7 +31,7 @@ export default function OtherDetailRoute() {
       <article>
         <header>
           <p className="eyebrow">NOTE / {item.slug}</p>
-          <h1>{item.title}</h1>
+          <h1>{item.title || (locale === "zh" ? "未命名文章" : "Untitled")}</h1>
           {item.summary ? <p>{item.summary}</p> : null}
         </header>
         <BlockRenderer

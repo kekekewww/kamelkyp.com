@@ -54,6 +54,28 @@ const appOrigin =
     ? process.env.APP_ORIGIN
     : `https://kamelkyp-com-pr-${process.env.PR_NUMBER}.${process.env.WORKERS_DEV_SUBDOMAIN}.workers.dev`;
 
+let accessTeamDomain;
+try {
+  accessTeamDomain = new URL(process.env.ACCESS_TEAM_DOMAIN);
+} catch {
+  throw new Error("invalid_access_team_domain");
+}
+if (
+  accessTeamDomain.protocol !== "https:" ||
+  !accessTeamDomain.hostname.endsWith(".cloudflareaccess.com") ||
+  accessTeamDomain.pathname !== "/" ||
+  accessTeamDomain.search ||
+  accessTeamDomain.hash
+) {
+  throw new Error("invalid_access_team_domain");
+}
+if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(process.env.ADMIN_EMAIL)) {
+  throw new Error("invalid_admin_email");
+}
+if (environment === "production" && appOrigin !== "https://kamelkyp.com") {
+  throw new Error("invalid_app_origin");
+}
+
 const generated = JSON.parse(await readFile(sourceConfig, "utf8"));
 const config = {
   ...generated,
@@ -79,6 +101,11 @@ const config = {
       simple: { limit: 10, period: 60 },
     },
   ],
+  ...(environment === "production"
+    ? {
+        routes: [{ pattern: "kamelkyp.com", custom_domain: true }],
+      }
+    : {}),
   secrets: {
     required: [
       "TURNSTILE_SECRET",

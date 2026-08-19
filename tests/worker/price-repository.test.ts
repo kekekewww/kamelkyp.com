@@ -21,17 +21,14 @@ describe("versioned price repository", () => {
     });
   });
 
-  it("selects the newest effective version and respects retirement", async () => {
-    await env.DB.batch([
-      env.DB.prepare(
-        "UPDATE price_versions SET retired_at = ? WHERE id = ?",
-      ).bind("2026-09-01T00:00:00Z", "full-2026-08-10"),
-      env.DB.prepare(
-        "INSERT INTO price_versions " +
-          "(id, service_id, base_twd, per_song_after_five_twd, " +
-          "student_discount_bps, rush_bps, consultation_bps, " +
-          "source_prep_bps, effective_from) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-      ).bind(
+  it("selects the newest immutable effective version", async () => {
+    await env.DB.prepare(
+      "INSERT INTO price_versions " +
+        "(id, service_id, base_twd, per_song_after_five_twd, " +
+        "student_discount_bps, rush_bps, consultation_bps, " +
+        "source_prep_bps, effective_from) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    )
+      .bind(
         "full-2026-09-01",
         "full_mix",
         9000,
@@ -41,8 +38,8 @@ describe("versioned price repository", () => {
         5000,
         500,
         "2026-09-01T00:00:00Z",
-      ),
-    ]);
+      )
+      .run();
 
     expect(
       (await getActivePriceRule(env.DB, "full_mix", "2026-08-31T23:59:59Z"))

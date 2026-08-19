@@ -40,7 +40,7 @@ export default function WorksIndexRoute() {
             <article key={item.entryId}>
               <span>{String(index + 1).padStart(2, "0")}</span>
               <div>
-                <h2>{item.title}</h2>
+                <h2>{item.title || (isZh ? "未命名作品" : "Untitled")}</h2>
                 {item.summary ? <p>{item.summary}</p> : null}
               </div>
               <Link to={localePath(locale, `/works/${item.slug}`)}>

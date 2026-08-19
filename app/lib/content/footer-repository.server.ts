@@ -16,6 +16,7 @@ export interface FooterGroup {
 interface FooterRow {
   group_id: string;
   stable_key: string;
+  group_label: string | null;
   link_id: string;
   label: string;
   url: string;
@@ -141,11 +142,14 @@ export async function listFooterGroups(
       `SELECT
         g.id AS group_id,
         g.stable_key,
+        gl.label AS group_label,
         l.id AS link_id,
         l.label,
         l.url
       FROM link_groups g
       JOIN links l ON l.group_id = g.id
+      LEFT JOIN link_group_labels gl
+        ON gl.group_id = g.id AND gl.locale = l.locale
       WHERE g.enabled = 1 AND l.enabled = 1 AND l.locale = ?
       ORDER BY g.sort_order, l.sort_order`,
     )
@@ -158,7 +162,7 @@ export async function listFooterGroups(
 
     const group = groups.get(row.group_id) ?? {
       id: row.group_id,
-      label: groupLabel(row.stable_key, locale),
+      label: row.group_label ?? groupLabel(row.stable_key, locale),
       links: [],
     };
     group.links.push({ id: row.link_id, label: row.label, url: row.url });

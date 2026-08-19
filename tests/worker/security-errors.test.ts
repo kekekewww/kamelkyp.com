@@ -6,7 +6,8 @@ import {
 
 describe("safe public errors", () => {
   it("never exposes secrets, email, form data or stack traces", async () => {
-    const sensitive = "token-secret artist@example.com https://drive.google.com/private";
+    const sensitive =
+      "token-secret artist@example.com https://drive.google.com/private";
     const response = publicErrorResponse({
       status: 503,
       code: "submission_unavailable",
@@ -24,8 +25,18 @@ describe("safe public errors", () => {
 
   it("logs only stable diagnostic fields", () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => undefined);
-    safeErrorLog({ code: "d1_failed", requestId: "ray-456", route: "/api/commission/submit" });
-    expect(spy).toHaveBeenCalledWith(JSON.stringify({ code: "d1_failed", requestId: "ray-456", route: "/api/commission/submit" }));
+    safeErrorLog({
+      code: "d1_failed",
+      requestId: "ray-456",
+      route: "/api/commission/submit",
+    });
+    expect(spy).toHaveBeenCalledWith(
+      JSON.stringify({
+        code: "d1_failed",
+        requestId: "ray-456",
+        route: "/api/commission/submit",
+      }),
+    );
     spy.mockRestore();
   });
 });

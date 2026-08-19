@@ -1,15 +1,24 @@
 PRAGMA foreign_keys = ON;
 
+DROP TRIGGER IF EXISTS content_versions_published_immutable_delete;
+
 DELETE FROM content_publications
 WHERE entry_id IN (
   'e2e-media-test', 'e2e-mediafire-test', 'e2e-audio-test',
-  'e2e-audio-bounds-test', 'e2e-audio-fallback-test'
+  'e2e-audio-bounds-test', 'e2e-audio-fallback-test', 'e2e-security-media-test'
 );
 DELETE FROM content_entries
 WHERE id IN (
   'e2e-media-test', 'e2e-mediafire-test', 'e2e-audio-test',
-  'e2e-audio-bounds-test', 'e2e-audio-fallback-test'
+  'e2e-audio-bounds-test', 'e2e-audio-fallback-test', 'e2e-security-media-test'
 );
+
+CREATE TRIGGER content_versions_published_immutable_delete
+BEFORE DELETE ON content_versions
+WHEN OLD.state = 'published'
+BEGIN
+  SELECT RAISE(ABORT, 'published_content_immutable');
+END;
 
 INSERT INTO content_entries (
   id, kind, slug, sort_order, is_listed, created_at, updated_at
@@ -18,7 +27,8 @@ INSERT INTO content_entries (
   ('e2e-mediafire-test', 'work', 'mediafire-test', 9002, 0, '2026-08-19T00:00:00Z', '2026-08-19T00:00:00Z'),
   ('e2e-audio-test', 'work', 'audio-test', 9003, 0, '2026-08-19T00:00:00Z', '2026-08-19T00:00:00Z'),
   ('e2e-audio-bounds-test', 'work', 'audio-bounds-test', 9004, 0, '2026-08-19T00:00:00Z', '2026-08-19T00:00:00Z'),
-  ('e2e-audio-fallback-test', 'work', 'audio-fallback-test', 9005, 0, '2026-08-19T00:00:00Z', '2026-08-19T00:00:00Z');
+  ('e2e-audio-fallback-test', 'work', 'audio-fallback-test', 9005, 0, '2026-08-19T00:00:00Z', '2026-08-19T00:00:00Z'),
+  ('e2e-security-media-test', 'work', 'security-media-test', 9006, 0, '2026-08-19T00:00:00Z', '2026-08-19T00:00:00Z');
 
 INSERT INTO content_versions (
   id, entry_id, locale, version_number, state, title, summary, body_json,
@@ -52,6 +62,12 @@ INSERT INTO content_versions (
     'e2e-audio-fallback-test-v1', 'e2e-audio-fallback-test', 'en', 1, 'draft',
     'Audio fallback test', NULL,
     '[{"type":"media","mediaId":"e2e-audio-fallback"}]',
+    '2026-08-19T00:00:00Z'
+  ),
+  (
+    'e2e-security-media-test-v1', 'e2e-security-media-test', 'en', 1, 'draft',
+    'Security media test', NULL,
+    '[{"type":"media","mediaId":"e2e-drive"},{"type":"media","mediaId":"e2e-dropbox"}]',
     '2026-08-19T00:00:00Z'
   );
 
@@ -87,11 +103,22 @@ INSERT INTO media_items (
     'e2e-audio-fallback', 'e2e-audio-fallback-test-v1', 'cloudflare_r2_audio',
     'https://media.kamelkyp.com/e2e/fallback.wav', 'Fallback preview',
     NULL, NULL, 0
+  ),
+  (
+    'e2e-drive', 'e2e-security-media-test-v1', 'google_drive',
+    'https://drive.google.com/file/d/1AbCdEfGhIjKlMnOp/view', 'Drive preview',
+    NULL, NULL, 0
+  ),
+  (
+    'e2e-dropbox', 'e2e-security-media-test-v1', 'external_link',
+    'https://www.dropbox.com/s/example/demo.wav?dl=0', 'Dropbox download',
+    NULL, NULL, 1
   );
 
 UPDATE content_versions
 SET state = 'published', published_at = '2026-08-19T00:00:00Z'
 WHERE id IN (
   'e2e-media-test-v1', 'e2e-mediafire-test-v1', 'e2e-audio-test-v1',
-  'e2e-audio-bounds-test-v1', 'e2e-audio-fallback-test-v1'
+  'e2e-audio-bounds-test-v1', 'e2e-audio-fallback-test-v1',
+  'e2e-security-media-test-v1'
 );

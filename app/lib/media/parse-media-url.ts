@@ -22,6 +22,7 @@ const YOUTUBE_HOSTS = new Set([
   "youtube-nocookie.com",
   "www.youtube-nocookie.com",
 ]);
+const EXTERNAL_ONLY_HOST_SUFFIXES = ["dropbox.com", "mediafire.com"];
 
 function assertRange(start: number | null, end: number | null) {
   const invalidStart =
@@ -127,6 +128,19 @@ export function parseMediaUrl(
       canonicalUrl: url.toString(),
       embedUrl: null,
       provider: "direct",
+    };
+  }
+
+  if (
+    EXTERNAL_ONLY_HOST_SUFFIXES.some(
+      (host) => url.hostname === host || url.hostname.endsWith(`.${host}`),
+    )
+  ) {
+    return {
+      kind: "external_link",
+      canonicalUrl: url.toString(),
+      embedUrl: null,
+      provider: "external",
     };
   }
 

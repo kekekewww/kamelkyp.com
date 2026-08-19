@@ -115,14 +115,7 @@ export default function HomeRoute() {
                   <div className="showreel__track">
                     <div className="showreel__waveform" aria-hidden="true">
                       {WAVEFORM_BARS.map(([id, height]) => (
-                        <span
-                          key={id}
-                          style={
-                            {
-                              "--wave-height": `${height}%`,
-                            } as React.CSSProperties
-                          }
-                        />
+                        <span key={id} className={`wave-height-${height}`} />
                       ))}
                     </div>
                     <div className="showreel__metadata">

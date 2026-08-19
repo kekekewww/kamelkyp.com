@@ -38,6 +38,26 @@ function doPost(e) {
 
     var properties = PropertiesService.getScriptProperties();
     var ledgerKey = "case:" + envelope.caseId;
+    var payload = decodePayload_(envelope.payloadBase64Url);
+    if (payload.caseId !== envelope.caseId) {
+      throw new Error("case_id_mismatch");
+    }
+    if (payload.operation === "cleanup_ledger") {
+      properties.deleteProperty(ledgerKey);
+      return json_({
+        ok: true,
+        data: { operation: "cleanup_ledger", caseId: envelope.caseId },
+      });
+    }
+    if (payload.operation && payload.operation !== "submit") {
+      throw new Error("invalid_operation");
+    }
+    if (payload.operation === "submit") {
+      payload = payload.submission;
+      if (!payload || payload.caseId !== envelope.caseId) {
+        throw new Error("case_id_mismatch");
+      }
+    }
     var ledgerRaw = properties.getProperty(ledgerKey);
     var ledger = ledgerRaw ? JSON.parse(ledgerRaw) : null;
     if (ledger && ledger.state === "complete") {
@@ -49,11 +69,6 @@ function doPost(e) {
           notified: true,
         },
       });
-    }
-
-    var payload = decodePayload_(envelope.payloadBase64Url);
-    if (payload.caseId !== envelope.caseId) {
-      throw new Error("case_id_mismatch");
     }
 
     if (!ledger || ledger.state === "created") {
@@ -104,6 +119,9 @@ function verifyEnvelope_(envelope) {
     !envelope.payloadBase64Url ||
     !envelope.signatureBase64Url
   ) {
+    throw new Error("invalid_envelope");
+  }
+  if (!/^KAM-[0-9]{8}-[0-9A-HJKMNP-TV-Z]{10}$/.test(envelope.caseId)) {
     throw new Error("invalid_envelope");
   }
   var requestTime = new Date(envelope.timestamp).getTime();
@@ -236,6 +254,7 @@ function publicErrorCode_(error) {
     invalid_signature: true,
     invalid_envelope: true,
     case_id_mismatch: true,
+    invalid_operation: true,
     configuration_missing: true,
     form_map_invalid: true,
   };

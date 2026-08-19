@@ -22,6 +22,7 @@ declare module "node:buffer" {
 declare module "node:child_process" {
   interface SpawnSyncResult {
     status: number | null;
+    stdout: string;
     stderr: string;
   }
 
@@ -29,7 +30,7 @@ declare module "node:child_process" {
     command: string,
     args: string[],
     options: {
-      cwd: string;
+      cwd?: string;
       encoding: string;
       env?: NodeJS.ProcessEnv;
     },
@@ -39,7 +40,7 @@ declare module "node:child_process" {
 declare module "node:fs/promises" {
   export function mkdir(
     path: string | URL,
-    options: { recursive: true },
+    options?: { recursive: true },
   ): Promise<void>;
   export function mkdtemp(prefix: string): Promise<string>;
   export function readFile(

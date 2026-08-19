@@ -9,9 +9,11 @@ test("health endpoint is deterministic", async ({ request }) => {
   });
 });
 
-test("root chooses Chinese for zh browser language", async ({ browser }) => {
+test("root chooses Chinese for zh browser language", async ({
+  browser,
+}, testInfo) => {
   const context = await browser.newContext({
-    baseURL: process.env.PREVIEW_URL,
+    baseURL: testInfo.project.use.baseURL as string,
     locale: "zh-TW",
   });
 

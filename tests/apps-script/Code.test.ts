@@ -202,7 +202,10 @@ describe("Apps Script Google Form and Gmail relay", () => {
 
   it("deletes only the requested idempotency ledger", async () => {
     const harness = await createHarness();
-    harness.store.set(`case:${payload.caseId}`, JSON.stringify({ state: "complete" }));
+    harness.store.set(
+      `case:${payload.caseId}`,
+      JSON.stringify({ state: "complete" }),
+    );
     harness.store.set("case:KAM-20260810-OTHERCASE1", "keep");
     const event = harness.signedEvent({
       operation: "cleanup_ledger",

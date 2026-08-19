@@ -33,11 +33,12 @@ export async function markCaseTerminal(
       .prepare(
         "INSERT INTO case_runtime " +
           "(case_id, cleanup_due_at, student_review_state, standard_price_minor, student_price_minor, updated_at) " +
-          "VALUES (?, ?, 'none', NULL, NULL, ?) " +
+          "SELECT ?, ?, 'none', NULL, NULL, ? WHERE EXISTS " +
+          "(SELECT 1 FROM cases WHERE case_id = ?) " +
           "ON CONFLICT(case_id) DO UPDATE SET cleanup_due_at = excluded.cleanup_due_at, " +
           "updated_at = excluded.updated_at",
       )
-      .bind(caseId, cleanupDueAt, terminalDate.toISOString()),
+      .bind(caseId, cleanupDueAt, terminalDate.toISOString(), caseId),
   ]);
   if (caseUpdate.meta.changes !== 1) throw new Error("case_not_found");
 }

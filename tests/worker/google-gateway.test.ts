@@ -104,7 +104,9 @@ describe("Google submission gateway", () => {
       fetcher,
     });
     const envelope = JSON.parse(String(fetcher.mock.calls[0]?.[1]?.body));
-    await expect(verifySignedEnvelopeForTest(envelope, secret)).resolves.toEqual({
+    await expect(
+      verifySignedEnvelopeForTest(envelope, secret),
+    ).resolves.toEqual({
       operation: "cleanup_ledger",
       caseId: "KAM-20260810-01HZX8J4AB",
     });

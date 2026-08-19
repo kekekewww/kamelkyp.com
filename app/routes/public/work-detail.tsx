@@ -31,7 +31,7 @@ export default function WorkDetailRoute() {
       <article>
         <header>
           <p className="eyebrow">WORK / {item.slug}</p>
-          <h1>{item.title}</h1>
+          <h1>{item.title || (locale === "zh" ? "未命名作品" : "Untitled")}</h1>
           {item.summary ? <p>{item.summary}</p> : null}
         </header>
         <BlockRenderer

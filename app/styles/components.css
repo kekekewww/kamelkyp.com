@@ -227,11 +227,89 @@
 
 .showreel__waveform span {
   width: 2px;
-  height: var(--wave-height);
   min-height: 0.35rem;
   flex: 1 0 2px;
   background: var(--color-cool-gray);
   opacity: 0.62;
+}
+
+.showreel__waveform .wave-height-28 {
+  height: 28%;
+}
+.showreel__waveform .wave-height-34 {
+  height: 34%;
+}
+.showreel__waveform .wave-height-38 {
+  height: 38%;
+}
+.showreel__waveform .wave-height-40 {
+  height: 40%;
+}
+.showreel__waveform .wave-height-42 {
+  height: 42%;
+}
+.showreel__waveform .wave-height-44 {
+  height: 44%;
+}
+.showreel__waveform .wave-height-46 {
+  height: 46%;
+}
+.showreel__waveform .wave-height-48 {
+  height: 48%;
+}
+.showreel__waveform .wave-height-52 {
+  height: 52%;
+}
+.showreel__waveform .wave-height-54 {
+  height: 54%;
+}
+.showreel__waveform .wave-height-58 {
+  height: 58%;
+}
+.showreel__waveform .wave-height-60 {
+  height: 60%;
+}
+.showreel__waveform .wave-height-62 {
+  height: 62%;
+}
+.showreel__waveform .wave-height-64 {
+  height: 64%;
+}
+.showreel__waveform .wave-height-66 {
+  height: 66%;
+}
+.showreel__waveform .wave-height-68 {
+  height: 68%;
+}
+.showreel__waveform .wave-height-72 {
+  height: 72%;
+}
+.showreel__waveform .wave-height-74 {
+  height: 74%;
+}
+.showreel__waveform .wave-height-76 {
+  height: 76%;
+}
+.showreel__waveform .wave-height-78 {
+  height: 78%;
+}
+.showreel__waveform .wave-height-82 {
+  height: 82%;
+}
+.showreel__waveform .wave-height-84 {
+  height: 84%;
+}
+.showreel__waveform .wave-height-86 {
+  height: 86%;
+}
+.showreel__waveform .wave-height-88 {
+  height: 88%;
+}
+.showreel__waveform .wave-height-90 {
+  height: 90%;
+}
+.showreel__waveform .wave-height-94 {
+  height: 94%;
 }
 
 .showreel__metadata {
