@@ -85,7 +85,7 @@ export async function verifySignedEnvelopeForTest(
   const valid = await crypto.subtle.verify(
     "HMAC",
     await importHmacKey(secret),
-    signature,
+    signature.buffer as ArrayBuffer,
     new TextEncoder().encode(
       canonical({
         version: envelope.version,
