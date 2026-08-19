@@ -113,7 +113,14 @@ describe("cloud project configuration", () => {
           simple: { limit: 10, period: 60 },
         },
       ]);
-      expect(config.secrets).toEqual({ required: ["TURNSTILE_SECRET"] });
+      expect(config.secrets).toEqual({
+        required: [
+          "TURNSTILE_SECRET",
+          "APPS_SCRIPT_URL",
+          "APPS_SCRIPT_HMAC_SECRET",
+        ],
+      });
+      expect(JSON.stringify(config)).not.toContain("private-hmac");
 
       const source = await readFile(renderer, "utf8");
       expect(source).toContain("build/server/wrangler.json");

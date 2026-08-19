@@ -4,7 +4,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-async function renderSecret(secret: string | undefined) {
+const validSecrets = {
+  TURNSTILE_SECRET: "private-turnstile-secret",
+  APPS_SCRIPT_URL: "https://script.google.com/macros/s/test/exec",
+  APPS_SCRIPT_HMAC_SECRET: "hmac-secret-with-at-least-32-characters",
+};
+
+async function renderSecret(secrets: Record<string, string | undefined>) {
   const cwd = await mkdtemp(join(tmpdir(), "worker-secrets-"));
   return {
     cwd,
@@ -14,7 +20,7 @@ async function renderSecret(secret: string | undefined) {
       {
         cwd,
         encoding: "utf8",
-        env: { ...process.env, TURNSTILE_SECRET: secret },
+        env: { ...process.env, ...secrets },
       },
     ),
   };
@@ -22,7 +28,10 @@ async function renderSecret(secret: string | undefined) {
 
 describe("ephemeral Worker secret renderer", () => {
   it("fails closed without the Turnstile secret", async () => {
-    const { cwd, result } = await renderSecret(undefined);
+    const { cwd, result } = await renderSecret({
+      ...validSecrets,
+      TURNSTILE_SECRET: undefined,
+    });
     try {
       expect(result.status).not.toBe(0);
       expect(result.stderr).toContain("missing_turnstile_secret");
@@ -32,16 +41,36 @@ describe("ephemeral Worker secret renderer", () => {
   });
 
   it("writes only the required secret without printing it", async () => {
-    const secret = "private-test-secret";
-    const { cwd, result } = await renderSecret(secret);
+    const { cwd, result } = await renderSecret(validSecrets);
     try {
       expect(result.status).toBe(0);
       const output = await readFile(
         join(cwd, ".wrangler.secrets.json"),
         "utf8",
       );
-      expect(JSON.parse(output)).toEqual({ TURNSTILE_SECRET: secret });
-      expect(result.stderr).not.toContain(secret);
+      expect(JSON.parse(output)).toEqual(validSecrets);
+      for (const secret of Object.values(validSecrets)) {
+        expect(result.stderr).not.toContain(secret);
+      }
+    } finally {
+      await rm(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it.each([
+    [
+      { ...validSecrets, APPS_SCRIPT_URL: "http://example.com/relay" },
+      "invalid_apps_script_url",
+    ],
+    [
+      { ...validSecrets, APPS_SCRIPT_HMAC_SECRET: "too-short" },
+      "invalid_apps_script_hmac_secret",
+    ],
+  ])("rejects malformed Google relay secrets", async (secrets, code) => {
+    const { cwd, result } = await renderSecret(secrets);
+    try {
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toContain(code);
     } finally {
       await rm(cwd, { recursive: true, force: true });
     }
