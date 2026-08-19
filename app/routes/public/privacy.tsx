@@ -1,5 +1,4 @@
 import { type LoaderFunctionArgs, useLoaderData } from "react-router";
-import { BlockRenderer } from "../../components/content/block-renderer";
 import { EmptyState } from "../../components/content/empty-state";
 import { listPublishedTerms } from "../../lib/content/public-content.server";
 import { getPublicLoaderContext } from "../../lib/content/public-loader.server";
@@ -40,7 +39,14 @@ export default function PrivacyRoute() {
         <div className="legal-page__documents">
           {terms.map((document) => (
             <section key={document.documentId}>
-              <BlockRenderer blocks={document.body} />
+              <div className="content-blocks">
+                {document.clauses.map((clause) => (
+                  <section key={clause.key}>
+                    <h2>{clause.title}</h2>
+                    <p>{clause.text}</p>
+                  </section>
+                ))}
+              </div>
             </section>
           ))}
         </div>

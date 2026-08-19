@@ -1,5 +1,4 @@
 import { type LoaderFunctionArgs, useLoaderData } from "react-router";
-import { BlockRenderer } from "../../components/content/block-renderer";
 import { EmptyState } from "../../components/content/empty-state";
 import { listPublishedTerms } from "../../lib/content/public-content.server";
 import { getPublicLoaderContext } from "../../lib/content/public-loader.server";
@@ -60,7 +59,14 @@ export default function TermsRoute() {
                     {isZh ? "生效日" : "Effective"} {document.effectiveFrom}
                   </time>
                 </div>
-                <BlockRenderer blocks={document.body} />
+                <div className="content-blocks">
+                  {document.clauses.map((clause) => (
+                    <section key={clause.key}>
+                      <h3>{clause.title}</h3>
+                      <p>{clause.text}</p>
+                    </section>
+                  ))}
+                </div>
               </section>
             );
           })}

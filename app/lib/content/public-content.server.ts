@@ -1,4 +1,8 @@
 import {
+  parseTermClauses,
+  type TermClause,
+} from "../commission/terms-repository.server";
+import {
   type ContentKind,
   getPublishedContent,
   listPublishedContentRecords,
@@ -16,7 +20,7 @@ export interface PublishedTerm {
   kind: "common" | "service" | "privacy";
   serviceId: string | null;
   locale: Locale;
-  body: ContentBlock[];
+  clauses: TermClause[];
   effectiveFrom: string;
 }
 
@@ -89,7 +93,7 @@ export async function listPublishedTerms(
     kind: row.kind,
     serviceId: row.service_id,
     locale: row.locale,
-    body: parseBlocks(JSON.parse(row.body_json)),
+    clauses: parseTermClauses(JSON.parse(row.body_json)),
     effectiveFrom: row.effective_from,
   }));
 }

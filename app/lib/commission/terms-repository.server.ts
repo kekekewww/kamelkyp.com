@@ -10,11 +10,17 @@ const TermClauseSchema = z.object({
 
 const TermBodySchema = z.array(TermClauseSchema).min(1).max(100);
 
+export type TermClause = z.infer<typeof TermClauseSchema>;
+
+export function parseTermClauses(value: unknown): TermClause[] {
+  return TermBodySchema.parse(value);
+}
+
 export interface PublishedTermDocument {
   documentId: string;
   versionId: string;
   kind: "common" | "service" | "privacy";
-  clauses: z.infer<typeof TermBodySchema>;
+  clauses: TermClause[];
   effectiveFrom: string;
 }
 
@@ -57,7 +63,7 @@ export async function getActiveTerms(
     documentId: row.document_id,
     versionId: row.version_id,
     kind: row.kind,
-    clauses: TermBodySchema.parse(JSON.parse(row.body_json)),
+    clauses: parseTermClauses(JSON.parse(row.body_json)),
     effectiveFrom: row.effective_from,
   }));
 }

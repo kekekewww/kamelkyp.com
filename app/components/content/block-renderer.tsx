@@ -1,4 +1,4 @@
-import { Children } from "react";
+import { Fragment } from "react";
 import type { ContentBlock } from "../../lib/content/block-schema";
 import type { Locale } from "../../lib/i18n/locale";
 import type { MediaItem } from "../../lib/media/media-schema";
@@ -45,9 +45,7 @@ function renderBlock(
         </blockquote>
       );
     case "list": {
-      const items = Children.toArray(
-        block.items.map((item) => <li key={item}>{item}</li>),
-      );
+      const items = block.items.map((item) => <li key={item}>{item}</li>);
       return block.style === "ordered" ? <ol>{items}</ol> : <ul>{items}</ul>;
     }
     case "media": {
@@ -77,13 +75,18 @@ export function BlockRenderer({
   r2Hosts?: ReadonlySet<string>;
 }) {
   const mediaById = new Map(media.map((item) => [item.id, item]));
-  return (
-    <div className="content-blocks">
-      {Children.toArray(
-        blocks.map((block) =>
-          renderBlock(block, { locale, mediaById, r2Hosts }),
-        ),
-      )}
-    </div>
-  );
+  const duplicateCounts = new Map<string, number>();
+  const renderedBlocks = blocks.map((block) => {
+    const fingerprint = JSON.stringify(block);
+    const occurrence = duplicateCounts.get(fingerprint) ?? 0;
+    duplicateCounts.set(fingerprint, occurrence + 1);
+
+    return (
+      <Fragment key={`${fingerprint}:${occurrence}`}>
+        {renderBlock(block, { locale, mediaById, r2Hosts })}
+      </Fragment>
+    );
+  });
+
+  return <div className="content-blocks">{renderedBlocks}</div>;
 }
