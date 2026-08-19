@@ -84,6 +84,7 @@ async function createHarness() {
       getScriptProperties: () => ({
         getProperty: (key: string) => store.get(key) ?? null,
         setProperty: (key: string, value: string) => store.set(key, value),
+        deleteProperty: (key: string) => store.delete(key),
       }),
     },
     LockService: {
@@ -145,7 +146,7 @@ async function createHarness() {
     );
   }
 
-  return { invoke, signedEvent, formSubmit, mailSend };
+  return { invoke, signedEvent, formSubmit, mailSend, store };
 }
 
 const payload = {
@@ -195,6 +196,25 @@ describe("Apps Script Google Form and Gmail relay", () => {
     const tampered = harness.signedEvent(payload);
     tampered.payloadBase64Url += "A";
     expect(harness.invoke(tampered).error.code).toBe("invalid_signature");
+    expect(harness.formSubmit).not.toHaveBeenCalled();
+    expect(harness.mailSend).not.toHaveBeenCalled();
+  });
+
+  it("deletes only the requested idempotency ledger", async () => {
+    const harness = await createHarness();
+    harness.store.set(`case:${payload.caseId}`, JSON.stringify({ state: "complete" }));
+    harness.store.set("case:KAM-20260810-OTHERCASE1", "keep");
+    const event = harness.signedEvent({
+      operation: "cleanup_ledger",
+      caseId: payload.caseId,
+    });
+    expect(harness.invoke(event)).toMatchObject({
+      ok: true,
+      data: { operation: "cleanup_ledger", caseId: payload.caseId },
+    });
+    expect(harness.invoke(event).ok).toBe(true);
+    expect(harness.store.has(`case:${payload.caseId}`)).toBe(false);
+    expect(harness.store.get("case:KAM-20260810-OTHERCASE1")).toBe("keep");
     expect(harness.formSubmit).not.toHaveBeenCalled();
     expect(harness.mailSend).not.toHaveBeenCalled();
   });

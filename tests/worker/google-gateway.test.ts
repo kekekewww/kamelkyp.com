@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import { sendToGoogle } from "../../app/lib/integrations/google-submission-gateway.server";
+import {
+  cleanupGoogleLedger,
+  sendToGoogle,
+} from "../../app/lib/integrations/google-submission-gateway.server";
 import { verifySignedEnvelopeForTest } from "../../app/lib/integrations/hmac-envelope";
 
 const secret = "test-secret-with-at-least-32-characters";
@@ -81,5 +84,29 @@ describe("Google submission gateway", () => {
       }),
     ).rejects.toThrow("apps_script_url_invalid");
     expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it("sends an idempotent signed cleanup_ledger operation", async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      Response.json({
+        ok: true,
+        data: {
+          operation: "cleanup_ledger",
+          caseId: "KAM-20260810-01HZX8J4AB",
+        },
+      }),
+    );
+    await cleanupGoogleLedger({
+      url: "https://script.google.com/macros/s/test/exec",
+      secret,
+      caseId: "KAM-20260810-01HZX8J4AB",
+      now: "2026-08-19T00:00:00.000Z",
+      fetcher,
+    });
+    const envelope = JSON.parse(String(fetcher.mock.calls[0]?.[1]?.body));
+    await expect(verifySignedEnvelopeForTest(envelope, secret)).resolves.toEqual({
+      operation: "cleanup_ledger",
+      caseId: "KAM-20260810-01HZX8J4AB",
+    });
   });
 });
