@@ -1,0 +1,37 @@
+import { expect, test } from "@playwright/test";
+
+test("landing identity and category navigation stay focused", async ({
+  page,
+}) => {
+  await page.goto("/zh");
+  await expect(page.getByRole("heading", { name: "Kamel" })).toBeVisible();
+  await expect(page.getByText("楊子賢", { exact: true })).toHaveCount(1);
+
+  await page.getByRole("link", { name: "混音", exact: true }).click();
+  await expect(page).toHaveURL(/\/zh\/mixing$/);
+  await expect(
+    page.getByRole("heading", { name: "完整歌曲混音" }),
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Vocal 混音" })).toBeVisible();
+  await expect(page.getByText("單純歌曲銜接")).toHaveCount(0);
+});
+
+test("mobile menu and footer use expandable groups", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/zh");
+  await page.getByRole("button", { name: "開啟選單" }).click();
+  await expect(page.getByRole("navigation", { name: "主要導覽" })).toBeVisible();
+  await expect(page.locator("footer details")).toHaveCount(5);
+});
+
+test("fonts are bundled without third-party font requests", async ({ page }) => {
+  const thirdPartyFontRequests: string[] = [];
+  page.on("request", (request) => {
+    if (/fonts\.(googleapis|gstatic)\.com/.test(request.url())) {
+      thirdPartyFontRequests.push(request.url());
+    }
+  });
+
+  await page.goto("/en");
+  expect(thirdPartyFontRequests).toEqual([]);
+});
