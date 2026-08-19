@@ -10,7 +10,7 @@ const required = {
   TURNSTILE_SITE_KEY: "site-key",
   RATE_LIMIT_NAMESPACE_ID: "41004",
   ACCESS_AUD: "access-audience",
-  ACCESS_TEAM_DOMAIN: "team.cloudflareaccess.com",
+  ACCESS_TEAM_DOMAIN: "https://team.cloudflareaccess.com",
   ADMIN_EMAIL: "admin@example.com",
 };
 
@@ -146,6 +146,9 @@ describe("cloud project configuration", () => {
         database_name: "kamelkyp-production",
         migrations_dir: "../../migrations",
       });
+      expect(config.routes).toEqual([
+        { pattern: "kamelkyp.com", custom_domain: true },
+      ]);
     } finally {
       await rm(result.directory, { recursive: true, force: true });
     }
