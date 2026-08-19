@@ -84,8 +84,7 @@ describe("commission schema", () => {
         .success,
     ).toBe(false);
     expect(
-      CommissionDraftSchema.safeParse({ ...input, consultation: true })
-        .success,
+      CommissionDraftSchema.safeParse({ ...input, consultation: true }).success,
     ).toBe(true);
   });
 
