@@ -10,9 +10,9 @@ export async function installTurnstileMock(page: Page) {
 }
 
 export async function completeValidFullMix(page: Page) {
+  await page.addInitScript(() => localStorage.clear());
   await page.goto("/en/commission/mixing/full");
-  await page.evaluate(() => localStorage.clear());
-  await page.getByLabel("Preferred name").fill("Artist K");
+  await page.locator('[data-draft-ready="true"]').waitFor();
   await page.getByLabel("Email").fill("artist@example.com");
   await page.getByRole("button", { name: "Add contact" }).click();
   await page.getByLabel("Contact platform").fill("Discord");
@@ -27,6 +27,7 @@ export async function completeValidFullMix(page: Page) {
   await page.getByLabel("BPM").fill("unknown");
   await page.getByLabel("Key").fill("unknown");
   await page.getByLabel("Direction").fill("Clear vocal");
+  await page.getByLabel("Preferred name").fill("Artist K");
   await page.getByRole("button", { name: "Next" }).click();
   await page.getByLabel(/I have read and agree/).check();
   await page.getByRole("button", { name: "Review" }).click();

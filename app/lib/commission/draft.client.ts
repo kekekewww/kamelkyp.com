@@ -2,6 +2,8 @@ import type { Locale } from "../i18n/locale";
 import { type CommissionDraft, CommissionDraftSchema } from "./schema";
 
 const PREFIX = "kamel:commission:v1";
+const ATTEMPT_PREFIX = "kamel:commission-attempt:v1";
+const CASE_ID_PATTERN = /^KAM-\d{8}-[0-9A-HJKMNP-TV-Z]{10}$/;
 
 export interface DraftStorage {
   getItem(key: string): string | null;
@@ -59,4 +61,37 @@ export function clearDraft(
   storage?: DraftStorage,
 ): void {
   resolveStorage(storage).removeItem(key(locale, serviceId));
+}
+
+function attemptKey(serviceId: CommissionDraft["serviceId"]): string {
+  return `${ATTEMPT_PREFIX}:${serviceId}`;
+}
+
+export function saveRetryCaseId(
+  serviceId: CommissionDraft["serviceId"],
+  caseId: string,
+  storage?: DraftStorage,
+): void {
+  if (!CASE_ID_PATTERN.test(caseId)) throw new Error("retry_case_id_invalid");
+  resolveStorage(storage).setItem(attemptKey(serviceId), caseId);
+}
+
+export function loadRetryCaseId(
+  serviceId: CommissionDraft["serviceId"],
+  storage?: DraftStorage,
+): string | null {
+  const target = resolveStorage(storage);
+  const storageKey = attemptKey(serviceId);
+  const caseId = target.getItem(storageKey);
+  if (!caseId) return null;
+  if (CASE_ID_PATTERN.test(caseId)) return caseId;
+  target.removeItem(storageKey);
+  return null;
+}
+
+export function clearRetryCaseId(
+  serviceId: CommissionDraft["serviceId"],
+  storage?: DraftStorage,
+): void {
+  resolveStorage(storage).removeItem(attemptKey(serviceId));
 }

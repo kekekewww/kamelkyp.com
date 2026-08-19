@@ -9,6 +9,7 @@ export default [
   route(":lang", "routes/public/layout.tsx", [
     index("routes/public/home.tsx"),
     route("commission", "routes/public/commission-index.tsx"),
+    route("commission/success", "routes/public/commission-success.tsx"),
     route("commission/:category", "routes/public/commission-category.tsx"),
     route(
       "commission/:category/:service",

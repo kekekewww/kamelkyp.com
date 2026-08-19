@@ -1,8 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router";
 import {
   clearDraft,
+  clearRetryCaseId,
   loadDraft,
+  loadRetryCaseId,
   saveDraft,
+  saveRetryCaseId,
 } from "../../lib/commission/draft.client";
 import {
   type CommissionDraft,
@@ -121,16 +125,17 @@ export function CommissionWizard({
   const [errors, setErrors] = useState<string[]>([]);
   const [turnstileToken, setTurnstileToken] = useState("");
   const [challengeKey, setChallengeKey] = useState(0);
-  const [submitState, setSubmitState] = useState<
-    "idle" | "submitting" | "ready"
-  >("idle");
+  const [submitState, setSubmitState] = useState<"idle" | "submitting">("idle");
   const [submitMessage, setSubmitMessage] = useState("");
+  const [retryCaseId, setRetryCaseId] = useState<string | null>(null);
+  const navigate = useNavigate();
   const service = getService(serviceId);
   const versionKey = terms.map((term) => term.versionId).join("|");
 
   useEffect(() => {
     const saved = loadDraft(locale, serviceId);
     if (saved) setDraft(saved);
+    setRetryCaseId(loadRetryCaseId(serviceId));
     setLoaded(true);
   }, [locale, serviceId]);
 
@@ -181,18 +186,20 @@ export function CommissionWizard({
 
   function resetCurrentDraft() {
     clearDraft(locale, serviceId);
+    clearRetryCaseId(serviceId);
+    setRetryCaseId(null);
     setDraft(createEmptyDraft(serviceId));
     setTermsAccepted(false);
     setErrors([]);
     setStep("details");
   }
 
-  async function validateEnvelope() {
+  async function submitEnvelope() {
     if (!turnstileToken || submitState === "submitting") return;
     setSubmitState("submitting");
     setSubmitMessage("");
     try {
-      const response = await fetch("/api/commission/prepare", {
+      const response = await fetch("/api/commission/submit", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -202,21 +209,37 @@ export function CommissionWizard({
           termVersionIds: terms.map((term) => term.versionId),
           termsAccepted,
           turnstileToken,
+          existingCaseId: retryCaseId ?? undefined,
         }),
       });
       const result = (await response.json()) as {
         ok: boolean;
-        error?: { message?: string };
+        data?: {
+          caseId: string;
+          serviceId: ServiceId;
+          submittedAt: string;
+        };
+        error?: { code?: string; message?: string; retryCaseId?: string };
       };
       if (!response.ok || !result.ok) {
-        throw new Error(result.error?.message ?? "prepare_failed");
+        if (
+          result.error?.code === "retry_required" &&
+          result.error.retryCaseId
+        ) {
+          saveRetryCaseId(serviceId, result.error.retryCaseId);
+          setRetryCaseId(result.error.retryCaseId);
+        }
+        throw new Error(result.error?.message ?? "submission_failed");
       }
-      setSubmitState("ready");
-      setSubmitMessage(
-        isZh
-          ? "驗證完成。草稿仍保留在此裝置，待安全送出閘道啟用。"
-          : "Validation complete. Your draft remains on this device until the secure submission gateway is enabled.",
-      );
+      if (!result.data) throw new Error("submission_failed");
+      clearDraft(locale, serviceId);
+      clearRetryCaseId(serviceId);
+      setTermsAccepted(false);
+      setTurnstileToken("");
+      navigate(`/${locale}/commission/success`, {
+        replace: true,
+        state: result.data,
+      });
     } catch (error) {
       setSubmitState("idle");
       setTurnstileToken("");
@@ -225,15 +248,19 @@ export function CommissionWizard({
         error instanceof Error
           ? error.message
           : isZh
-            ? "驗證失敗，請再試一次。"
-            : "Verification failed. Please try again.",
+            ? "送出失敗，請再試一次。"
+            : "Submission failed. Please try again.",
       );
     }
   }
 
   const isZh = locale === "zh";
   return (
-    <main className="commission-wizard" id="main-content">
+    <main
+      className="commission-wizard"
+      data-draft-ready={loaded ? "true" : "false"}
+      id="main-content"
+    >
       <header className="commission-wizard__header">
         <p className="eyebrow">COMMISSION / {serviceId}</p>
         <h1>{service.name[locale]}</h1>
@@ -342,7 +369,7 @@ export function CommissionWizard({
           <p>
             {isZh
               ? "資料已準備完成。下一階段會在此驗證防機器人並安全送出。"
-              : "The envelope is ready. The next stage verifies Turnstile and submits it securely."}
+              : "The envelope is ready. Turnstile is verified immediately before secure submission."}
           </p>
           {turnstileSiteKey ? (
             <TurnstileWidget
@@ -360,10 +387,7 @@ export function CommissionWizard({
             </p>
           )}
           {submitMessage ? (
-            <p
-              className="commission-submit-status"
-              role={submitState === "ready" ? "status" : "alert"}
-            >
+            <p className="commission-submit-status" role="alert">
               {submitMessage}
             </p>
           ) : null}
@@ -374,15 +398,19 @@ export function CommissionWizard({
             <button
               type="button"
               disabled={!turnstileToken || submitState === "submitting"}
-              onClick={validateEnvelope}
+              onClick={submitEnvelope}
             >
               {submitState === "submitting"
                 ? isZh
-                  ? "驗證中…"
-                  : "Validating…"
-                : isZh
-                  ? "驗證委託"
-                  : "Validate commission"}
+                  ? "送出中…"
+                  : "Submitting…"
+                : retryCaseId
+                  ? isZh
+                    ? "重試通知"
+                    : "Retry notification"
+                  : isZh
+                    ? "送出委託"
+                    : "Submit commission"}
             </button>
           </div>
         </section>

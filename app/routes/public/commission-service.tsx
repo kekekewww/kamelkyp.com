@@ -27,15 +27,18 @@ export async function loader(args: LoaderFunctionArgs) {
   const fxSnapshot =
     locale === "en" ? await getUsableFxSnapshot(db, now.slice(0, 10)) : null;
 
+  const turnstileSiteKey =
+    env.TURNSTILE_SITE_KEY ||
+    (import.meta.env.DEV ? "1x00000000000000000000AA" : "");
   return {
     locale,
     serviceId,
     priceRule,
     terms,
     fxSnapshot,
-    turnstileSiteKey: env.TURNSTILE_SITE_KEY,
+    turnstileSiteKey,
     turnstileAction:
-      env.TURNSTILE_SITE_KEY === "1x00000000000000000000AA"
+      turnstileSiteKey === "1x00000000000000000000AA"
         ? "test"
         : "commission-submit",
   };

@@ -28,7 +28,9 @@ test("successful submit clears draft and shows limited confirmation", async ({
   await submit.click();
 
   await expect(page.getByText("KAM-20260810-0000000001")).toBeVisible();
-  await expect(page.getByText("Full Song Mixing")).toBeVisible();
+  await expect(
+    page.getByRole("main").getByText("Full Song Mixing"),
+  ).toBeVisible();
   await expect(page.getByText("artist@example.com")).toHaveCount(0);
   await expect(page.getByText("https://drive.google.com")).toHaveCount(0);
   const draftKeys = await page.evaluate(() =>
