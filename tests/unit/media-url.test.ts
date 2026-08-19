@@ -36,8 +36,7 @@ describe("media URL parser", () => {
       kind: "google_drive",
       canonicalUrl:
         "https://drive.google.com/file/d/1Example-File_Id/view?usp=sharing",
-      embedUrl:
-        "https://drive.google.com/file/d/1Example-File_Id/preview",
+      embedUrl: "https://drive.google.com/file/d/1Example-File_Id/preview",
       provider: "google_drive",
     });
   });
