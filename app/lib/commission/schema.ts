@@ -3,7 +3,13 @@ import { z } from "zod";
 const HttpsUrl = z
   .string()
   .url()
-  .refine((value) => new URL(value).protocol === "https:", "https_required");
+  .refine((value) => {
+    try {
+      return new URL(value).protocol === "https:";
+    } catch {
+      return false;
+    }
+  }, "https_required");
 
 const Common = z
   .object({

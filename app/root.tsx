@@ -11,6 +11,7 @@ import {
 } from "react-router";
 import type { Route } from "./+types/root";
 import { PlaybackProvider } from "./components/media/playback-provider";
+import commissionStyles from "./styles/commission.css?url";
 import componentStyles from "./styles/components.css?url";
 import globalStyles from "./styles/global.css?url";
 import layoutStyles from "./styles/layout.css?url";
@@ -23,6 +24,7 @@ export const links: Route.LinksFunction = () => [
   { rel: "stylesheet", href: globalStyles },
   { rel: "stylesheet", href: layoutStyles },
   { rel: "stylesheet", href: componentStyles },
+  { rel: "stylesheet", href: commissionStyles },
   { rel: "stylesheet", href: mediaStyles },
   { rel: "stylesheet", href: motionStyles },
 ];

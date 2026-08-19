@@ -1,9 +1,6 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 
-test("full mix can be reviewed and edited before validation", async ({
-  page,
-}) => {
-  await page.goto("/en/commission/mixing/full");
+async function fillFullMix(page: Page) {
   await page.getByLabel("Preferred name").fill("Artist K");
   await page.getByLabel("Email").fill("artist@example.com");
   await page.getByRole("button", { name: "Add contact" }).click();
@@ -19,23 +16,48 @@ test("full mix can be reviewed and edited before validation", async ({
   await page.getByLabel("BPM").fill("unknown");
   await page.getByLabel("Key").fill("unknown");
   await page.getByLabel("Direction").fill("Clear vocal");
+}
+
+test("full mix can be reviewed and edited before validation", async ({
+  page,
+}) => {
+  await page.goto("/en/commission/mixing/full");
+  await fillFullMix(page);
   await page.getByRole("button", { name: "Next" }).click();
 
-  await expect(page.getByText(/Bank transfer/)).toBeVisible();
+  await expect(page.getByText(/bank transfer/i)).toBeVisible();
   await expect(page.getByText(/PayPal/)).toBeVisible();
   await expect(page.getByText(/first 5/i)).toBeVisible();
   await page.getByLabel(/I have read and agree/).check();
   await page.getByRole("button", { name: "Review" }).click();
-  await expect(page.getByText("Artist K")).toBeVisible();
-  await expect(page.getByText("US$260.00", { exact: false })).toBeVisible();
+  await expect(page.getByText("Artist K", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("US$260.00", { exact: true }).first(),
+  ).toBeVisible();
 
   await page.getByRole("button", { name: "Edit project details" }).click();
   await expect(page.getByLabel("Direction")).toHaveValue("Clear vocal");
 });
 
-test("term acceptance is not restored from local draft", async ({ page }) => {
+test("refresh restores the valid draft but not term acceptance", async ({
+  page,
+}) => {
   await page.goto("/en/commission/mixing/full");
   await page.evaluate(() => localStorage.clear());
+  await fillFullMix(page);
+  await page.getByRole("button", { name: "Next" }).click();
+  await page.getByLabel(/I have read and agree/).check();
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        localStorage.getItem("kamel:commission:v1:en:full_mix"),
+      ),
+    )
+    .not.toBeNull();
+
   await page.reload();
+  await expect(page.getByLabel("Preferred name")).toHaveValue("Artist K");
   await expect(page.getByLabel(/I have read and agree/)).toHaveCount(0);
+  await page.getByRole("button", { name: "Next" }).click();
+  await expect(page.getByLabel(/I have read and agree/)).not.toBeChecked();
 });

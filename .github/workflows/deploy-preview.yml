@@ -74,6 +74,7 @@ jobs:
         run: |
           npx wrangler d1 execute kamelkyp-preview --remote --file tests/fixtures/media-e2e.sql
           npx wrangler d1 execute kamelkyp-preview --remote --file tests/fixtures/fx-e2e.sql
+          npx wrangler d1 execute kamelkyp-preview --remote --file tests/fixtures/terms-e2e.sql
       - name: Remove generated deployment configuration
         if: always()
         shell: bash
@@ -99,3 +100,4 @@ jobs:
         run: |
           npx wrangler d1 execute kamelkyp-preview --remote --file tests/fixtures/media-e2e-cleanup.sql
           npx wrangler d1 execute kamelkyp-preview --remote --file tests/fixtures/fx-e2e-cleanup.sql
+          npx wrangler d1 execute kamelkyp-preview --remote --file tests/fixtures/terms-e2e-cleanup.sql

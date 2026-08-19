@@ -7,6 +7,11 @@ export default [
   route(":lang", "routes/public/layout.tsx", [
     index("routes/public/home.tsx"),
     route("commission", "routes/public/commission-index.tsx"),
+    route("commission/:category", "routes/public/commission-category.tsx"),
+    route(
+      "commission/:category/:service",
+      "routes/public/commission-service.tsx",
+    ),
     route("mixing", "routes/public/mixing-index.tsx"),
     route("mixing/full", "routes/public/mixing-full.tsx"),
     route("mixing/vocal", "routes/public/mixing-vocal.tsx"),

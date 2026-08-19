@@ -16,10 +16,10 @@ export default function CommissionIndexRoute() {
         </p>
       </header>
       <div className="commission-entry__choices">
-        <Link to={localePath(locale, "/mixing")}>
-          {locale === "zh" ? "混音服務" : "Mixing"}
+        <Link to={localePath(locale, "/commission/mixing")}>
+          {locale === "zh" ? "混音" : "Mixing"}
         </Link>
-        <Link to={localePath(locale, "/song-transition")}>
+        <Link to={localePath(locale, "/commission/song-transition")}>
           {locale === "zh" ? "歌曲銜接" : "Song transition"}
         </Link>
       </div>
