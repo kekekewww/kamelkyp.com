@@ -118,6 +118,7 @@ describe("cloud project configuration", () => {
           "TURNSTILE_SECRET",
           "APPS_SCRIPT_URL",
           "APPS_SCRIPT_HMAC_SECRET",
+          "CSRF_SECRET",
         ],
       });
       expect(JSON.stringify(config)).not.toContain("private-hmac");

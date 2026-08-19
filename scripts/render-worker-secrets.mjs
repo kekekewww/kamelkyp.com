@@ -1,9 +1,15 @@
 import { writeFile } from "node:fs/promises";
 
+const environment = process.argv[2];
+if (environment !== "preview" && environment !== "production") {
+  throw new Error("environment_must_be_preview_or_production");
+}
+
 const names = [
   "TURNSTILE_SECRET",
   "APPS_SCRIPT_URL",
   "APPS_SCRIPT_HMAC_SECRET",
+  "CSRF_SECRET",
 ];
 const values = Object.fromEntries(
   names.map((name) => {
@@ -30,6 +36,15 @@ if (
 }
 if (values.APPS_SCRIPT_HMAC_SECRET.length < 32) {
   throw new Error("invalid_apps_script_hmac_secret");
+}
+if (values.CSRF_SECRET.length < 32) {
+  throw new Error("invalid_csrf_secret");
+}
+if (
+  environment === "production" &&
+  values.TURNSTILE_SECRET === "1x0000000000000000000000000000000AA"
+) {
+  throw new Error("turnstile_test_secret_forbidden");
 }
 
 await writeFile(".wrangler.secrets.json", `${JSON.stringify(values)}\n`, {

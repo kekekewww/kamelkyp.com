@@ -84,6 +84,7 @@ const config = {
       "TURNSTILE_SECRET",
       "APPS_SCRIPT_URL",
       "APPS_SCRIPT_HMAC_SECRET",
+      "CSRF_SECRET",
     ],
   },
   vars: {

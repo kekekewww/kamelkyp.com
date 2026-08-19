@@ -54,7 +54,11 @@ async function expectForbidden(request: Request) {
 describe("Cloudflare Access JWT verification", () => {
   it("returns only normalized identity for a valid token", async () => {
     await expect(
-      verifyAccessRequest(requestWithClaims(validClaims()), createTestEnv(), verifier),
+      verifyAccessRequest(
+        requestWithClaims(validClaims()),
+        createTestEnv(),
+        verifier,
+      ),
     ).resolves.toEqual({
       subject: "admin-subject",
       email: "admin@example.com",
@@ -79,7 +83,11 @@ describe("Cloudflare Access JWT verification", () => {
     const token = validClaims({ email: "secret-person@example.com" });
     let response: Response | undefined;
     try {
-      await verifyAccessRequest(requestWithClaims(token), createTestEnv(), verifier);
+      await verifyAccessRequest(
+        requestWithClaims(token),
+        createTestEnv(),
+        verifier,
+      );
     } catch (error) {
       response = error as Response;
     }

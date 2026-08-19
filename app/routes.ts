@@ -5,6 +5,7 @@ export default [
   route("api/commission/prepare", "routes/api/commission-prepare.ts"),
   route("api/commission/submit", "routes/api/commission-submit.ts"),
   route("language/:locale", "routes/language-preference.ts"),
+  route("admin", "routes/admin/layout.tsx", [index("routes/admin/index.tsx")]),
   index("routes/language-redirect.tsx"),
   route(":lang", "routes/public/layout.tsx", [
     index("routes/public/home.tsx"),

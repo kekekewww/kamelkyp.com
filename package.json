@@ -17,8 +17,8 @@
     "test:worker": "vitest run --config vitest.worker.config.ts tests/worker",
     "test:apps-script": "vitest run --config vitest.config.ts tests/apps-script",
     "test:e2e": "playwright test",
-    "deploy:preview": "npm run build && node scripts/render-wrangler-config.mjs preview && node scripts/render-worker-secrets.mjs && wrangler deploy --config build/server/.wrangler.generated.jsonc --secrets-file .wrangler.secrets.json",
-    "deploy:production": "npm run build && node scripts/render-wrangler-config.mjs production && node scripts/render-worker-secrets.mjs && wrangler deploy --config build/server/.wrangler.generated.jsonc --secrets-file .wrangler.secrets.json"
+    "deploy:preview": "npm run build && node scripts/render-wrangler-config.mjs preview && node scripts/render-worker-secrets.mjs preview && wrangler deploy --config build/server/.wrangler.generated.jsonc --secrets-file .wrangler.secrets.json",
+    "deploy:production": "npm run build && node scripts/render-wrangler-config.mjs production && node scripts/render-worker-secrets.mjs production && wrangler deploy --config build/server/.wrangler.generated.jsonc --secrets-file .wrangler.secrets.json"
   },
   "dependencies": {
     "@fontsource/barlow-condensed": "5.3.0",

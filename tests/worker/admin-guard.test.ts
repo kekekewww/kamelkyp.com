@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
+import type { JwtVerifier } from "../../app/lib/auth/access-jwt.server";
 import {
   requireAdmin,
   requireAdminMutation,
 } from "../../app/lib/auth/admin.server";
-import type { JwtVerifier } from "../../app/lib/auth/access-jwt.server";
 import { createCsrfToken } from "../../app/lib/auth/csrf.server";
 import { createTestEnv } from "../helpers/test-env";
 
@@ -26,10 +26,12 @@ function accessRequest(method = "GET") {
 describe("admin guards", () => {
   it("requires Access for reads and Access plus CSRF for mutations", async () => {
     const env = createTestEnv();
-    await expect(requireAdmin(accessRequest(), env, verifier)).resolves.toEqual({
-      subject: "admin-subject",
-      email: "admin@example.com",
-    });
+    await expect(requireAdmin(accessRequest(), env, verifier)).resolves.toEqual(
+      {
+        subject: "admin-subject",
+        email: "admin@example.com",
+      },
+    );
 
     const csrfToken = await createCsrfToken({
       subject: "admin-subject",
