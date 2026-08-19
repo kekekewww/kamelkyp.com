@@ -42,15 +42,18 @@ describe("service pages", () => {
 });
 
 describe("public locale layout", () => {
-  it("provides a supported locale to its child routes", () => {
-    expect(publicLayoutLoader({ params: { lang: "zh" } } as never)).toEqual({
-      locale: "zh",
-    });
+  it("provides a supported locale and footer groups to its child routes", async () => {
+    const result = await publicLayoutLoader({
+      params: { lang: "zh" },
+    } as never);
+
+    expect(result.locale).toBe("zh");
+    expect(result.footerGroups).toHaveLength(5);
   });
 
-  it("rejects an unsupported public locale", () => {
-    expect(() =>
+  it("rejects an unsupported public locale", async () => {
+    await expect(
       publicLayoutLoader({ params: { lang: "fr" } } as never),
-    ).toThrowError(Response);
+    ).rejects.toBeInstanceOf(Response);
   });
 });
