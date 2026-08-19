@@ -1,4 +1,5 @@
 import { createRequestHandler } from "react-router";
+import { deleteOrphanAttempts } from "../app/lib/cases/retention.server";
 import { createCloudflareContextProvider } from "../app/lib/cloudflare/context";
 import type { Env } from "../app/lib/env.server";
 import { refreshFxRate } from "../app/lib/pricing/fx-repository.server";
@@ -22,6 +23,11 @@ export default {
     return requestHandler(request, createCloudflareContextProvider(env, ctx));
   },
   scheduled(_controller, env, ctx) {
-    ctx.waitUntil(refreshFxRate(env.DB, env.FX_API_URL, fetch));
+    ctx.waitUntil(
+      Promise.all([
+        refreshFxRate(env.DB, env.FX_API_URL, fetch),
+        deleteOrphanAttempts(env.DB, new Date().toISOString()),
+      ]),
+    );
   },
 } satisfies ExportedHandler<Env>;

@@ -21,6 +21,7 @@ jobs:
       - run: npm ci
       - run: npm run format:check
       - run: npm run test:unit
+      - run: npm run test:apps-script
       - run: npm run typecheck
       - run: npm run build
       - name: Render generated SSR Worker configuration for dry-run

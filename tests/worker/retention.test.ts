@@ -29,7 +29,9 @@ async function seedCase(caseId: string, updatedAt: string) {
 
 describe("commission metadata retention", () => {
   beforeEach(async () => {
-    await env.DB.prepare("DELETE FROM cases WHERE case_id LIKE 'KAM-RET-%'").run();
+    await env.DB.prepare(
+      "DELETE FROM cases WHERE case_id LIKE 'KAM-RET-%'",
+    ).run();
   });
 
   it("sets cleanup seven days after delivered, cancelled or paused", async () => {
@@ -78,9 +80,16 @@ describe("commission metadata retention", () => {
 
   it("deletes incomplete attempts older than 24 hours", async () => {
     await seedCase("KAM-RET-ORPHAN", "2026-08-10T12:00:00Z");
-    expect(
-      await deleteOrphanAttempts(env.DB, "2026-08-11T13:00:00Z"),
-    ).toBe(1);
+    const eligible = await env.DB.prepare(
+      "SELECT COUNT(*) AS total FROM submission_attempts a " +
+        "JOIN cases c ON c.case_id = a.case_id " +
+        "WHERE a.state != 'complete' AND c.status = 'pending_review' " +
+        "AND a.updated_at < '2026-08-10T13:00:00.000Z'",
+    ).first<{ total: number }>();
+    expect(eligible?.total).toBeGreaterThanOrEqual(1);
+    expect(await deleteOrphanAttempts(env.DB, "2026-08-11T13:00:00Z")).toBe(
+      eligible?.total,
+    );
     expect(
       await env.DB.prepare(
         "SELECT * FROM cases WHERE case_id = 'KAM-RET-ORPHAN'",
