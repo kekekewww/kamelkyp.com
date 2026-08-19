@@ -29,9 +29,7 @@ describe("locale selection", () => {
   });
 
   it("switches locale without changing the rest of the path", () => {
-    expect(switchLocalePath("/zh/mixing/full", "en")).toBe(
-      "/en/mixing/full",
-    );
+    expect(switchLocalePath("/zh/mixing/full", "en")).toBe("/en/mixing/full");
     expect(localePath("zh", "/works")).toBe("/zh/works");
   });
 });
