@@ -15,6 +15,7 @@
     "typecheck": "npm run typegen && tsc -b",
     "test:unit": "vitest run --config vitest.config.ts tests/unit",
     "test:worker": "vitest run --config vitest.worker.config.ts tests/worker",
+    "test:apps-script": "vitest run --config vitest.config.ts tests/apps-script",
     "test:e2e": "playwright test",
     "deploy:preview": "npm run build && node scripts/render-wrangler-config.mjs preview && node scripts/render-worker-secrets.mjs && wrangler deploy --config build/server/.wrangler.generated.jsonc --secrets-file .wrangler.secrets.json",
     "deploy:production": "npm run build && node scripts/render-wrangler-config.mjs production && node scripts/render-worker-secrets.mjs && wrangler deploy --config build/server/.wrangler.generated.jsonc --secrets-file .wrangler.secrets.json"
