@@ -1,6 +1,7 @@
 import type { Locale } from "../../lib/i18n/locale";
 import type { MediaItem } from "../../lib/media/media-schema";
 import { parseMediaUrl } from "../../lib/media/parse-media-url";
+import { DirectAudioPreview } from "./direct-audio-preview";
 import { ExternalMediaLink } from "./external-media-link";
 import { GoogleDrivePreview } from "./google-drive-preview";
 import { YouTubePreview } from "./youtube-preview";
@@ -43,6 +44,8 @@ export function MediaPreview({
     case "direct_audio":
     case "github_raw_audio":
     case "cloudflare_r2_audio":
+      preview = <DirectAudioPreview item={item} locale={locale} />;
+      break;
     case "external_link":
       preview = <ExternalMediaLink url={parsed.canonicalUrl} locale={locale} />;
       break;

@@ -13,6 +13,12 @@ declare namespace NodeJS {
 
 declare const process: NodeJS.Process;
 
+declare module "node:buffer" {
+  export class Buffer extends Uint8Array {
+    static from(data: Uint8Array): Buffer;
+  }
+}
+
 declare module "node:child_process" {
   interface SpawnSyncResult {
     status: number | null;

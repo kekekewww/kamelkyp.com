@@ -2,6 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./tests/e2e",
+  workers: 4,
   use: {
     baseURL: process.env.PREVIEW_URL,
     trace: "retain-on-failure",

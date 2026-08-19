@@ -14,6 +14,7 @@ import { PlaybackProvider } from "./components/media/playback-provider";
 import componentStyles from "./styles/components.css?url";
 import globalStyles from "./styles/global.css?url";
 import layoutStyles from "./styles/layout.css?url";
+import mediaStyles from "./styles/media.css?url";
 import motionStyles from "./styles/motion.css?url";
 import tokenStyles from "./styles/tokens.css?url";
 
@@ -22,6 +23,7 @@ export const links: Route.LinksFunction = () => [
   { rel: "stylesheet", href: globalStyles },
   { rel: "stylesheet", href: layoutStyles },
   { rel: "stylesheet", href: componentStyles },
+  { rel: "stylesheet", href: mediaStyles },
   { rel: "stylesheet", href: motionStyles },
 ];
 
