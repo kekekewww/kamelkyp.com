@@ -21,10 +21,13 @@ test("desktop submenu works by keyboard and Escape", async ({ page }) => {
   const mixingLink = page
     .getByRole("navigation", { name: "Primary navigation" })
     .getByRole("link", { name: "Mixing", exact: true });
+  const fullMixingLink = page.getByRole("link", { name: "Full Song Mixing" });
   await mixingLink.focus();
-  await expect(page.getByRole("link", { name: "Full Song Mixing" })).toBeVisible();
+  await expect(fullMixingLink).toBeVisible();
+  await page.keyboard.press("ArrowDown");
+  await expect(fullMixingLink).toBeFocused();
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("link", { name: "Full Song Mixing" })).toBeHidden();
+  await expect(fullMixingLink).toBeHidden();
   await expect(mixingLink).toBeFocused();
 });
 

@@ -14,6 +14,8 @@ describe("language routes", () => {
     } as never);
 
     expect(response.headers.get("location")).toBe("/en");
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+    expect(response.headers.get("vary")).toBe("Accept-Language, Cookie");
   });
 
   it("stores a valid preference and returns to a local path", () => {

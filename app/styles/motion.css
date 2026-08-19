@@ -27,7 +27,7 @@ button,
 }
 
 .nav-group:hover .nav-group__menu,
-.nav-group:focus-within .nav-group__menu {
+.nav-group[data-mobile-open] .nav-group__menu {
   visibility: visible;
   opacity: 1;
   transform: translateY(0) scale(1);
@@ -68,7 +68,7 @@ button:active:not(:disabled),
 
   .nav-group__menu,
   .nav-group:hover .nav-group__menu,
-  .nav-group:focus-within .nav-group__menu {
+  .nav-group[data-mobile-open] .nav-group__menu {
     visibility: visible;
     opacity: 1;
     transform: none;

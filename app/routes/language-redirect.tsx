@@ -6,5 +6,10 @@ export function loader({ request }: LoaderFunctionArgs) {
     cookieHeader: request.headers.get("cookie"),
     acceptLanguage: request.headers.get("accept-language"),
   });
-  return redirect(`/${locale}`);
+  return redirect(`/${locale}`, {
+    headers: {
+      "cache-control": "private, no-store",
+      vary: "Accept-Language, Cookie",
+    },
+  });
 }

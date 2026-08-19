@@ -1,4 +1,9 @@
-import { type LoaderFunctionArgs, Outlet, useLoaderData } from "react-router";
+import {
+  type LoaderFunctionArgs,
+  type MetaFunction,
+  Outlet,
+  useLoaderData,
+} from "react-router";
 import { PublicShell } from "../../components/layout/public-shell";
 import { cloudflareContext } from "../../lib/cloudflare/context";
 import {
@@ -10,6 +15,24 @@ import { isLocale, type Locale } from "../../lib/i18n/locale";
 export interface PublicOutletContext {
   locale: Locale;
 }
+
+export const meta: MetaFunction = ({ params }) => {
+  const isZh = params.lang !== "en";
+
+  return [
+    {
+      title: isZh
+        ? "Kamel — 音樂混音與歌曲銜接"
+        : "Kamel — Music Mixing & Song Transitions",
+    },
+    {
+      name: "description",
+      content: isZh
+        ? "Kamel 的混音、Vocal 製作與歌曲銜接委託網站。"
+        : "Kamel's commissions for mixing, vocal production and song transitions.",
+    },
+  ];
+};
 
 export async function loader({ params, context }: LoaderFunctionArgs) {
   if (!params.lang || !isLocale(params.lang)) {

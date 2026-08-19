@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { Link, NavLink } from "react-router";
 import { getSiteCopy } from "../../lib/i18n/copy";
 import type { Locale } from "../../lib/i18n/locale";
@@ -11,6 +11,8 @@ interface NavigationGroupProps {
   path: string;
   disclosureLabel: string;
   open: boolean;
+  onClose: () => void;
+  onOpen: () => void;
   onToggle: () => void;
   onNavigate: () => void;
   items: Array<{ label: string; path: string }>;
@@ -22,16 +24,91 @@ function NavigationGroup({
   path,
   disclosureLabel,
   open,
+  onClose,
+  onOpen,
   onToggle,
   onNavigate,
   items,
 }: NavigationGroupProps) {
   const menuId = useId();
+  const primaryLinkRef = useRef<HTMLAnchorElement>(null);
+  const menuRef = useRef<HTMLUListElement>(null);
+  const suppressNextFocusOpen = useRef(false);
+
+  function getMenuLinks() {
+    return Array.from(
+      menuRef.current?.querySelectorAll<HTMLAnchorElement>("a") ?? [],
+    );
+  }
+
+  function handleFocus(event: React.FocusEvent<HTMLLIElement>) {
+    if (suppressNextFocusOpen.current) {
+      suppressNextFocusOpen.current = false;
+      return;
+    }
+
+    if (!event.currentTarget.contains(event.relatedTarget)) {
+      onOpen();
+    }
+  }
+
+  function handleBlur(event: React.FocusEvent<HTMLLIElement>) {
+    if (!event.currentTarget.contains(event.relatedTarget)) {
+      onClose();
+    }
+  }
+
+  function handleKeyDown(event: React.KeyboardEvent<HTMLLIElement>) {
+    const links = getMenuLinks();
+    const activeIndex = links.indexOf(event.target as HTMLAnchorElement);
+
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      onClose();
+      if (document.activeElement !== primaryLinkRef.current) {
+        suppressNextFocusOpen.current = true;
+        primaryLinkRef.current?.focus();
+      }
+      return;
+    }
+
+    if (event.target === primaryLinkRef.current && event.key === "ArrowDown") {
+      event.preventDefault();
+      onOpen();
+      requestAnimationFrame(() => links[0]?.focus());
+      return;
+    }
+
+    if (event.target === primaryLinkRef.current && event.key === "ArrowUp") {
+      event.preventDefault();
+      onOpen();
+      requestAnimationFrame(() => links.at(-1)?.focus());
+      return;
+    }
+
+    if (activeIndex >= 0 && ["ArrowDown", "ArrowUp"].includes(event.key)) {
+      event.preventDefault();
+      const direction = event.key === "ArrowDown" ? 1 : -1;
+      const nextIndex = (activeIndex + direction + links.length) % links.length;
+      links[nextIndex]?.focus();
+    }
+  }
 
   return (
-    <li className="nav-group" data-mobile-open={open || undefined}>
+    <li
+      className="nav-group"
+      data-mobile-open={open || undefined}
+      onBlur={handleBlur}
+      onFocus={handleFocus}
+      onKeyDown={handleKeyDown}
+    >
       <div className="nav-group__trigger">
-        <NavLink to={localePath(locale, path)} onClick={onNavigate}>
+        <NavLink
+          ref={primaryLinkRef}
+          to={localePath(locale, path)}
+          onClick={onNavigate}
+        >
           {label}
         </NavLink>
         <button
@@ -45,7 +122,7 @@ function NavigationGroup({
           <span aria-hidden="true">+</span>
         </button>
       </div>
-      <ul className="nav-group__menu" id={menuId}>
+      <ul className="nav-group__menu" id={menuId} ref={menuRef}>
         {items.map((item) => (
           <li key={item.path}>
             <Link to={localePath(locale, item.path)} onClick={onNavigate}>
@@ -108,6 +185,12 @@ export function SiteHeader({ locale }: { locale: Locale }) {
                 openGroup === "mixing" ? copy.collapseMixing : copy.expandMixing
               }
               open={openGroup === "mixing"}
+              onClose={() =>
+                setOpenGroup((current) =>
+                  current === "mixing" ? null : current,
+                )
+              }
+              onOpen={() => setOpenGroup("mixing")}
               onNavigate={closeNavigation}
               onToggle={() =>
                 setOpenGroup((current) =>
@@ -135,6 +218,12 @@ export function SiteHeader({ locale }: { locale: Locale }) {
                   : copy.expandTransition
               }
               open={openGroup === "transition"}
+              onClose={() =>
+                setOpenGroup((current) =>
+                  current === "transition" ? null : current,
+                )
+              }
+              onOpen={() => setOpenGroup("transition")}
               onNavigate={closeNavigation}
               onToggle={() =>
                 setOpenGroup((current) =>
