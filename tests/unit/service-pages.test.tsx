@@ -13,6 +13,7 @@ describe("service pages", () => {
   it("renders only mixing services in the mixing chooser", () => {
     const html = render(<ServiceChoice category="mixing" locale="zh" />);
 
+    expect(html).toContain('<section class="service-choice"');
     expect(html).toContain("完整歌曲混音");
     expect(html).toContain("Vocal 混音");
     expect(html).not.toContain("單純歌曲銜接");
@@ -31,9 +32,7 @@ describe("service pages", () => {
   });
 
   it("renders the approved localized service details", () => {
-    const html = render(
-      <ServiceOverview serviceId="full_mix" locale="zh" />,
-    );
+    const html = render(<ServiceOverview serviceId="full_mix" locale="zh" />);
 
     expect(html).toContain("完整歌曲混音");
     expect(html).toContain("NT$8,000");
