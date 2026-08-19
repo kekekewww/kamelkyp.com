@@ -1,7 +1,17 @@
 import { Children } from "react";
 import type { ContentBlock } from "../../lib/content/block-schema";
+import type { Locale } from "../../lib/i18n/locale";
+import type { MediaItem } from "../../lib/media/media-schema";
+import { MediaPreview } from "../media/media-preview";
 
-function renderBlock(block: ContentBlock) {
+function renderBlock(
+  block: ContentBlock,
+  options: {
+    locale: Locale | null;
+    mediaById: ReadonlyMap<string, MediaItem>;
+    r2Hosts: ReadonlySet<string>;
+  },
+) {
   switch (block.type) {
     case "heading":
       return block.level === 2 ? <h2>{block.text}</h2> : <h3>{block.text}</h3>;
@@ -40,15 +50,40 @@ function renderBlock(block: ContentBlock) {
       );
       return block.style === "ordered" ? <ol>{items}</ol> : <ul>{items}</ul>;
     }
+    case "media": {
+      const item = options.mediaById.get(block.mediaId);
+      return item && options.locale ? (
+        <MediaPreview
+          item={item}
+          locale={options.locale}
+          r2Hosts={options.r2Hosts}
+        />
+      ) : null;
+    }
     case "divider":
       return <hr />;
   }
 }
 
-export function BlockRenderer({ blocks }: { blocks: ContentBlock[] }) {
+export function BlockRenderer({
+  blocks,
+  locale = null,
+  media = [],
+  r2Hosts = new Set(["media.kamelkyp.com"]),
+}: {
+  blocks: ContentBlock[];
+  locale?: Locale | null;
+  media?: MediaItem[];
+  r2Hosts?: ReadonlySet<string>;
+}) {
+  const mediaById = new Map(media.map((item) => [item.id, item]));
   return (
     <div className="content-blocks">
-      {Children.toArray(blocks.map(renderBlock))}
+      {Children.toArray(
+        blocks.map((block) =>
+          renderBlock(block, { locale, mediaById, r2Hosts }),
+        ),
+      )}
     </div>
   );
 }

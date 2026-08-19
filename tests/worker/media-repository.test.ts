@@ -59,16 +59,12 @@ describe("published media repository", () => {
       await listMediaForVersion(env.DB, published.versionId, r2Hosts),
     ).toEqual([]);
 
-    await publishVersion(
-      env.DB,
-      published.versionId,
-      "2026-08-19T00:00:00Z",
-    );
+    await publishVersion(env.DB, published.versionId, "2026-08-19T00:00:00Z");
 
     expect(
-      (
-        await listMediaForVersion(env.DB, published.versionId, r2Hosts)
-      ).map((item) => item.id),
+      (await listMediaForVersion(env.DB, published.versionId, r2Hosts)).map(
+        (item) => item.id,
+      ),
     ).toEqual(["published-youtube"]);
     expect(await listMediaForVersion(env.DB, draft.versionId, r2Hosts)).toEqual(
       [],

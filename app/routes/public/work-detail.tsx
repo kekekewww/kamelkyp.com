@@ -3,6 +3,9 @@ import { BlockRenderer } from "../../components/content/block-renderer";
 import { getPublicContent } from "../../lib/content/public-content.server";
 import { getPublicLoaderContext } from "../../lib/content/public-loader.server";
 import { localePath } from "../../lib/i18n/path";
+import { listMediaForVersion } from "../../lib/media/media-repository.server";
+
+const R2_HOSTS = new Set(["media.kamelkyp.com"]);
 
 export async function loader(args: LoaderFunctionArgs) {
   const { locale, db } = getPublicLoaderContext(args);
@@ -11,11 +14,12 @@ export async function loader(args: LoaderFunctionArgs) {
 
   const item = await getPublicContent(db, "work", slug, locale);
   if (!item) throw new Response("Not Found", { status: 404 });
-  return { locale, item };
+  const media = await listMediaForVersion(db, item.versionId, R2_HOSTS);
+  return { locale, item, media };
 }
 
 export default function WorkDetailRoute() {
-  const { locale, item } = useLoaderData<typeof loader>();
+  const { locale, item, media } = useLoaderData<typeof loader>();
   return (
     <main className="content-detail-page" id="main-content">
       <Link
@@ -30,7 +34,12 @@ export default function WorkDetailRoute() {
           <h1>{item.title}</h1>
           {item.summary ? <p>{item.summary}</p> : null}
         </header>
-        <BlockRenderer blocks={item.body} />
+        <BlockRenderer
+          blocks={item.body}
+          locale={locale}
+          media={media}
+          r2Hosts={R2_HOSTS}
+        />
       </article>
     </main>
   );

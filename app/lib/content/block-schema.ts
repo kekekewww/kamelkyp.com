@@ -46,6 +46,10 @@ export const ContentBlockSchema = z.discriminatedUnion("type", [
     url: HttpsUrl,
     label: z.string().min(1).max(200),
   }),
+  z.object({
+    type: z.literal("media"),
+    mediaId: z.string().min(1).max(100),
+  }),
   z.object({ type: z.literal("divider") }),
 ]);
 

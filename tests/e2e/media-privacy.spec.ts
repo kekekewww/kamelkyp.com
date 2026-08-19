@@ -1,9 +1,14 @@
 import { expect, test } from "@playwright/test";
 
-test("does not contact YouTube before explicit activation", async ({ page }) => {
+test("does not contact YouTube before explicit activation", async ({
+  page,
+}) => {
   const youtubeRequests: string[] = [];
   page.on("request", (request) => {
-    if (request.url().includes("youtube")) youtubeRequests.push(request.url());
+    const hostname = new URL(request.url()).hostname;
+    if (hostname.includes("youtube") || hostname === "youtu.be") {
+      youtubeRequests.push(request.url());
+    }
   });
 
   await page.goto("/en/works/media-test");

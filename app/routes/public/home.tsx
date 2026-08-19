@@ -1,6 +1,11 @@
-import { Link, useOutletContext } from "react-router";
+import { Link, type LoaderFunctionArgs, useLoaderData } from "react-router";
+import { MediaPreview } from "../../components/media/media-preview";
+import { getPublicLoaderContext } from "../../lib/content/public-loader.server";
+import { getPublishedContent } from "../../lib/db/content-repository.server";
 import { localePath } from "../../lib/i18n/path";
-import type { PublicOutletContext } from "./layout";
+import { listMediaForVersion } from "../../lib/media/media-repository.server";
+
+const R2_HOSTS = new Set(["media.kamelkyp.com"]);
 
 const WAVEFORM_BARS = [
   ["wave-01", 28],
@@ -37,8 +42,18 @@ const WAVEFORM_BARS = [
   ["wave-32", 48],
 ] as const;
 
+export async function loader(args: LoaderFunctionArgs) {
+  const { locale, db } = getPublicLoaderContext(args);
+  const home = await getPublishedContent(db, "page", "home", locale);
+  const media = home
+    ? await listMediaForVersion(db, home.versionId, R2_HOSTS)
+    : [];
+
+  return { locale, showreel: media[0] ?? null };
+}
+
 export default function HomeRoute() {
-  const { locale } = useOutletContext<PublicOutletContext>();
+  const { locale, showreel } = useLoaderData<typeof loader>();
   const isZh = locale === "zh";
 
   return (
@@ -76,41 +91,53 @@ export default function HomeRoute() {
               </h2>
             </div>
 
-            <div className="showreel__console">
-              <button
-                className="showreel__play"
-                type="button"
-                disabled
-                aria-label={
-                  isZh
-                    ? "尚無可播放的 Showreel"
-                    : "No showreel is available yet"
-                }
-              >
-                <span aria-hidden="true">—</span>
-              </button>
-              <div className="showreel__track">
-                <div className="showreel__waveform" aria-hidden="true">
-                  {WAVEFORM_BARS.map(([id, height]) => (
-                    <span
-                      key={id}
-                      style={
-                        { "--wave-height": `${height}%` } as React.CSSProperties
-                      }
-                    />
-                  ))}
+            {showreel ? (
+              <MediaPreview
+                item={showreel}
+                locale={locale}
+                r2Hosts={R2_HOSTS}
+              />
+            ) : (
+              <>
+                <div className="showreel__console">
+                  <button
+                    className="showreel__play"
+                    type="button"
+                    disabled
+                    aria-label={
+                      isZh
+                        ? "尚無可播放的 Showreel"
+                        : "No showreel is available yet"
+                    }
+                  >
+                    <span aria-hidden="true">—</span>
+                  </button>
+                  <div className="showreel__track">
+                    <div className="showreel__waveform" aria-hidden="true">
+                      {WAVEFORM_BARS.map(([id, height]) => (
+                        <span
+                          key={id}
+                          style={
+                            {
+                              "--wave-height": `${height}%`,
+                            } as React.CSSProperties
+                          }
+                        />
+                      ))}
+                    </div>
+                    <div className="showreel__metadata">
+                      <span>{isZh ? "作品待發布" : "Showreel pending"}</span>
+                      <span>00:00 / 00:00</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="showreel__metadata">
-                  <span>{isZh ? "作品待發布" : "Showreel pending"}</span>
-                  <span>00:00 / 00:00</span>
-                </div>
-              </div>
-            </div>
-            <p className="showreel__empty" role="status">
-              {isZh
-                ? "音訊會由 Kamel 從後台發布；媒體不會自動播放。"
-                : "Kamel will publish audio from the admin area. Media never autoplays."}
-            </p>
+                <p className="showreel__empty" role="status">
+                  {isZh
+                    ? "音訊會由 Kamel 從後台發布；媒體不會自動播放。"
+                    : "Kamel will publish audio from the admin area. Media never autoplays."}
+                </p>
+              </>
+            )}
           </section>
 
           <section
