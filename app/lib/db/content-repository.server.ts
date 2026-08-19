@@ -1,6 +1,6 @@
 import type { Locale } from "../i18n/locale";
 
-type ContentKind = "page" | "work" | "post";
+export type ContentKind = "page" | "work" | "post";
 
 interface DraftInput {
   entryId: string;
@@ -25,6 +25,25 @@ export interface PublishedContent {
   seoDescription: string | null;
   socialImageUrl: string | null;
   publishedAt: string;
+}
+
+function mapPublishedContent(
+  row: Record<string, string | null>,
+): PublishedContent {
+  return {
+    entryId: String(row.entry_id),
+    kind: row.kind as ContentKind,
+    slug: String(row.slug),
+    locale: row.locale as Locale,
+    versionId: String(row.version_id),
+    title: String(row.title),
+    summary: row.summary,
+    body: JSON.parse(String(row.body_json)),
+    seoTitle: row.seo_title,
+    seoDescription: row.seo_description,
+    socialImageUrl: row.social_image_url,
+    publishedAt: String(row.published_at),
+  };
 }
 
 export async function createDraftVersion(
@@ -106,18 +125,27 @@ export async function getPublishedContent(
 
   if (!row) return null;
 
-  return {
-    entryId: String(row.entry_id),
-    kind: row.kind as ContentKind,
-    slug: String(row.slug),
-    locale: row.locale as Locale,
-    versionId: String(row.version_id),
-    title: String(row.title),
-    summary: row.summary,
-    body: JSON.parse(String(row.body_json)),
-    seoTitle: row.seo_title,
-    seoDescription: row.seo_description,
-    socialImageUrl: row.social_image_url,
-    publishedAt: String(row.published_at),
-  };
+  return mapPublishedContent(row);
+}
+
+export async function listPublishedContentRecords(
+  db: D1Database,
+  kind: ContentKind,
+  locale: Locale,
+): Promise<PublishedContent[]> {
+  const rows = await db
+    .prepare(
+      "SELECT e.id AS entry_id, e.kind, e.slug, v.locale, " +
+        "v.id AS version_id, v.title, v.summary, v.body_json, v.seo_title, " +
+        "v.seo_description, v.social_image_url, p.published_at " +
+        "FROM content_entries e " +
+        "JOIN content_publications p ON p.entry_id = e.id AND p.locale = ? " +
+        "JOIN content_versions v ON v.id = p.version_id " +
+        "WHERE e.kind = ? AND e.is_listed = 1 " +
+        "ORDER BY e.sort_order, p.published_at DESC, e.slug",
+    )
+    .bind(locale, kind)
+    .all<Record<string, string | null>>();
+
+  return rows.results.map(mapPublishedContent);
 }

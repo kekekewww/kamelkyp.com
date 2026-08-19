@@ -9,6 +9,7 @@ if (environment !== "preview" && environment !== "production") {
 const commonRequired = [
   "D1_DATABASE_ID",
   "TURNSTILE_SITE_KEY",
+  "RATE_LIMIT_NAMESPACE_ID",
   "ACCESS_AUD",
   "ACCESS_TEAM_DOMAIN",
   "ADMIN_EMAIL",
@@ -38,6 +39,11 @@ if (
   throw new Error("invalid_pr_number");
 }
 
+const rateLimitNamespaceId = process.env.RATE_LIMIT_NAMESPACE_ID;
+if (!/^[1-9][0-9]*$/.test(rateLimitNamespaceId ?? "")) {
+  throw new Error("invalid_rate_limit_namespace_id");
+}
+
 const sourceConfig =
   process.env.WRANGLER_SOURCE_CONFIG ?? "build/server/wrangler.json";
 const outputConfig =
@@ -47,6 +53,28 @@ const appOrigin =
   environment === "production"
     ? process.env.APP_ORIGIN
     : `https://kamelkyp-com-pr-${process.env.PR_NUMBER}.${process.env.WORKERS_DEV_SUBDOMAIN}.workers.dev`;
+
+let accessTeamDomain;
+try {
+  accessTeamDomain = new URL(process.env.ACCESS_TEAM_DOMAIN);
+} catch {
+  throw new Error("invalid_access_team_domain");
+}
+if (
+  accessTeamDomain.protocol !== "https:" ||
+  !accessTeamDomain.hostname.endsWith(".cloudflareaccess.com") ||
+  accessTeamDomain.pathname !== "/" ||
+  accessTeamDomain.search ||
+  accessTeamDomain.hash
+) {
+  throw new Error("invalid_access_team_domain");
+}
+if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(process.env.ADMIN_EMAIL)) {
+  throw new Error("invalid_admin_email");
+}
+if (environment === "production" && appOrigin !== "https://kamelkyp.com") {
+  throw new Error("invalid_app_origin");
+}
 
 const generated = JSON.parse(await readFile(sourceConfig, "utf8"));
 const config = {
@@ -66,6 +94,26 @@ const config = {
       migrations_dir: "../../migrations",
     },
   ],
+  ratelimits: [
+    {
+      name: "SUBMISSION_RATE_LIMITER",
+      namespace_id: rateLimitNamespaceId,
+      simple: { limit: 10, period: 60 },
+    },
+  ],
+  ...(environment === "production"
+    ? {
+        routes: [{ pattern: "kamelkyp.com", custom_domain: true }],
+      }
+    : {}),
+  secrets: {
+    required: [
+      "TURNSTILE_SECRET",
+      "APPS_SCRIPT_URL",
+      "APPS_SCRIPT_HMAC_SECRET",
+      "CSRF_SECRET",
+    ],
+  },
   vars: {
     ...generated.vars,
     TURNSTILE_SITE_KEY: process.env.TURNSTILE_SITE_KEY,

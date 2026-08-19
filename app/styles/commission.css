@@ -1,0 +1,313 @@
+.commission-category > header,
+.commission-wizard__header,
+.commission-step > header {
+  max-width: 64rem;
+  margin-bottom: clamp(2rem, 5vw, 4rem);
+}
+
+.commission-category h1,
+.commission-wizard__header h1 {
+  margin-bottom: 1rem;
+  font-size: clamp(3rem, 8vw, 7rem);
+}
+
+.commission-category__choices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-block: 1px solid var(--color-line);
+}
+
+.commission-category__choices article {
+  min-width: 0;
+  padding: clamp(2rem, 5vw, 4rem);
+}
+
+.commission-category__choices article + article {
+  border-left: 1px solid var(--color-line);
+}
+
+.commission-category__choices h2,
+.commission-step h2 {
+  font-size: clamp(2.5rem, 6vw, 5rem);
+}
+
+.commission-category__price,
+.quote-summary__total dd {
+  color: var(--color-coral);
+  font-family: var(--font-mono);
+}
+
+.commission-category__choices a,
+.commission-actions button,
+.commission-fields button,
+.review-card button {
+  min-height: 44px;
+}
+
+.commission-wizard__header ol {
+  display: flex;
+  margin: 2rem 0 0;
+  padding: 0;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.5rem;
+  color: var(--color-cool-gray);
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  list-style: none;
+  text-transform: uppercase;
+}
+
+.commission-wizard__header li[aria-current="step"] {
+  color: var(--color-coral);
+}
+
+.commission-step {
+  animation: commission-enter var(--motion-normal) ease both;
+}
+
+.commission-step form {
+  display: grid;
+  gap: 2rem;
+}
+
+.commission-fields {
+  display: grid;
+  min-width: 0;
+  margin: 0;
+  padding: clamp(1.25rem, 4vw, 2.5rem);
+  gap: 0.65rem;
+  border: 1px solid var(--color-line);
+}
+
+.commission-fields legend {
+  padding-inline: 0.5rem;
+  color: var(--color-coral);
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+}
+
+.commission-fields input,
+.commission-fields select,
+.commission-fields textarea {
+  width: 100%;
+  min-height: 44px;
+  margin-bottom: 0.8rem;
+  padding: 0.75rem;
+  border: 1px solid var(--color-line);
+  border-radius: 0;
+  color: var(--color-chalk);
+  background: var(--color-console);
+}
+
+.commission-fields textarea {
+  min-height: 7rem;
+  resize: vertical;
+}
+
+.checkbox-field,
+.terms-acceptance {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.checkbox-field input,
+.terms-acceptance input {
+  width: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  margin: 0;
+}
+
+.field-help,
+.quote-summary > p {
+  color: var(--color-cool-gray);
+}
+
+.commission-step > header p,
+.commission-category > header p {
+  color: var(--color-cool-gray);
+}
+
+.commission-repeatable,
+.commission-song {
+  margin-block: 1rem;
+  padding: 1rem;
+  border-left: 2px solid var(--color-line);
+}
+
+.commission-repeatable__heading,
+.review-card__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.commission-repeatable__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem 1rem;
+}
+
+.quote-summary,
+.review-card {
+  margin-top: 2rem;
+  padding: clamp(1.25rem, 4vw, 2.5rem);
+  border: 1px solid var(--color-line);
+  background: var(--color-console);
+}
+
+.quote-summary h2,
+.review-card h3 {
+  font-size: 2rem;
+}
+
+.quote-summary dl > div,
+.review-card dl > div {
+  display: grid;
+  padding-block: 0.65rem;
+  grid-template-columns: minmax(9rem, 1fr) minmax(0, 2fr);
+  gap: 1rem;
+  border-top: 1px solid var(--color-line-soft);
+}
+
+.quote-summary dd,
+.review-card dd {
+  min-width: 0;
+  margin: 0;
+}
+
+.review-card pre {
+  max-width: 100%;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
+.commission-terms {
+  display: grid;
+  gap: 1rem;
+}
+
+.commission-terms > article {
+  padding: clamp(1.25rem, 4vw, 2.5rem);
+  border: 1px solid var(--color-line);
+}
+
+.commission-terms section + section {
+  margin-top: 2rem;
+}
+
+.commission-terms h3 {
+  margin-bottom: 0.6rem;
+  font-size: 1.6rem;
+}
+
+.commission-terms section > p {
+  color: var(--color-cool-gray);
+}
+
+.commission-terms__version {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+}
+
+.terms-acceptance {
+  margin-block: 2rem;
+  padding: 1rem;
+  border: 1px solid var(--color-coral);
+  scroll-margin-block: 7rem;
+}
+
+.commission-actions {
+  position: sticky;
+  z-index: 1;
+  inset-block-end: 0;
+  display: flex;
+  margin-top: 2rem;
+  padding: 1rem;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  border-top: 1px solid var(--color-line);
+  background: color-mix(in srgb, var(--color-mineral) 94%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+.commission-actions button,
+.commission-fields button,
+.review-card button {
+  padding: 0.65rem 1rem;
+  border: 1px solid var(--color-line);
+  color: var(--color-chalk);
+  background: transparent;
+}
+
+.commission-actions button:last-child {
+  border-color: var(--color-coral);
+  background: var(--color-coral);
+}
+
+.commission-actions button:disabled {
+  opacity: 0.5;
+}
+
+.error-summary {
+  margin-bottom: 2rem;
+  padding: 1rem;
+  border: 1px solid var(--color-coral);
+}
+
+.turnstile-widget {
+  min-height: 65px;
+  margin-block: 2rem 1rem;
+}
+
+.commission-submit-status {
+  padding: 1rem;
+  border-left: 2px solid var(--color-coral);
+  background: var(--color-console);
+}
+
+@keyframes commission-enter {
+  from {
+    opacity: 0;
+    transform: translateY(0.75rem) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 700px) {
+  .commission-category__choices,
+  .commission-repeatable__row {
+    grid-template-columns: 1fr;
+  }
+
+  .commission-category__choices article + article {
+    border-top: 1px solid var(--color-line);
+    border-left: 0;
+  }
+
+  .quote-summary dl > div,
+  .review-card dl > div {
+    grid-template-columns: 1fr;
+  }
+
+  .commission-actions {
+    position: static;
+    justify-content: stretch;
+  }
+
+  .commission-actions button {
+    flex: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .commission-step {
+    animation: none;
+  }
+}

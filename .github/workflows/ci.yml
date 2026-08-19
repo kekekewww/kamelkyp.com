@@ -21,14 +21,16 @@ jobs:
       - run: npm ci
       - run: npm run format:check
       - run: npm run test:unit
+      - run: npm run test:apps-script
       - run: npm run typecheck
       - run: npm run build
       - name: Render generated SSR Worker configuration for dry-run
         env:
           D1_DATABASE_ID: 11111111-1111-4111-8111-111111111111
           TURNSTILE_SITE_KEY: ci-site-key
+          RATE_LIMIT_NAMESPACE_ID: "41003"
           ACCESS_AUD: ci-access-audience
-          ACCESS_TEAM_DOMAIN: ci.cloudflareaccess.com
+          ACCESS_TEAM_DOMAIN: https://ci.cloudflareaccess.com
           ADMIN_EMAIL: ci@example.com
           WORKERS_DEV_SUBDOMAIN: ci-preview
           PR_NUMBER: "1"

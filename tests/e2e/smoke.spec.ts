@@ -9,8 +9,19 @@ test("health endpoint is deterministic", async ({ request }) => {
   });
 });
 
-test("root chooses Chinese for zh browser language", async ({ page }) => {
-  await page.setExtraHTTPHeaders({ "accept-language": "zh-TW,zh;q=0.9" });
-  await page.goto("/");
-  await expect(page).toHaveURL(/\/zh$/);
+test("root chooses Chinese for zh browser language", async ({
+  browser,
+}, testInfo) => {
+  const context = await browser.newContext({
+    baseURL: testInfo.project.use.baseURL as string,
+    locale: "zh-TW",
+  });
+
+  try {
+    const page = await context.newPage();
+    await page.goto("/");
+    await expect(page).toHaveURL(/\/zh$/);
+  } finally {
+    await context.close();
+  }
 });

@@ -6,6 +6,7 @@
       "!build",
       "!node_modules",
       "!playwright-report",
+      "!test-results",
       "!.react-router",
       "!.wrangler",
       "!worker-configuration.d.ts"

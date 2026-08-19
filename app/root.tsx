@@ -1,21 +1,52 @@
-import { Links, Meta, Outlet, Scripts, ScrollRestoration } from "react-router";
+import "@fontsource/barlow-condensed/600.css";
+import "@fontsource/ibm-plex-mono/500.css";
+import "@fontsource-variable/noto-sans-tc/wght.css";
+import {
+  isRouteErrorResponse,
+  Links,
+  Meta,
+  Outlet,
+  Scripts,
+  ScrollRestoration,
+  useLocation,
+  useRouteError,
+} from "react-router";
 import type { Route } from "./+types/root";
+import { PlaybackProvider } from "./components/media/playback-provider";
+import adminStyles from "./styles/admin.css?url";
+import commissionStyles from "./styles/commission.css?url";
+import componentStyles from "./styles/components.css?url";
 import globalStyles from "./styles/global.css?url";
+import layoutStyles from "./styles/layout.css?url";
+import mediaStyles from "./styles/media.css?url";
+import motionStyles from "./styles/motion.css?url";
 import tokenStyles from "./styles/tokens.css?url";
 
 export const links: Route.LinksFunction = () => [
   { rel: "stylesheet", href: tokenStyles },
   { rel: "stylesheet", href: globalStyles },
+  { rel: "stylesheet", href: layoutStyles },
+  { rel: "stylesheet", href: componentStyles },
+  { rel: "stylesheet", href: commissionStyles },
+  { rel: "stylesheet", href: mediaStyles },
+  { rel: "stylesheet", href: motionStyles },
+  { rel: "stylesheet", href: adminStyles },
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
+  const location = useLocation();
+  const documentLanguage = location.pathname.startsWith("/en")
+    ? "en"
+    : "zh-Hant";
+
   return (
-    <html lang="zh-Hant">
+    <html lang={documentLanguage}>
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="theme-color" content="#071724" />
         <Meta />
-        <Links />
+        <Links nonce="" />
       </head>
       <body>
         {children}
@@ -27,5 +58,31 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  return <Outlet />;
+  return (
+    <PlaybackProvider>
+      <Outlet />
+    </PlaybackProvider>
+  );
+}
+
+export function ErrorBoundary() {
+  const error = useRouteError();
+  const location = useLocation();
+  const isEnglish = location.pathname.startsWith("/en");
+  const status = isRouteErrorResponse(error) ? error.status : 500;
+
+  return (
+    <main className="error-page" aria-live="polite">
+      <p className="eyebrow">{status}</p>
+      <h1>{isEnglish ? "Something went wrong" : "目前無法顯示這個頁面"}</h1>
+      <p>
+        {isEnglish
+          ? "Please try again later or return to the home page."
+          : "請稍後再試，或返回首頁。"}
+      </p>
+      <a href={isEnglish ? "/en" : "/zh"}>
+        {isEnglish ? "Back to home" : "返回首頁"}
+      </a>
+    </main>
+  );
 }

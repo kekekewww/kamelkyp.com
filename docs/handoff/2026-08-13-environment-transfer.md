@@ -1,6 +1,6 @@
 # 電腦環境轉移交接
 
-日期：2026-08-13
+原始日期：2026-08-13；最後更新：2026-08-19
 
 Repository：`https://github.com/kekekewww/kamelkyp.com`
 
@@ -9,7 +9,7 @@ Repository：`https://github.com/kekekewww/kamelkyp.com`
 ## GitHub 已保存的內容
 
 - 完整網站規格與 Plan 00–06。
-- Plan 01 Cloud Foundation 的所有原始碼、migration、測試、workflow 與鎖定版本。
+- Plan 01–06 的原始碼、migration、單元／Worker／Apps Script／E2E 測試、workflow 與鎖定版本。
 - SDD Task 1–4 brief、Task 1–3 實作報告、review packages 與進度紀錄。
 - Task 4 實作／雲端設定狀態報告。
 
@@ -24,7 +24,7 @@ Repository：`https://github.com/kekekewww/kamelkyp.com`
    git clone https://github.com/kekekewww/kamelkyp.com.git
    cd kamelkyp.com
    npm ci
-   npm run check
+   npm run check:all
    ```
 
 3. 登入 GitHub 與 Cloudflare：
@@ -53,14 +53,15 @@ GitHub `preview` Environment 已包含以下設定名稱：
 
 Secret 值、D1 UUID、OAuth Token 與 Turnstile Secret 不記錄在這份公開文件。
 
-## 尚未完成的外部設定
+## 尚未完成、不能由程式假造的外部設定
 
-最新 Preview workflow 已成功讀取並遮罩 `CLOUDFLARE_API_TOKEN`；目前仍缺少：
+- Preview／Production Cloudflare Access application、Audience tag 與完整 HTTPS team domain。
+- 正式 Google Form、Apps Script Web App URL 與共享 HMAC secret。
+- Preview／Production 各自至少 32 字元的 `CSRF_SECRET`。
+- Production D1、Turnstile 正式 key、GitHub `production` Environment 與 required reviewer。
+- 專業法務審查及 `LEGAL_REVIEW_CONFIRMED=true`。
 
-- Variable：`ACCESS_AUD`
-- Variable：`ACCESS_TEAM_DOMAIN`
-
-因此 Preview migration、遠端部署與 E2E smoke test 尚未取得完整綠燈。這是外部雲端設定狀態，不是未提交的本機原始碼。
+逐步操作請依 `docs/runbooks/cloudflare-setup.md`、`google-setup.md`、`release-checklist.md` 與 `docs/legal/review-checklist.md`。這些是帳戶層級外部狀態，不是遺失的本機原始碼。
 
 設定完成後可檢查名稱：
 
@@ -73,7 +74,16 @@ gh variable list --env preview
 
 ## 驗證與部署
 
-合併後的 [`main` CI run 31712851358](https://github.com/kekekewww/kamelkyp.com/actions/runs/31712851358) 已通過。最新 [`Deploy Preview` run 31712705490](https://github.com/kekekewww/kamelkyp.com/actions/runs/31712705490) 只因缺少上述兩項 Access Variables 而在明確的設定閘門停止。
+2026-08-19 合併前已在 production build 與本機隔離 D1 完成以下驗證：
+
+- 格式與 TypeScript typecheck 通過。
+- 24 個 unit test files、108 項 unit tests 通過。
+- 21 個真實 Cloudflare Worker／D1 test files、59 項 tests 通過。
+- 4 項 Apps Script tests 通過。
+- Production build 通過。
+- Chromium desktop／mobile 共 76 項 E2E 通過，包含 responsive、a11y、雙語、價格、委託、媒體、CSP 與安全錯誤。
+
+GitHub `e2e` workflow 會在 PR／手動執行時重現相同 loopback 驗收。Preview workflow 會 fail closed；在 Access variables、Apps Script secrets 與 CSRF secret 補齊以前，不會執行 remote migration 或部署。合併後請從 GitHub Actions 查看 `main` 最新 run，而不要沿用舊 run 編號判斷狀態。
 
 本機完整驗證：
 
@@ -82,8 +92,17 @@ npm ci
 npm run check
 ```
 
-Preview Environment 補齊後，重新執行 GitHub 的 `Deploy Preview` workflow；成功條件為 migration、Worker deploy 與 Playwright smoke test 全部通過。
+Preview Environment 補齊後，重新執行 GitHub `preview` workflow；Production 只能在 `main` 手動執行受保護的 `production` workflow，且 production verifier 會拒絕測試 key、placeholder、未完成法務確認或錯誤網域。
 
-## 下一階段
+## 換機後第一個安全檢查
 
-依序執行 Roadmap 的 Plan 02–06。Plan 01 的 SDD 證據位於 `.superpowers/sdd/2026-08-10-01-cloud-foundation/`，不要重新執行已標記完成的 Task 1–3。
+```powershell
+git status
+git log -1 --oneline
+gh auth status
+npx wrangler whoami
+npm ci
+npm run check:all
+```
+
+不要搬移舊電腦的 `.dev.vars`、`.wrangler.secrets.json`、OAuth cache 或任何明文 Secret；所有必要程式與交付文件都應從 GitHub `main` 還原。

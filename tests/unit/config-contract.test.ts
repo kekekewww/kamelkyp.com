@@ -8,8 +8,9 @@ const renderer = "scripts/render-wrangler-config.mjs";
 const required = {
   D1_DATABASE_ID: "preview-d1-id",
   TURNSTILE_SITE_KEY: "site-key",
+  RATE_LIMIT_NAMESPACE_ID: "41004",
   ACCESS_AUD: "access-audience",
-  ACCESS_TEAM_DOMAIN: "team.cloudflareaccess.com",
+  ACCESS_TEAM_DOMAIN: "https://team.cloudflareaccess.com",
   ADMIN_EMAIL: "admin@example.com",
 };
 
@@ -105,6 +106,22 @@ describe("cloud project configuration", () => {
           migrations_dir: "../../migrations",
         }),
       ]);
+      expect(config.ratelimits).toEqual([
+        {
+          name: "SUBMISSION_RATE_LIMITER",
+          namespace_id: "41004",
+          simple: { limit: 10, period: 60 },
+        },
+      ]);
+      expect(config.secrets).toEqual({
+        required: [
+          "TURNSTILE_SECRET",
+          "APPS_SCRIPT_URL",
+          "APPS_SCRIPT_HMAC_SECRET",
+          "CSRF_SECRET",
+        ],
+      });
+      expect(JSON.stringify(config)).not.toContain("private-hmac");
 
       const source = await readFile(renderer, "utf8");
       expect(source).toContain("build/server/wrangler.json");
@@ -129,6 +146,9 @@ describe("cloud project configuration", () => {
         database_name: "kamelkyp-production",
         migrations_dir: "../../migrations",
       });
+      expect(config.routes).toEqual([
+        { pattern: "kamelkyp.com", custom_domain: true },
+      ]);
     } finally {
       await rm(result.directory, { recursive: true, force: true });
     }
@@ -164,6 +184,26 @@ describe("cloud project configuration", () => {
     }
   });
 
+  it("fails closed for a missing or invalid Rate Limiting namespace", async () => {
+    for (const namespaceId of [undefined, "not-a-number"]) {
+      const result = await render("preview", {
+        ...required,
+        RATE_LIMIT_NAMESPACE_ID: namespaceId,
+        PR_NUMBER: "42",
+        WORKERS_DEV_SUBDOMAIN: "example-workers",
+      });
+
+      try {
+        expect(result.status).not.toBe(0);
+        expect(result.stderr).toMatch(
+          /missing_rate_limit_namespace_id|invalid_rate_limit_namespace_id/,
+        );
+      } finally {
+        await rm(result.directory, { recursive: true, force: true });
+      }
+    }
+  });
+
   it("keeps the generated deployment config ignored and untracked", async () => {
     const gitignore = await readFile(".gitignore", "utf8");
     const tracked = spawnSync(
@@ -173,6 +213,7 @@ describe("cloud project configuration", () => {
     );
 
     expect(gitignore).toContain("build/");
+    expect(gitignore).toContain(".wrangler.secrets.json");
     expect(tracked.status).not.toBe(0);
   });
 
