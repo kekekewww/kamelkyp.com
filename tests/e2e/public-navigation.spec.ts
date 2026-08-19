@@ -48,3 +48,26 @@ test("fonts are bundled without third-party font requests", async ({
   await page.goto("/en");
   expect(thirdPartyFontRequests).toEqual([]);
 });
+
+test("empty published collections and legal routes remain usable", async ({
+  page,
+}) => {
+  await page.goto("/zh/works");
+  await expect(
+    page.getByRole("heading", { name: "作品", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "作品準備中" })).toBeVisible();
+
+  await page.goto("/en/other");
+  await expect(page.getByRole("heading", { name: "Other Work" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Nothing published yet" }),
+  ).toBeVisible();
+
+  await page.goto("/zh/terms");
+  await expect(page.getByRole("heading", { name: "服務條款" })).toBeVisible();
+  await page.goto("/zh/privacy");
+  await expect(
+    page.getByRole("heading", { name: "隱私說明", exact: true }),
+  ).toBeVisible();
+});

@@ -13,5 +13,11 @@ export default [
     route("song-transition", "routes/public/transition-index.tsx"),
     route("song-transition/simple", "routes/public/transition-simple.tsx"),
     route("song-transition/edit", "routes/public/transition-edit.tsx"),
+    route("works", "routes/public/works-index.tsx"),
+    route("works/:slug", "routes/public/work-detail.tsx"),
+    route("other", "routes/public/other-index.tsx"),
+    route("other/:slug", "routes/public/other-detail.tsx"),
+    route("terms", "routes/public/terms.tsx"),
+    route("privacy", "routes/public/privacy.tsx"),
   ]),
 ] satisfies RouteConfig;
