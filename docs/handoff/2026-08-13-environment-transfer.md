@@ -6,6 +6,8 @@ Repository：`https://github.com/kekekewww/kamelkyp.com`
 
 正式分支：`main`
 
+完整平台合併：PR [#6](https://github.com/kekekewww/kamelkyp.com/pull/6)，merge commit `5cc3f795c14256020a39258cff30ef323fceac05`。
+
 ## GitHub 已保存的內容
 
 - 完整網站規格與 Plan 00–06。
@@ -84,6 +86,12 @@ gh variable list --env preview
 - Chromium desktop／mobile 共 76 項 E2E 通過，包含 responsive、a11y、雙語、價格、委託、媒體、CSP 與安全錯誤。
 
 GitHub `e2e` workflow 會在 PR／手動執行時重現相同 loopback 驗收。Preview workflow 會 fail closed；在 Access variables、Apps Script secrets 與 CSRF secret 補齊以前，不會執行 remote migration 或部署。合併後請從 GitHub Actions 查看 `main` 最新 run，而不要沿用舊 run 編號判斷狀態。
+
+GitHub 證據：
+
+- 合併後 [`main` CI run 32251080859](https://github.com/kekekewww/kamelkyp.com/actions/runs/32251080859) 通過。
+- PR head [`e2e` run 32250835660](https://github.com/kekekewww/kamelkyp.com/actions/runs/32250835660) 通過完整 loopback 驗收。
+- [`Preview` run 32250835280](https://github.com/kekekewww/kamelkyp.com/actions/runs/32250835280) 只在設定 gate 停止；當時缺少 `APPS_SCRIPT_URL`、`APPS_SCRIPT_HMAC_SECRET`、`CSRF_SECRET`、`ACCESS_AUD`、`ACCESS_TEAM_DOMAIN`，未執行 migration、deploy 或 cleanup。
 
 本機完整驗證：
 
