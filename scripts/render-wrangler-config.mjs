@@ -79,7 +79,13 @@ const config = {
       simple: { limit: 10, period: 60 },
     },
   ],
-  secrets: { required: ["TURNSTILE_SECRET"] },
+  secrets: {
+    required: [
+      "TURNSTILE_SECRET",
+      "APPS_SCRIPT_URL",
+      "APPS_SCRIPT_HMAC_SECRET",
+    ],
+  },
   vars: {
     ...generated.vars,
     TURNSTILE_SITE_KEY: process.env.TURNSTILE_SITE_KEY,

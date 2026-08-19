@@ -2,7 +2,11 @@ import { env } from "cloudflare:workers";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { submitCommission } from "../../app/lib/commission/submit.server";
 
-const termIds = ["submit-common-zh-v1", "submit-full-zh-v1", "submit-privacy-zh-v1"];
+const termIds = [
+  "submit-common-zh-v1",
+  "submit-full-zh-v1",
+  "submit-privacy-zh-v1",
+];
 const caseIds = [
   "KAM-20260810-0000000001",
   "KAM-20260810-0000000002",
@@ -41,9 +45,14 @@ beforeAll(async () => {
     await env.DB.prepare(
       "INSERT INTO term_versions " +
         "(id, document_id, locale, version_number, body_json, created_at, effective_from) " +
-        "VALUES (?, ?, 'zh', 1, '[]', ?, ?)",
+        `VALUES (?, ?, 'zh', 1, '[{"key":"test","title":"Test","text":"Test"}]', ?, ?)`,
     )
-      .bind(versionId, "2026-08-10T00:00:00Z", "2026-08-10T00:00:00Z")
+      .bind(
+        versionId,
+        documentId,
+        "2026-08-10T00:00:00Z",
+        "2026-08-10T00:00:00Z",
+      )
       .run();
     await env.DB.prepare(
       "INSERT INTO term_publications " +
@@ -55,9 +64,11 @@ beforeAll(async () => {
 });
 
 function turnstileSuccess() {
-  return vi.fn<typeof fetch>().mockResolvedValue(
-    Response.json({ success: true, hostname: "localhost", action: "test" }),
-  );
+  return vi
+    .fn<typeof fetch>()
+    .mockResolvedValue(
+      Response.json({ success: true, hostname: "localhost", action: "test" }),
+    );
 }
 
 function googleComplete() {
@@ -98,9 +109,13 @@ describe("commission submission without D1 PII", () => {
       .fn<typeof fetch>()
       .mockResolvedValue(new Response("down", { status: 503 }));
     const result = await submitCommission(firstInput);
-    expect(result).toMatchObject({ state: "pending_retry", caseId: caseIds[0] });
-    const columns = await env.DB.prepare("PRAGMA table_info(submission_attempts)")
-      .all<{ name: string }>();
+    expect(result).toMatchObject({
+      state: "pending_retry",
+      caseId: caseIds[0],
+    });
+    const columns = await env.DB.prepare(
+      "PRAGMA table_info(submission_attempts)",
+    ).all<{ name: string }>();
     expect(columns.results.map((row) => row.name)).not.toEqual(
       expect.arrayContaining(["email", "contact", "project_url", "payload"]),
     );
@@ -135,9 +150,11 @@ describe("commission submission without D1 PII", () => {
 
   it("reuses a case only when the normalized payload hash matches", async () => {
     const firstInput = input(caseIds[2]);
-    firstInput.googleFetcher = vi.fn<typeof fetch>().mockResolvedValue(
-      Response.json({ ok: false, error: { code: "mail_failed" } }),
-    );
+    firstInput.googleFetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(
+        Response.json({ ok: false, error: { code: "mail_failed" } }),
+      );
     const first = await submitCommission(firstInput);
     expect(first.state).toBe("pending_retry");
 

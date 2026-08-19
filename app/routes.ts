@@ -3,6 +3,7 @@ import { index, type RouteConfig, route } from "@react-router/dev/routes";
 export default [
   route("health", "routes/health.ts"),
   route("api/commission/prepare", "routes/api/commission-prepare.ts"),
+  route("api/commission/submit", "routes/api/commission-submit.ts"),
   route("language/:locale", "routes/language-preference.ts"),
   index("routes/language-redirect.tsx"),
   route(":lang", "routes/public/layout.tsx", [

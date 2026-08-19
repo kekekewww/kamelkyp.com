@@ -28,9 +28,12 @@ describe("Google submission gateway", () => {
     ).resolves.toMatchObject({ state: "complete", notified: true });
     const request = fetcher.mock.calls[0]?.[1];
     const envelope = JSON.parse(String(request?.body));
-    await expect(verifySignedEnvelopeForTest(envelope, secret)).resolves.toEqual(
-      { caseId: "KAM-20260810-01HZX8J4AB", displayName: "藝名 K" },
-    );
+    await expect(
+      verifySignedEnvelopeForTest(envelope, secret),
+    ).resolves.toEqual({
+      caseId: "KAM-20260810-01HZX8J4AB",
+      displayName: "藝名 K",
+    });
   });
 
   it("distinguishes Gmail-pending and transport failures", async () => {
@@ -44,9 +47,11 @@ describe("Google submission gateway", () => {
     await expect(
       sendToGoogle({
         ...base,
-        fetcher: vi.fn<typeof fetch>().mockResolvedValue(
-          Response.json({ ok: false, error: { code: "mail_failed" } }),
-        ),
+        fetcher: vi
+          .fn<typeof fetch>()
+          .mockResolvedValue(
+            Response.json({ ok: false, error: { code: "mail_failed" } }),
+          ),
       }),
     ).rejects.toThrow("google_mail_pending");
     await expect(
@@ -57,5 +62,24 @@ describe("Google submission gateway", () => {
           .mockResolvedValue(new Response("down", { status: 503 })),
       }),
     ).rejects.toThrow("google_transport_failed");
+  });
+
+  it.each([
+    "https://example.com/relay",
+    "https://script.google.com.evil.example/macros/s/test/exec",
+    "https://script.google.com/macros/s/test/dev",
+  ])("rejects a non-Apps-Script egress destination", async (url) => {
+    const fetcher = vi.fn<typeof fetch>();
+    await expect(
+      sendToGoogle({
+        url,
+        secret,
+        caseId: "KAM-20260810-01HZX8J4AB",
+        payload: { caseId: "KAM-20260810-01HZX8J4AB" },
+        now: "2026-08-10T12:00:00.000Z",
+        fetcher,
+      }),
+    ).rejects.toThrow("apps_script_url_invalid");
+    expect(fetcher).not.toHaveBeenCalled();
   });
 });

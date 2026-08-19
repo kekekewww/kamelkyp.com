@@ -29,6 +29,8 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
           TURNSTILE_SECRET: ${{ secrets.TURNSTILE_SECRET }}
+          APPS_SCRIPT_URL: ${{ secrets.APPS_SCRIPT_URL }}
+          APPS_SCRIPT_HMAC_SECRET: ${{ secrets.APPS_SCRIPT_HMAC_SECRET }}
           TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
           RATE_LIMIT_NAMESPACE_ID: ${{ vars.RATE_LIMIT_NAMESPACE_ID }}
           ACCESS_AUD: ${{ vars.ACCESS_AUD }}
@@ -37,7 +39,7 @@ jobs:
           WORKERS_DEV_SUBDOMAIN: ${{ vars.WORKERS_DEV_SUBDOMAIN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          for value in "$CLOUDFLARE_API_TOKEN" "$CLOUDFLARE_ACCOUNT_ID" "$D1_DATABASE_ID" "$TURNSTILE_SECRET" "$TURNSTILE_SITE_KEY" "$RATE_LIMIT_NAMESPACE_ID" "$ACCESS_AUD" "$ACCESS_TEAM_DOMAIN" "$ADMIN_EMAIL" "$WORKERS_DEV_SUBDOMAIN" "$PR_NUMBER"; do
+          for value in "$CLOUDFLARE_API_TOKEN" "$CLOUDFLARE_ACCOUNT_ID" "$D1_DATABASE_ID" "$TURNSTILE_SECRET" "$APPS_SCRIPT_URL" "$APPS_SCRIPT_HMAC_SECRET" "$TURNSTILE_SITE_KEY" "$RATE_LIMIT_NAMESPACE_ID" "$ACCESS_AUD" "$ACCESS_TEAM_DOMAIN" "$ADMIN_EMAIL" "$WORKERS_DEV_SUBDOMAIN" "$PR_NUMBER"; do
             if [ -z "$value" ]; then
               echo "required preview deployment configuration is missing" >&2
               exit 1
@@ -63,6 +65,8 @@ jobs:
       - name: Render ephemeral Worker secrets
         env:
           TURNSTILE_SECRET: ${{ secrets.TURNSTILE_SECRET }}
+          APPS_SCRIPT_URL: ${{ secrets.APPS_SCRIPT_URL }}
+          APPS_SCRIPT_HMAC_SECRET: ${{ secrets.APPS_SCRIPT_HMAC_SECRET }}
         run: node scripts/render-worker-secrets.mjs
       - name: Apply preview migrations
         env:
