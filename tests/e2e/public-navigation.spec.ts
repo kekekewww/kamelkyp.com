@@ -104,18 +104,32 @@ test("legacy /other routes redirect permanently to /writing", async ({
 test("empty published collections and legal routes remain usable", async ({
   page,
 }) => {
-  // Work agent: replace the empty-state check below with the IA §8 filter and
-  // PLACEHOLDER assertions once /works merges app/content projects.
+  // /works merges D1 works with the file projects (IA §8): placeholders fill
+  // the list, the filter bar is present and ?category= narrows it.
   await page.goto("/zh/works");
   await expect(
     page.getByRole("heading", { name: "作品", exact: true }),
   ).toBeVisible();
-  await expect(page.getByRole("heading", { name: "作品準備中" })).toBeVisible();
+  await expect(page.getByText("PLACEHOLDER").first()).toBeVisible();
+  await expect(
+    page.getByRole("navigation", { name: "作品分類" }),
+  ).toBeVisible();
 
-  // Writing agent: add the PLACEHOLDER badge assertion (IA §8) here.
+  await page.goto("/zh/works?category=research");
+  const main = page.locator("main");
+  await expect(
+    main.getByRole("heading", { name: "示意：即時音訊分析筆記" }),
+  ).toBeVisible();
+  await expect(
+    main.getByRole("heading", { name: "示意：完整歌曲混音——獨立單曲" }),
+  ).toHaveCount(0);
+
   await page.goto("/en/writing");
   await expect(
     page.getByRole("heading", { name: "Writing", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("main").getByText("PLACEHOLDER").first(),
   ).toBeVisible();
 
   await page.goto("/zh/terms");

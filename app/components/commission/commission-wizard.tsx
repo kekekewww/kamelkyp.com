@@ -30,6 +30,12 @@ import { TurnstileWidget } from "./turnstile-widget";
 
 type WizardStep = "details" | "terms" | "review" | "verify";
 
+const WIZARD_STEPS: WizardStep[] = ["details", "terms", "review", "verify"];
+
+function stepIndex(index: number) {
+  return String(index + 1).padStart(2, "0");
+}
+
 function commonDraft(serviceId: ServiceId) {
   return {
     serviceId,
@@ -255,19 +261,48 @@ export function CommissionWizard({
   }
 
   const isZh = locale === "zh";
+  const currentIndex = WIZARD_STEPS.indexOf(step);
   return (
     <main
-      className="commission-wizard"
+      className="page grid commission-wizard"
       data-draft-ready={loaded ? "true" : "false"}
       id="main-content"
     >
       <header className="commission-wizard__header">
-        <p className="eyebrow">COMMISSION / {serviceId}</p>
+        <p className="eyebrow col-rail">COMMISSION / {serviceId}</p>
         <h1>{service.name[locale]}</h1>
-        <ol aria-label={isZh ? "委託步驟" : "Commission steps"}>
-          {["details", "terms", "review", "verify"].map((item, index) => (
-            <li aria-current={step === item ? "step" : undefined} key={item}>
-              {String(index + 1).padStart(2, "0")} · {item}
+        {/* < md: compact "02 / 04 TERMS"; the full list stays for screen readers. */}
+        <p className="stepper__compact" aria-hidden="true">
+          <span className="stepper__count">
+            {stepIndex(currentIndex)} / {stepIndex(WIZARD_STEPS.length - 1)}
+          </span>
+          <span className="stepper__compact-label">{step}</span>
+        </p>
+        <ol
+          className="stepper"
+          aria-label={isZh ? "委託步驟" : "Commission steps"}
+        >
+          {WIZARD_STEPS.map((item, index) => (
+            <li
+              className="stepper__item"
+              aria-current={step === item ? "step" : undefined}
+              data-state={
+                index < currentIndex
+                  ? "done"
+                  : index === currentIndex
+                    ? "current"
+                    : "upcoming"
+              }
+              key={item}
+            >
+              <span className="stepper__index">{stepIndex(index)}</span>
+              <span className="stepper__label">{item}</span>
+              {index < currentIndex ? (
+                <span className="stepper__check" aria-hidden="true">
+                  ✓
+                </span>
+              ) : null}
+              <span className="stepper__bar" aria-hidden="true" />
             </li>
           ))}
         </ol>
@@ -283,7 +318,7 @@ export function CommissionWizard({
             <h2 id="details-step-title">
               {isZh ? "填寫委託內容" : "Project details"}
             </h2>
-            <p>
+            <p className="commission-step__intro">
               {isZh
                 ? "不接受檔案上傳；請提供 Google Drive、Dropbox、MediaFire 或其他 HTTPS 下載連結。"
                 : "Files cannot be uploaded here. Provide Google Drive, Dropbox, MediaFire or another HTTPS download link."}
@@ -323,10 +358,18 @@ export function CommissionWizard({
           </form>
           <QuoteSummary locale={locale} quote={quote} fxSnapshot={fxSnapshot} />
           <div className="commission-actions">
-            <button type="button" onClick={resetCurrentDraft}>
+            <button
+              className="button button--ghost"
+              type="button"
+              onClick={resetCurrentDraft}
+            >
               {isZh ? "清除本服務草稿" : "Clear this draft"}
             </button>
-            <button type="button" onClick={validateDetails}>
+            <button
+              className="button button--inverse"
+              type="button"
+              onClick={validateDetails}
+            >
               {isZh ? "下一步" : "Next"}
             </button>
           </div>
@@ -362,15 +405,17 @@ export function CommissionWizard({
           className="commission-step"
           aria-labelledby="verify-step-title"
         >
-          <p className="eyebrow">04 / VERIFY</p>
-          <h2 id="verify-step-title">
-            {isZh ? "驗證並送出" : "Verify and submit"}
-          </h2>
-          <p>
-            {isZh
-              ? "資料已準備完成。下一階段會在此驗證防機器人並安全送出。"
-              : "The envelope is ready. Turnstile is verified immediately before secure submission."}
-          </p>
+          <header>
+            <p className="eyebrow">04 / VERIFY</p>
+            <h2 id="verify-step-title">
+              {isZh ? "驗證並送出" : "Verify and submit"}
+            </h2>
+            <p className="commission-step__intro">
+              {isZh
+                ? "資料已準備完成。下一階段會在此驗證防機器人並安全送出。"
+                : "The envelope is ready. Turnstile is verified immediately before secure submission."}
+            </p>
+          </header>
           {turnstileSiteKey ? (
             <TurnstileWidget
               key={challengeKey}
@@ -380,22 +425,30 @@ export function CommissionWizard({
               onError={() => setTurnstileToken("")}
             />
           ) : (
-            <p role="alert">
+            <p className="commission-notice" role="alert">
               {isZh
                 ? "目前無法載入防機器人驗證。"
                 : "Bot verification is currently unavailable."}
             </p>
           )}
           {submitMessage ? (
-            <p className="commission-submit-status" role="alert">
+            <p
+              className="commission-notice commission-submit-status"
+              role="alert"
+            >
               {submitMessage}
             </p>
           ) : null}
           <div className="commission-actions">
-            <button type="button" onClick={() => setStep("review")}>
+            <button
+              className="button button--ghost"
+              type="button"
+              onClick={() => setStep("review")}
+            >
               {isZh ? "返回複核" : "Back to review"}
             </button>
             <button
+              className="button button--primary"
               type="button"
               disabled={!turnstileToken || submitState === "submitting"}
               onClick={submitEnvelope}

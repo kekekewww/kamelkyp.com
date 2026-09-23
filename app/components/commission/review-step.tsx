@@ -32,7 +32,7 @@ export function ReviewStep({
         <h2 id="review-step-title">
           {isZh ? "完整複核" : "Review everything"}
         </h2>
-        <p>
+        <p className="commission-step__intro">
           {isZh
             ? "送出前確認所有資料；工程與學生證明連結只會顯示給你自己。"
             : "Check every field before submission. Project and student-proof links remain visible to you here."}
@@ -41,7 +41,11 @@ export function ReviewStep({
       <article className="review-card">
         <div className="review-card__heading">
           <h3>{isZh ? "委託資料" : "Project details"}</h3>
-          <button type="button" onClick={onEditDetails}>
+          <button
+            className="text-link commission-edit"
+            type="button"
+            onClick={onEditDetails}
+          >
             {isZh ? "編輯專案資料" : "Edit project details"}
           </button>
         </div>
@@ -81,11 +85,15 @@ export function ReviewStep({
       <article className="review-card">
         <div className="review-card__heading">
           <h3>{isZh ? "同意的條款版本" : "Accepted term versions"}</h3>
-          <button type="button" onClick={onEditTerms}>
+          <button
+            className="text-link commission-edit"
+            type="button"
+            onClick={onEditTerms}
+          >
             {isZh ? "返回條款" : "Edit terms"}
           </button>
         </div>
-        <ul>
+        <ul className="review-card__versions">
           {terms.map((term) => (
             <li key={term.versionId}>{term.versionId}</li>
           ))}
@@ -93,10 +101,18 @@ export function ReviewStep({
       </article>
       <QuoteSummary locale={locale} quote={quote} fxSnapshot={fxSnapshot} />
       <div className="commission-actions">
-        <button type="button" onClick={onEditTerms}>
+        <button
+          className="button button--ghost"
+          type="button"
+          onClick={onEditTerms}
+        >
           {isZh ? "上一步" : "Back"}
         </button>
-        <button type="button" onClick={onContinue}>
+        <button
+          className="button button--inverse"
+          type="button"
+          onClick={onContinue}
+        >
           {isZh ? "繼續驗證" : "Continue to verification"}
         </button>
       </div>

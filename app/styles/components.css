@@ -1,6 +1,8 @@
 /* ==========================================================================
-   Shared components (docs/design-system.md §6). Page-specific components
-   (project rows, feature block, capability rows, ...) live in pages/*.css.
+   Shared components (docs/design-system.md §6), including the project cover
+   (§7.1) and the editorial project list (§6.8) used by Home and Work.
+   Page-specific components (feature block, capability rows, ...) live in
+   pages/*.css.
    Transition timing for these lives in motion.css.
    ========================================================================== */
 
@@ -661,4 +663,289 @@
   margin-block: var(--space-7);
   border: 0;
   border-block-start: 1px solid var(--color-rule);
+}
+
+/* ==========================================================================
+   Project cover (§7.1): real image or procedural SVG keyed to the category
+   ========================================================================== */
+.project-cover {
+  --cover-ratio: 1.3333;
+  position: relative;
+  display: block;
+  inline-size: 100%;
+  aspect-ratio: var(--cover-ratio);
+  overflow: clip;
+  background: var(--color-bg-2);
+  container-type: inline-size;
+}
+
+.project-cover[data-aspect="3:2"] {
+  --cover-ratio: 1.5;
+}
+
+.project-cover[data-aspect="4:5"] {
+  --cover-ratio: 0.8;
+}
+
+.project-cover[data-aspect="16:9"],
+.project-cover[data-aspect="hero"] {
+  --cover-ratio: 1.7778;
+}
+
+.project-cover[data-aspect="21:9"] {
+  --cover-ratio: 2.3333;
+}
+
+@media (min-width: 1024px) {
+  .project-cover[data-aspect="hero"] {
+    --cover-ratio: 2.3333;
+  }
+}
+
+.project-cover__art,
+.project-cover__image {
+  position: absolute;
+  inset: 0;
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+.project-cover__image {
+  object-fit: cover;
+}
+
+.project-cover__line {
+  fill: none;
+  stroke: var(--color-text);
+  stroke-width: 1;
+}
+
+.project-cover__dots {
+  fill: none;
+  stroke: var(--color-text);
+  stroke-opacity: 0.2;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+/* The project index as an Archivo 200 numeral at 28% of the cover height. */
+.project-cover__numeral {
+  position: absolute;
+  inset-block-end: 0;
+  inset-inline-start: var(--space-4);
+  color: var(--color-trace);
+  font-family: var(--font-display);
+  font-size: calc(28cqi / var(--cover-ratio));
+  font-weight: 200;
+  font-stretch: 125%;
+  line-height: 0.8;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums lining-nums;
+  pointer-events: none;
+}
+
+.project-cover__badge {
+  position: absolute;
+  inset-block-start: var(--space-3);
+  inset-inline-start: var(--space-3);
+  background: color-mix(in srgb, var(--color-bg) 80%, transparent);
+}
+
+/* Covers that fill a sized frame (hover preview, detail hero). */
+.hover-preview__item > .project-cover,
+.project-hero__cover > .project-cover {
+  block-size: 100%;
+  aspect-ratio: auto;
+}
+
+/* Row title: same editorial list title as the feature block (work.css). */
+.project-row__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.project-row__title {
+  margin: 0;
+  color: var(--color-text);
+  font-family: var(--font-display);
+  font-size: var(--text-title-list);
+  font-weight: var(--weight-title);
+  font-stretch: var(--stretch-title);
+  line-height: var(--leading-title);
+  letter-spacing: var(--tracking-title);
+  text-wrap: balance;
+}
+
+:lang(zh) .project-row__title {
+  font-size: var(--text-title-list-zh);
+  font-weight: var(--weight-heading-zh);
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+}
+
+/* ==========================================================================
+   Editorial project list (§6.8) with the hover-preview slot (motion §2.4)
+   ========================================================================== */
+.project-list {
+  position: relative;
+}
+
+.project-list__rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.project-list__item {
+  border-block-end: 1px solid var(--color-rule);
+}
+
+.project-list__item:first-child {
+  border-block-start: 1px solid var(--color-rule);
+}
+
+/* Phones, tablets and touch: metadata line above the title, inline thumbnail. */
+.project-row {
+  display: grid;
+  min-block-size: 6rem;
+  grid-template-areas:
+    "index cats year thumb"
+    "head head head thumb"
+    "sub sub sub thumb";
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--space-2) 0;
+  padding-block: var(--space-5);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.project-row__index {
+  grid-area: index;
+}
+
+.project-row__cats {
+  grid-area: cats;
+}
+
+.project-row__year {
+  grid-area: year;
+}
+
+.project-row__head {
+  grid-area: head;
+  margin-block-start: var(--space-1);
+}
+
+.project-row__sub {
+  grid-area: sub;
+}
+
+.project-row__thumb {
+  grid-area: thumb;
+  inline-size: 5.5rem;
+  margin-inline-start: var(--space-4);
+}
+
+.project-row__index,
+.project-row__year {
+  color: var(--color-text-meta);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta);
+  font-weight: 500;
+  line-height: var(--leading-meta);
+  letter-spacing: var(--tracking-meta);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.project-row__cats::before,
+.project-row__year::before {
+  content: " / ";
+  color: var(--color-text-meta);
+  white-space: pre;
+}
+
+.project-row__sub {
+  display: flex;
+  max-inline-size: 60ch;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: var(--text-body-s);
+  line-height: var(--leading-body-s);
+}
+
+.project-row__sub > :first-child {
+  color: var(--color-text);
+  font-weight: var(--weight-label);
+}
+
+.project-row:active .project-row__title {
+  opacity: 0.8;
+}
+
+.project-row:focus-visible {
+  outline-offset: -2px;
+}
+
+@media (min-width: 1024px) {
+  .project-row {
+    grid-template-areas: none;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--grid-gutter);
+    row-gap: var(--space-2);
+    align-items: baseline;
+  }
+
+  .project-row__index {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .project-row__head {
+    grid-column: 2 / 8;
+    grid-row: 1;
+    margin-block-start: 0;
+  }
+
+  .project-row__cats {
+    grid-column: 8 / 11;
+    grid-row: 1;
+  }
+
+  .project-row__year {
+    grid-column: 12;
+    grid-row: 1;
+    justify-self: end;
+  }
+
+  .project-row__cats::before,
+  .project-row__year::before {
+    content: none;
+  }
+
+  .project-row__sub {
+    grid-column: 2 / 8;
+    grid-row: 2;
+  }
+
+  /* Touch laptops/tablets at lg: the thumbnail sits in col 11. */
+  .project-row__thumb {
+    grid-column: 11;
+    grid-row: 1 / span 2;
+    align-self: start;
+    margin-inline-start: 0;
+  }
+}
+
+/* Sibling rows step back while one row is hovered (fine pointers only). */
+@media (hover: hover) and (pointer: fine) {
+  .project-list__rows:has(.project-row:hover)
+    .project-row:not(:hover)
+    .project-row__title {
+    color: var(--color-text-secondary);
+  }
 }

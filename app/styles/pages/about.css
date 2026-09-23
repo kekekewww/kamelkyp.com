@@ -1,3 +1,195 @@
 /* Page styles: About.
    Owned by the page agent for this route group (phase 3b). Only this agent edits this file.
    Use tokens (tokens.css), utilities (global.css) and shared components (components.css). */
+
+/* Header: Display h1, lede at cols 5–11 (design-system §6.17). */
+.about-header__lede {
+  max-inline-size: 36ch;
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-family: var(--font-display);
+  font-size: var(--text-h2);
+  font-weight: 400;
+  line-height: 1.35;
+}
+
+:lang(zh) .about-header__lede {
+  max-inline-size: 24em;
+  font-family: var(--font-body);
+  font-size: var(--text-h2-zh);
+  line-height: 1.6;
+}
+
+@media (min-width: 1024px) {
+  .about-header > .about-header__lede {
+    grid-column: 5 / 12;
+  }
+}
+
+/* Sections: heading on the left (sticky on xl+), text at cols 6–11. */
+.about-section {
+  row-gap: var(--space-5);
+  padding-block: var(--section-s);
+}
+
+.about-section__title {
+  margin: 0;
+}
+
+.about-section__body {
+  max-inline-size: var(--measure);
+}
+
+.about-section__body > p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-lede);
+  line-height: var(--leading-lede);
+}
+
+:lang(zh) .about-section__body > p {
+  line-height: var(--leading-lede-zh);
+}
+
+.about-section__body > p + p {
+  margin-block-start: var(--space-5);
+}
+
+.about-section__body > p + ul,
+.about-section__body > p + ol {
+  margin-block-start: var(--space-6);
+}
+
+@media (min-width: 1024px) {
+  .about-section > .about-section__title {
+    grid-column: 1 / 5;
+  }
+
+  .about-section > .about-section__body {
+    grid-column: 6 / 12;
+  }
+}
+
+@media (min-width: 1280px) {
+  .about-section > .about-section__title {
+    position: sticky;
+    top: calc(var(--header-h) + var(--space-6));
+    align-self: start;
+  }
+}
+
+/* What I make: the four capability groups as ruled rows linking into Work. */
+.about-capabilities {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.about-capability {
+  display: grid;
+  grid-template-columns: 2.5rem minmax(0, 1fr);
+  column-gap: var(--space-4);
+  padding-block: var(--space-4);
+  border-block-end: 1px solid var(--color-rule);
+}
+
+.about-capability:first-child {
+  border-block-start: 1px solid var(--color-rule);
+}
+
+.about-capability__index {
+  grid-row: 1 / 3;
+  padding-block-start: 0.9rem;
+  color: var(--color-text-meta);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta);
+  letter-spacing: var(--tracking-meta);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.about-capability__title {
+  margin: 0;
+}
+
+.about-capability__title .text-link {
+  font-family: var(--font-display);
+  font-size: var(--text-h2);
+  font-weight: var(--weight-heading);
+  text-decoration-line: none;
+}
+
+:lang(zh) .about-capability__title .text-link {
+  font-size: var(--text-h2-zh);
+}
+
+.about-capability__title .text-link__arrow {
+  font-size: var(--text-body);
+  transition: transform var(--dur-2) var(--ease-out-quart);
+}
+
+@media (hover: hover) {
+  .about-capability__title .text-link:hover {
+    text-decoration-line: underline;
+  }
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .about-capability__title .text-link:hover .text-link__arrow {
+    transform: translateX(4px);
+  }
+}
+
+.about-capability__description {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-body-s);
+}
+
+/* How I work: a real sequence, 01–04. */
+.about-principles {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.about-principle {
+  display: grid;
+  grid-template-columns: 2.5rem minmax(0, 1fr);
+  column-gap: var(--space-4);
+  align-items: baseline;
+  padding-block: var(--space-4);
+  border-block-end: 1px solid var(--color-rule);
+}
+
+.about-principle:first-child {
+  border-block-start: 1px solid var(--color-rule);
+}
+
+.about-principle__index {
+  color: var(--color-text-meta);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta);
+  letter-spacing: var(--tracking-meta);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.about-principle__text {
+  color: var(--color-text);
+  font-size: var(--text-lede);
+  line-height: var(--leading-lede);
+}
+
+:lang(zh) .about-principle__text {
+  line-height: var(--leading-lede-zh);
+}
+
+.about-page__coda {
+  padding-block-start: var(--space-6);
+}
+
+@media (min-width: 1024px) {
+  .about-page__coda > .text-link {
+    grid-column: 6 / 12;
+    justify-self: start;
+  }
+}

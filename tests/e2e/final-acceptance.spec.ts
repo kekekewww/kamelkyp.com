@@ -45,21 +45,22 @@ test("language preference, identity and responsive introduction meet the brief",
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/zh");
   await expect(page.getByText("楊子賢", { exact: true })).toHaveCount(1);
+  // Only the wordmark h1 may contain "Kamel" (IA §4.1 / §8).
   await expect(page.getByRole("heading", { name: "Kamel" })).toHaveCount(1);
   const desktopIdentity = await page
-    .locator(".landing-console__identity")
+    .locator(".home-hero__identity")
     .boundingBox();
+  const desktopStage = await page.locator(".home-hero__stage").boundingBox();
   expect(desktopIdentity?.width).toBeGreaterThanOrEqual(340);
+  expect(desktopStage?.width).toBeGreaterThanOrEqual(340);
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.reload();
-  const identity = await page
-    .locator(".landing-console__identity")
-    .boundingBox();
-  const content = await page.locator(".landing-console__content").boundingBox();
-  expect(identity?.x).toBe(content?.x);
+  const identity = await page.locator(".home-hero__identity").boundingBox();
+  const stage = await page.locator(".home-hero__stage").boundingBox();
+  expect(identity?.x).toBe(stage?.x);
   expect((identity?.y ?? 0) + (identity?.height ?? 0)).toBeLessThanOrEqual(
-    content?.y ?? 0,
+    stage?.y ?? 0,
   );
 });
 

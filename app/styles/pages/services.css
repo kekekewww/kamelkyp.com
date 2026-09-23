@@ -1,3 +1,596 @@
 /* Page styles: Services overview, Mixing/Song Transition reskin, Software & Interactive.
    Owned by the page agent for this route group (phase 3b). Only this agent edits this file.
    Use tokens (tokens.css), utilities (global.css) and shared components (components.css). */
+
+/* ==========================================================================
+   Shared: numbered step list (a real sequence — IA §4.4 / §4.6)
+   ========================================================================== */
+.step-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: none;
+}
+
+.step-list__item {
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1fr);
+  align-items: baseline;
+  padding-block: var(--space-4);
+  border-block-end: 1px solid var(--color-rule);
+}
+
+.step-list__item:first-child {
+  border-block-start: 1px solid var(--color-rule);
+}
+
+.step-list__index {
+  color: var(--color-text-meta);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta);
+  font-weight: 500;
+  letter-spacing: var(--tracking-meta);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.step-list__title {
+  color: var(--color-text);
+  font-family: var(--font-display);
+  font-size: var(--text-h3);
+  font-weight: var(--weight-heading);
+  line-height: 1.25;
+}
+
+@media (min-width: 1024px) {
+  /* Steps read left to right as one measured line, split into equal spans. */
+  .step-list {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    border-block-start: 1px solid var(--color-rule-strong);
+  }
+
+  .step-list--five {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .step-list__item,
+  .step-list__item:first-child {
+    grid-template-columns: 1fr;
+    row-gap: var(--space-3);
+    padding-block: var(--space-4) 0;
+    padding-inline-end: var(--space-4);
+    border-block: 0;
+  }
+}
+
+/* ==========================================================================
+   Services overview `/services` (design-system §6.13)
+   ========================================================================== */
+.services-groups {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.service-group {
+  display: grid;
+  row-gap: var(--space-4);
+  padding-block: var(--space-6);
+  border-block-end: 1px solid var(--color-rule);
+  transition: background-color var(--dur-2) var(--ease-out-quart);
+}
+
+.service-group:first-child {
+  border-block-start: 1px solid var(--color-rule);
+}
+
+.service-group__name {
+  margin: 0;
+}
+
+.service-group__name a {
+  display: inline-flex;
+  min-block-size: var(--target-min);
+  align-items: center;
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.service-group__detail {
+  display: grid;
+  row-gap: var(--space-4);
+  justify-items: start;
+}
+
+.service-group__body {
+  max-inline-size: 40ch;
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.service-group__link .text-link__arrow {
+  transition: transform var(--dur-2) var(--ease-out-quart);
+}
+
+@media (hover: hover) {
+  .service-group:has(a:hover) {
+    background-color: var(--color-bg-2);
+  }
+
+  .service-group__name a:hover {
+    text-decoration-line: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.18em;
+  }
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .service-group:has(a:hover) .service-group__link .text-link__arrow {
+    transform: translateX(4px);
+  }
+}
+
+@media (min-width: 1024px) {
+  /* Content columns 4–12 → a 9-track subgrid: name 4–8, detail 9–12. */
+  .service-group {
+    grid-template-columns: repeat(9, minmax(0, 1fr));
+    column-gap: var(--grid-gutter);
+    padding-inline: var(--space-4);
+    margin-inline: calc(-1 * var(--space-4));
+  }
+
+  .service-group__name {
+    grid-column: 1 / 6;
+  }
+
+  .service-group__detail {
+    grid-column: 6 / 10;
+  }
+}
+
+.services-process {
+  row-gap: var(--space-6);
+}
+
+.services-process__title {
+  margin: 0;
+}
+
+@media (min-width: 1024px) {
+  .services-process__title,
+  .services-process__steps {
+    grid-column: 4 / 13;
+  }
+}
+
+/* ==========================================================================
+   Mixing / Song Transition selection pages (design-system §6.13 choice)
+   ========================================================================== */
+/* Neutralise the legacy two-column border box on the section wrapper. */
+.service-select-page .service-choice {
+  display: block;
+  border-block: 0;
+}
+
+.service-select__list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  gap: var(--grid-gutter);
+  list-style: none;
+}
+
+.service-select__card {
+  display: grid;
+  block-size: 100%;
+  align-content: start;
+  justify-items: start;
+  row-gap: var(--space-4);
+  padding: var(--space-6);
+  background-color: var(--color-surface);
+  box-shadow: var(--edge-light);
+  transition: background-color var(--dur-2) var(--ease-out-quart);
+}
+
+@media (hover: hover) {
+  .service-select__card:has(a:hover) {
+    background-color: var(--color-surface-hover);
+  }
+}
+
+.service-select__name {
+  margin: 0;
+  font-size: var(--text-h2);
+  line-height: var(--leading-heading-s);
+}
+
+:lang(zh) .service-select__name {
+  font-size: var(--text-h2-zh);
+}
+
+.service-select__description {
+  max-inline-size: 40ch;
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.service-select__schedule {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta);
+  letter-spacing: var(--tracking-meta);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.service-select__schedule-label {
+  color: var(--color-text-meta);
+  text-transform: uppercase;
+}
+
+:lang(zh) .service-select__schedule {
+  letter-spacing: var(--tracking-cjk-max);
+}
+
+.service-select__action {
+  margin-block-start: var(--space-3);
+}
+
+@media (min-width: 768px) {
+  .service-select__list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* "Estimated today" suffix from ServicePrice sits under the figure as metadata. */
+.price__figure small,
+.price__quote small {
+  display: block;
+  margin-block-start: var(--space-2);
+  color: var(--color-text-meta);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta);
+  font-weight: 500;
+  letter-spacing: var(--tracking-meta);
+  text-transform: uppercase;
+}
+
+/* ==========================================================================
+   Service detail pages (ServiceOverview)
+   ========================================================================== */
+.service-detail__body {
+  row-gap: var(--space-7);
+}
+
+.service-detail__facts {
+  display: grid;
+  margin: 0;
+  row-gap: var(--space-6);
+  column-gap: var(--grid-gutter);
+}
+
+.service-detail__fact {
+  display: grid;
+  align-content: start;
+  row-gap: var(--space-2);
+}
+
+.service-detail__fact dd {
+  margin: 0;
+}
+
+.service-detail__days {
+  color: var(--color-text);
+  font-family: var(--font-display);
+  font-size: var(--text-h2);
+  font-weight: 500;
+  line-height: var(--leading-heading-s);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+:lang(zh) .service-detail__days {
+  font-size: var(--text-h2-zh);
+}
+
+.service-detail__deliverables {
+  row-gap: var(--space-5);
+}
+
+.service-detail__section-title {
+  margin: 0;
+  font-size: var(--text-h2);
+  line-height: var(--leading-heading-s);
+}
+
+:lang(zh) .service-detail__section-title {
+  font-size: var(--text-h2-zh);
+}
+
+.service-detail__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.service-detail__list > li {
+  padding-block: var(--space-4);
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: var(--text-body-s);
+  letter-spacing: 0.02em;
+}
+
+@media (min-width: 768px) {
+  .service-detail__facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: end;
+  }
+}
+
+@media (min-width: 1024px) {
+  .service-detail__facts {
+    grid-template-columns: repeat(9, minmax(0, 1fr));
+  }
+
+  .service-detail__fact--price {
+    grid-column: 1 / 6;
+  }
+
+  .service-detail__fact:not(.service-detail__fact--price) {
+    grid-column: 6 / 10;
+  }
+
+  .service-detail__deliverables > .service-detail__section-title {
+    grid-column: 4 / 7;
+  }
+
+  .service-detail__deliverables > .service-detail__list {
+    grid-column: 7 / 13;
+  }
+}
+
+/* ==========================================================================
+   Software & Interactive `/services/software` (IA §4.6)
+   ========================================================================== */
+.page.software-page {
+  padding-block-end: 0;
+}
+
+.software-section {
+  row-gap: var(--space-6);
+}
+
+.software-section__title {
+  margin: 0;
+}
+
+@media (min-width: 1024px) {
+  .software-section > * {
+    grid-column: 4 / 13;
+  }
+
+  .software-section > .software-section__title {
+    grid-column: 4 / 11;
+  }
+}
+
+/* Offerings: ruled rows, title left, one sentence right. */
+.software-offers {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.software-offer {
+  display: grid;
+  row-gap: var(--space-2);
+  padding-block: var(--space-5);
+  border-block-end: 1px solid var(--color-rule);
+}
+
+.software-offer:first-child {
+  border-block-start: 1px solid var(--color-rule);
+}
+
+.software-offer__title {
+  margin: 0;
+}
+
+.software-offer__description {
+  max-inline-size: 48ch;
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+@media (min-width: 768px) {
+  .software-offer {
+    grid-template-columns: minmax(0, 4fr) minmax(0, 5fr);
+    column-gap: var(--grid-gutter);
+    align-items: baseline;
+  }
+}
+
+/* Engagement models: two open columns, a strong rule above each, no prices. */
+.software-models {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  gap: var(--space-7) var(--grid-gutter);
+  list-style: none;
+}
+
+.software-model {
+  display: grid;
+  align-content: start;
+  justify-items: start;
+  row-gap: var(--space-4);
+  padding-block-start: var(--space-5);
+  border-block-start: 1px solid var(--color-rule-strong);
+}
+
+.software-model__label {
+  margin: 0;
+  color: var(--color-text-meta);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta);
+  font-weight: 500;
+  letter-spacing: var(--tracking-meta);
+}
+
+.software-model__title {
+  margin: 0;
+}
+
+.software-model__description {
+  max-inline-size: 40ch;
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.software-model .price {
+  margin-block-start: var(--space-3);
+}
+
+@media (min-width: 768px) {
+  .software-models {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Related work: plain text list. */
+.software-related {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.software-related__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--space-4);
+  border-block-end: 1px solid var(--color-rule);
+}
+
+.software-related__item:first-child {
+  border-block-start: 1px solid var(--color-rule);
+}
+
+.software-related__year {
+  min-inline-size: 3rem;
+  color: var(--color-text-meta);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta);
+  letter-spacing: var(--tracking-meta);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.software-related__link {
+  font-size: var(--text-body);
+}
+
+/* Contact block (#contact): the page's closing zone. */
+.software-contact {
+  margin-block-start: var(--section-l);
+  padding-block: var(--section-m);
+}
+
+.software-contact__inner {
+  row-gap: var(--space-5);
+}
+
+.software-contact__title {
+  margin: 0;
+  font-size: var(--text-display);
+  font-weight: var(--weight-display);
+  font-stretch: var(--stretch-display);
+  line-height: var(--leading-display);
+  letter-spacing: var(--tracking-display);
+}
+
+:lang(zh) .software-contact__title {
+  font-size: var(--text-display-zh);
+  font-weight: var(--weight-display-zh);
+  line-height: var(--leading-display-zh);
+  letter-spacing: 0.01em;
+}
+
+.software-contact__body {
+  max-inline-size: 44ch;
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-lede);
+  line-height: var(--leading-lede);
+}
+
+:lang(zh) .software-contact__body {
+  line-height: var(--leading-lede-zh);
+}
+
+.software-contact__include-label {
+  margin: 0 0 var(--space-3);
+  color: var(--color-text-meta);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta);
+  letter-spacing: var(--tracking-meta);
+  text-transform: uppercase;
+}
+
+:lang(zh) .software-contact__include-label {
+  letter-spacing: var(--tracking-cjk-max);
+}
+
+.software-contact__include ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.software-contact__include li {
+  padding-block: var(--space-2);
+  border-block-end: 1px solid var(--color-rule);
+  color: var(--color-text);
+  font-size: var(--text-body-s);
+}
+
+.software-contact__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4) var(--space-5);
+  margin-block-start: var(--space-4);
+}
+
+.software-contact__address {
+  margin: 0;
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: var(--text-body-s);
+  user-select: all;
+  overflow-wrap: anywhere;
+}
+
+@media (min-width: 1024px) {
+  .software-contact__title {
+    grid-column: 1 / 11;
+  }
+
+  .software-contact__body {
+    grid-column: 7 / 12;
+  }
+
+  .software-contact__include {
+    grid-column: 7 / 11;
+  }
+
+  .software-contact__actions {
+    grid-column: 7 / 13;
+  }
+}
+
+@media (max-width: 479.98px) {
+  .software-contact__actions .button {
+    inline-size: 100%;
+    justify-content: center;
+  }
+}

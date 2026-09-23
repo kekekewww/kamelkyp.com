@@ -87,6 +87,7 @@ export function EditTransitionFields({
         </div>
       ))}
       <button
+        className="button button--ghost button--compact commission-add"
         type="button"
         onClick={() =>
           updateField("songs", [
