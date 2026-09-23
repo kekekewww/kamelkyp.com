@@ -1,17 +1,238 @@
+/* ==========================================================================
+   Kamel design tokens — Cold Industrial Editorial
+   Source of truth: docs/design-system.md §8. Motion values: docs/motion-system.md §1
+   (the motion doc owns durations/easings; the design-system token names are kept
+   as aliases of the motion tokens so both documents resolve to one value).
+   ========================================================================== */
+
 :root {
-  --color-mineral: #071724;
-  --color-console: #0b2030;
-  --color-chalk: #f3f1ea;
-  --color-cool-gray: #a9b3bc;
-  --color-coral: #ff5c4d;
-  --color-line: #344652;
-  --color-line-soft: #203643;
-  --color-surface-raised: #0e2839;
-  --font-display: "Barlow Condensed", "Noto Sans TC Variable", sans-serif;
-  --font-body: "Noto Sans TC Variable", "Noto Sans TC", system-ui, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
-  --content-max: 100rem;
-  --motion-fast: 140ms;
-  --motion-normal: 220ms;
-  --motion-panel: 320ms;
+  color-scheme: dark;
+
+  /* ---- Color: surfaces ---- */
+  --color-bg: #090d12;
+  --color-bg-2: #0f151d;
+  --color-surface: #161e28;
+  --color-surface-hover: #1c2632;
+  --color-shadow: rgb(5 8 11 / 0.7);
+
+  /* ---- Color: text ---- */
+  --color-text: #e8edf2; /* 16.54:1 on bg */
+  --color-text-bright: #f5f7f9; /* inverse-button hover fill only */
+  --color-text-secondary: #9aa5b2; /* 7.79:1 on bg, 6.12:1 on surface-hover */
+  --color-text-meta: #808d9b; /* 5.75:1 on bg, 4.52:1 on surface-hover */
+
+  /* ---- Color: lines (decorative unless noted) ---- */
+  --color-trace: #596674; /* decorative only; never text */
+  --color-rule: #1f2934;
+  --color-rule-strong: #2a3643;
+  --color-control-border: #6a7684; /* non-text 3:1 on every surface */
+
+  /* ---- Color: accent (≤ 5% of a view) ---- */
+  --color-accent: #a7c7e7;
+  --color-accent-hover: #c4daf0;
+  --color-accent-pressed: #8fb3d9;
+  --color-on-accent: #090d12; /* 11.10:1 on accent */
+  --color-accent-2: #788bff; /* live audio state only */
+
+  /* ---- Color: status ---- */
+  --color-danger: #eba3a3;
+  --color-success: #9ccdb3;
+  --color-warning: #d8c28e;
+
+  /* ---- Elevation ---- */
+  --edge-light: inset 0 1px 0 rgb(232 237 242 / 0.06);
+  --shadow-float: 0 24px 48px -24px var(--color-shadow);
+
+  /* ---- Typography: families ---- */
+  --font-display:
+    "Archivo Variable", "Noto Sans TC Variable", "PingFang TC",
+    "Microsoft JhengHei", system-ui, sans-serif;
+  --font-body:
+    "Noto Sans TC Variable", "PingFang TC", "Microsoft JhengHei", system-ui,
+    sans-serif;
+  --font-mono:
+    "IBM Plex Mono", "Noto Sans TC Variable", ui-monospace, "SFMono-Regular",
+    Menlo, Consolas, monospace;
+
+  /* ---- Typography: sizes ---- */
+  --text-wordmark: clamp(4rem, 0.5rem + 17vw, 15rem);
+  --text-display: clamp(2.75rem, 1.5rem + 5vw, 6.5rem);
+  --text-title-list: clamp(1.625rem, 0.9rem + 2.8vw, 3.5rem);
+  --text-h1: clamp(1.75rem, 1.2rem + 2.2vw, 3.25rem);
+  --text-h2: clamp(1.375rem, 1.1rem + 1vw, 2rem);
+  --text-h3: clamp(1.125rem, 1.05rem + 0.3vw, 1.25rem);
+  --text-price: clamp(2.5rem, 1.6rem + 3vw, 4.5rem);
+  --text-price-s: clamp(2rem, 1.4rem + 2vw, 3.25rem);
+  --text-lede: clamp(1.125rem, 1rem + 0.45vw, 1.375rem);
+  --text-body: clamp(1rem, 0.96rem + 0.18vw, 1.0625rem);
+  --text-body-s: 0.875rem;
+  --text-meta: clamp(0.75rem, 0.72rem + 0.12vw, 0.8125rem);
+  --text-meta-xs: 0.6875rem;
+  --text-button: 0.9375rem;
+  --text-button-s: 0.8125rem;
+  --text-numeral-404: clamp(8rem, 4rem + 20vw, 22rem);
+
+  /* zh overrides (applied under :lang(zh)) */
+  --text-display-zh: clamp(2.5rem, 1.5rem + 3.6vw, 4.75rem);
+  --text-title-list-zh: clamp(1.5rem, 0.95rem + 2.1vw, 2.75rem);
+  --text-h1-zh: clamp(1.625rem, 1.2rem + 1.6vw, 2.625rem);
+  --text-h2-zh: clamp(1.25rem, 1.05rem + 0.8vw, 1.75rem);
+
+  /* ---- Typography: line-height ---- */
+  --leading-wordmark: 0.86;
+  --leading-display: 0.95;
+  --leading-title: 1;
+  --leading-heading: 1.06;
+  --leading-heading-s: 1.12;
+  --leading-lede: 1.55;
+  --leading-body: 1.65;
+  --leading-body-s: 1.6;
+  --leading-meta: 1.4;
+  --leading-display-zh: 1.12;
+  --leading-heading-zh: 1.22;
+  --leading-lede-zh: 1.75;
+  --leading-body-zh: 1.85;
+
+  /* ---- Typography: tracking ---- */
+  --tracking-wordmark: -0.035em;
+  --tracking-display: -0.025em;
+  --tracking-title: -0.018em;
+  --tracking-heading: -0.015em;
+  --tracking-heading-s: -0.01em;
+  --tracking-meta: 0.08em;
+  --tracking-meta-xs: 0.1em;
+  --tracking-button: 0.06em;
+  --tracking-cjk-max: 0.02em;
+
+  /* ---- Typography: weight / width ---- */
+  --weight-wordmark: 780;
+  --weight-display: 650;
+  --weight-title: 500;
+  --weight-heading: 600;
+  --weight-body: 400;
+  --weight-label: 500;
+  --weight-display-zh: 800;
+  --weight-heading-zh: 700;
+  --stretch-wordmark: 125%;
+  --stretch-display: 112%;
+  --stretch-title: 106%;
+  --stretch-heading: 100%;
+
+  /* ---- Layout ---- */
+  --content-max: 93.75rem; /* 1500px */
+  --measure: 65ch;
+  --page-margin: clamp(1rem, 0.25rem + 3.2vw, 3.5rem);
+  --grid-cols: 4;
+  --grid-gutter: clamp(1rem, 0.6rem + 1.1vw, 1.5rem);
+  --header-h: 60px;
+  --header-h-compact: 56px;
+
+  /* ---- Vertical rhythm ---- */
+  --section-s: clamp(3.5rem, 2.5rem + 4vw, 6rem);
+  --section-m: clamp(5rem, 3rem + 7vw, 10rem);
+  --section-l: clamp(6.5rem, 3.5rem + 10vw, 14rem);
+
+  /* ---- Spacing (4px base) ---- */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4rem;
+  --space-9: 6rem;
+  --space-10: 8rem;
+
+  /* ---- Radius ---- */
+  --radius-0: 0;
+  --radius-xs: 2px;
+  --radius-round: 50%;
+
+  /* ---- Targets ---- */
+  --target-min: 44px;
+  --control-h: 3rem;
+  --control-h-s: 2.75rem;
+  --control-h-l: 3.5rem;
+
+  /* ---- Focus ---- */
+  --focus-width: 2px;
+  --focus-offset: 2px;
+  --focus-color: var(--color-accent);
+
+  /* ---- Motion: owned by docs/motion-system.md §1 (mirrored in app/lib/motion/tokens.ts) ---- */
+  --dur-1: 120ms;
+  --dur-2: 200ms;
+  --dur-3: 320ms;
+  --dur-4: 480ms;
+  --dur-5: 720ms;
+  --stagger: 60ms;
+  --stagger-line: 80ms;
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-weighted: cubic-bezier(0.33, 0, 0.13, 1);
+  --ease-in-out-quint: cubic-bezier(0.83, 0, 0.17, 1);
+  --ease-in-quart: cubic-bezier(0.5, 0, 0.75, 0);
+  --ease-linear: linear;
+
+  /* Design-system motion names (docs/design-system.md §8), resolved to the motion tokens */
+  --duration-instant: var(--dur-1);
+  --duration-fast: var(--dur-1);
+  --duration-base: var(--dur-2);
+  --duration-slow: var(--dur-3);
+  --duration-reveal: var(--dur-5);
+  --duration-page: var(--dur-4);
+  --ease-standard: var(--ease-out-quart);
+  --ease-out: var(--ease-out-expo);
+  --ease-out-soft: var(--ease-out-quart);
+  --ease-in-out: var(--ease-in-out-quint);
+  --reveal-distance: 16px;
+
+  /* ---- Z-index ---- */
+  --z-base: 0;
+  --z-preview: 20;
+  --z-header: 50;
+  --z-menu: 60;
+  --z-skip: 100;
+
+  /* ---- Legacy aliases (remove after every page is migrated) ---- */
+  --color-mineral: var(--color-bg);
+  --color-console: var(--color-bg-2);
+  --color-chalk: var(--color-text);
+  --color-cool-gray: var(--color-text-secondary);
+  --color-coral: var(
+    --color-accent
+  ); /* icons on a coral fill must switch to --color-on-accent */
+  --color-line: var(--color-rule-strong);
+  --color-line-soft: var(--color-rule);
+  --color-surface-raised: var(--color-surface);
+  --motion-fast: var(--duration-fast);
+  --motion-normal: var(--duration-base);
+  --motion-panel: var(--duration-slow);
+}
+
+@media (min-width: 768px) {
+  :root {
+    --grid-cols: 8;
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --grid-cols: 12;
+    --header-h: 72px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    /* Opacity/colour transitions stay at --dur-1; everything longer collapses to it. */
+    --dur-2: var(--dur-1);
+    --dur-3: var(--dur-1);
+    --dur-4: var(--dur-1);
+    --dur-5: var(--dur-1);
+    --stagger: 0ms;
+    --stagger-line: 0ms;
+    --reveal-distance: 0px;
+  }
 }

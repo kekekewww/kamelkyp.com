@@ -1,160 +1,191 @@
-import { useId, useRef, useState } from "react";
-import { Link, NavLink } from "react-router";
+import { useEffect, useId, useRef, useState } from "react";
+import { Link, useLocation } from "react-router";
 import { getSiteCopy } from "../../lib/i18n/copy";
 import type { Locale } from "../../lib/i18n/locale";
-import { localePath } from "../../lib/i18n/path";
+import {
+  isNavSectionActive,
+  localePath,
+  type NavSection,
+} from "../../lib/i18n/path";
+import { useMagnetic } from "../../lib/motion/use-magnetic";
+import { NavigationProgress } from "../motion/navigation-progress";
 import { LanguageSwitcher } from "./language-switcher";
 
-interface NavigationGroupProps {
-  label: string;
-  locale: Locale;
+const NAV_ITEMS: ReadonlyArray<{
+  section: Exclude<NavSection, "home" | "cta">;
   path: string;
-  disclosureLabel: string;
-  open: boolean;
-  onClose: () => void;
-  onOpen: () => void;
-  onToggle: () => void;
-  onNavigate: () => void;
-  items: Array<{ label: string; path: string }>;
-}
+}> = [
+  { section: "work", path: "/works" },
+  { section: "services", path: "/services" },
+  { section: "about", path: "/about" },
+  { section: "writing", path: "/writing" },
+];
 
-function NavigationGroup({
+/** Magnetic only on the four desktop nav links and the CTA (motion-system §2.5). */
+function NavItem({
+  href,
   label,
-  locale,
-  path,
-  disclosureLabel,
-  open,
-  onClose,
-  onOpen,
-  onToggle,
+  current,
   onNavigate,
-  items,
-}: NavigationGroupProps) {
-  const menuId = useId();
-  const primaryLinkRef = useRef<HTMLAnchorElement>(null);
-  const menuRef = useRef<HTMLUListElement>(null);
-  const suppressNextFocusOpen = useRef(false);
-
-  function getMenuLinks() {
-    return Array.from(
-      menuRef.current?.querySelectorAll<HTMLAnchorElement>("a") ?? [],
-    );
-  }
-
-  function handleFocus(event: React.FocusEvent<HTMLLIElement>) {
-    if (suppressNextFocusOpen.current) {
-      suppressNextFocusOpen.current = false;
-      return;
-    }
-
-    if (!event.currentTarget.contains(event.relatedTarget)) {
-      onOpen();
-    }
-  }
-
-  function handleBlur(event: React.FocusEvent<HTMLLIElement>) {
-    if (!event.currentTarget.contains(event.relatedTarget)) {
-      onClose();
-    }
-  }
-
-  function handleKeyDown(event: React.KeyboardEvent<HTMLLIElement>) {
-    const links = getMenuLinks();
-    const activeIndex = links.indexOf(event.target as HTMLAnchorElement);
-
-    if (event.key === "Escape") {
-      event.preventDefault();
-      event.stopPropagation();
-      onClose();
-      if (document.activeElement !== primaryLinkRef.current) {
-        suppressNextFocusOpen.current = true;
-        primaryLinkRef.current?.focus();
-      }
-      return;
-    }
-
-    if (event.target === primaryLinkRef.current && event.key === "ArrowDown") {
-      event.preventDefault();
-      onOpen();
-      requestAnimationFrame(() => links[0]?.focus());
-      return;
-    }
-
-    if (event.target === primaryLinkRef.current && event.key === "ArrowUp") {
-      event.preventDefault();
-      onOpen();
-      requestAnimationFrame(() => links.at(-1)?.focus());
-      return;
-    }
-
-    if (activeIndex >= 0 && ["ArrowDown", "ArrowUp"].includes(event.key)) {
-      event.preventDefault();
-      const direction = event.key === "ArrowDown" ? 1 : -1;
-      const nextIndex = (activeIndex + direction + links.length) % links.length;
-      links[nextIndex]?.focus();
-    }
-  }
+}: {
+  href: string;
+  label: string;
+  current: boolean;
+  onNavigate: () => void;
+}) {
+  const ref = useRef<HTMLAnchorElement>(null);
+  useMagnetic(ref);
 
   return (
-    <li
-      className="nav-group"
-      data-mobile-open={open || undefined}
-      onBlur={handleBlur}
-      onFocus={handleFocus}
-      onKeyDown={handleKeyDown}
-    >
-      <div className="nav-group__trigger">
-        <NavLink
-          ref={primaryLinkRef}
-          to={localePath(locale, path)}
-          onClick={onNavigate}
-        >
+    <li>
+      <Link
+        ref={ref}
+        className="site-nav__link"
+        to={href}
+        viewTransition
+        aria-current={current ? "page" : undefined}
+        onClick={onNavigate}
+      >
+        <span className="site-nav__label" data-magnetic-label>
           {label}
-        </NavLink>
-        <button
-          className="nav-group__disclosure"
-          type="button"
-          aria-expanded={open}
-          aria-controls={menuId}
-          aria-label={disclosureLabel}
-          onClick={onToggle}
-        >
-          <span aria-hidden="true">+</span>
-        </button>
-      </div>
-      <ul className="nav-group__menu" id={menuId} ref={menuRef}>
-        {items.map((item) => (
-          <li key={item.path}>
-            <Link to={localePath(locale, item.path)} onClick={onNavigate}>
-              {item.label}
-            </Link>
-          </li>
-        ))}
-      </ul>
+        </span>
+      </Link>
     </li>
   );
 }
 
 export function SiteHeader({ locale }: { locale: Locale }) {
   const copy = getSiteCopy(locale);
+  const location = useLocation();
   const navigationId = useId();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [openGroup, setOpenGroup] = useState<"mixing" | "transition" | null>(
-    null,
-  );
+  const headerRef = useRef<HTMLElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const ctaRef = useRef<HTMLAnchorElement>(null);
+  useMagnetic(ctaRef);
 
-  function closeNavigation() {
+  const pathname = location.pathname;
+  const ctaHref = localePath(locale, "/commission");
+
+  // Navigating closes the panel.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: close on every path change
+  useEffect(() => {
     setMenuOpen(false);
-    setOpenGroup(null);
-  }
+  }, [pathname]);
+
+  // Body scroll lock + Escape (disclosure, not a modal: no focus trap).
+  useEffect(() => {
+    if (!menuOpen) return;
+    const root = document.documentElement;
+    root.setAttribute("data-menu-open", "");
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setMenuOpen(false);
+      menuButtonRef.current?.focus();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      root.removeAttribute("data-menu-open");
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [menuOpen]);
+
+  // Close the panel if the viewport grows into the desktop layout.
+  useEffect(() => {
+    const query = window.matchMedia("(min-width: 1024px)");
+    const onChange = () => {
+      if (query.matches) setMenuOpen(false);
+    };
+    query.addEventListener("change", onChange);
+    return () => query.removeEventListener("change", onChange);
+  }, []);
+
+  // Compact after 24px of scroll (height only, never hidden).
+  useEffect(() => {
+    const header = headerRef.current;
+    if (!header) return;
+    let ticking = false;
+    const update = () => {
+      ticking = false;
+      header.toggleAttribute("data-scrolled", window.scrollY > 24);
+    };
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(update);
+    };
+    update();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const close = () => setMenuOpen(false);
 
   return (
-    <header className="site-header">
-      <div className="site-header__inner">
-        <Link className="site-header__brand" to={localePath(locale)}>
+    <header className="site-header" ref={headerRef} data-magnetic-scope>
+      <div className="site-header__bar container">
+        <Link
+          className="site-header__brand"
+          to={localePath(locale)}
+          viewTransition
+          aria-label={copy.brandLabel}
+          aria-current={
+            isNavSectionActive(pathname, "home") ? "page" : undefined
+          }
+        >
           Kamel
         </Link>
+
+        <nav
+          className="site-nav"
+          id={navigationId}
+          aria-label={copy.primaryNavigation}
+          data-open={menuOpen || undefined}
+        >
+          <div className="site-nav__inner">
+            <ul className="site-nav__list">
+              {NAV_ITEMS.map((item) => (
+                <NavItem
+                  key={item.section}
+                  href={localePath(locale, item.path)}
+                  label={copy[item.section]}
+                  current={isNavSectionActive(pathname, item.section)}
+                  onNavigate={close}
+                />
+              ))}
+            </ul>
+            <div className="site-nav__panel-actions">
+              <Link
+                className="button button--primary"
+                to={ctaHref}
+                onClick={close}
+              >
+                {copy.cta}
+              </Link>
+              <LanguageSwitcher locale={locale} />
+            </div>
+          </div>
+        </nav>
+
+        <Link
+          ref={ctaRef}
+          className="site-header__cta button button--inverse button--compact"
+          to={ctaHref}
+          aria-current={
+            isNavSectionActive(pathname, "cta") ? "page" : undefined
+          }
+        >
+          <span className="button__label" data-magnetic-label>
+            {copy.cta}
+          </span>
+        </Link>
+
+        <div className="site-header__language">
+          <LanguageSwitcher locale={locale} />
+        </div>
+
         <button
+          ref={menuButtonRef}
           className="site-header__menu-button"
           type="button"
           aria-label={menuOpen ? copy.closeMenu : copy.openMenu}
@@ -165,97 +196,8 @@ export function SiteHeader({ locale }: { locale: Locale }) {
           <span aria-hidden="true" />
           <span aria-hidden="true" />
         </button>
-        <nav
-          className="site-navigation"
-          id={navigationId}
-          aria-label={copy.primaryNavigation}
-          data-open={menuOpen || undefined}
-        >
-          <ul className="site-navigation__list">
-            <li>
-              <NavLink end to={localePath(locale)} onClick={closeNavigation}>
-                {copy.home}
-              </NavLink>
-            </li>
-            <NavigationGroup
-              label={copy.mixing}
-              locale={locale}
-              path="/mixing"
-              disclosureLabel={
-                openGroup === "mixing" ? copy.collapseMixing : copy.expandMixing
-              }
-              open={openGroup === "mixing"}
-              onClose={() =>
-                setOpenGroup((current) =>
-                  current === "mixing" ? null : current,
-                )
-              }
-              onOpen={() => setOpenGroup("mixing")}
-              onNavigate={closeNavigation}
-              onToggle={() =>
-                setOpenGroup((current) =>
-                  current === "mixing" ? null : "mixing",
-                )
-              }
-              items={[
-                {
-                  label: locale === "zh" ? "完整歌曲混音" : "Full Song Mixing",
-                  path: "/mixing/full",
-                },
-                {
-                  label: locale === "zh" ? "Vocal 混音" : "Vocal Mixing",
-                  path: "/mixing/vocal",
-                },
-              ]}
-            />
-            <NavigationGroup
-              label={copy.transition}
-              locale={locale}
-              path="/song-transition"
-              disclosureLabel={
-                openGroup === "transition"
-                  ? copy.collapseTransition
-                  : copy.expandTransition
-              }
-              open={openGroup === "transition"}
-              onClose={() =>
-                setOpenGroup((current) =>
-                  current === "transition" ? null : current,
-                )
-              }
-              onOpen={() => setOpenGroup("transition")}
-              onNavigate={closeNavigation}
-              onToggle={() =>
-                setOpenGroup((current) =>
-                  current === "transition" ? null : "transition",
-                )
-              }
-              items={[
-                {
-                  label: locale === "zh" ? "單純歌曲銜接" : "Simple Transition",
-                  path: "/song-transition/simple",
-                },
-                {
-                  label:
-                    locale === "zh" ? "編輯／剪輯銜接" : "Edited Transition",
-                  path: "/song-transition/edit",
-                },
-              ]}
-            />
-            <li>
-              <NavLink
-                to={localePath(locale, "/other")}
-                onClick={closeNavigation}
-              >
-                {copy.other}
-              </NavLink>
-            </li>
-            <li className="site-navigation__language">
-              <LanguageSwitcher locale={locale} />
-            </li>
-          </ul>
-        </nav>
       </div>
+      <NavigationProgress />
     </header>
   );
 }

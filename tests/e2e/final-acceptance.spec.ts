@@ -1,3 +1,21 @@
+/*
+ * Editorial redesign: assertions in this file that page agents must change
+ * (docs/information-architecture.md §8). Foundation already updated the 404
+ * check (root ErrorBoundary is foundation-owned).
+ *
+ * - Home agent: "language preference, identity and responsive introduction"
+ *   uses `.landing-console__identity` / `.landing-console__content`; rename to
+ *   `.home-hero__identity` / `.home-hero__stage` with the same geometry checks
+ *   (≥ 340px stage at 1440, stacked and left-aligned at 390). Keep heading
+ *   "Kamel" count 1 and 楊子賢 count 1 (no other home heading may contain "Kamel").
+ * - Services agent: "service entry pages" (mixing / song-transition headings,
+ *   strict NT$ matches, US$260.00) must keep passing unchanged after the reskin;
+ *   do not add "starting at" figures or cross-category names inside <main>.
+ * - Commission agent: "commission form is link-only…" (wizard labels, totals)
+ *   must keep passing unchanged after the reskin.
+ * - Unchanged, owned by nobody: footer summary count 5, footer links > 3,
+ *   /admin 403.
+ */
 import { expect, test } from "@playwright/test";
 
 test("language preference, identity and responsive introduction meet the brief", async ({
@@ -111,7 +129,13 @@ test("public safety boundaries remain explicit", async ({ page, request }) => {
 
   await page.goto("/en/does-not-exist");
   await expect(
-    page.getByRole("heading", { name: "Something went wrong" }),
+    page.getByRole("heading", { name: "Page not found" }),
+  ).toBeVisible();
+  await expect(page.getByText(/stack|ErrorResponseImpl/)).toHaveCount(0);
+
+  await page.goto("/zh/does-not-exist");
+  await expect(
+    page.getByRole("heading", { name: "找不到這個頁面" }),
   ).toBeVisible();
   await expect(page.getByText(/stack|ErrorResponseImpl/)).toHaveCount(0);
 });

@@ -9,15 +9,15 @@ export async function loader(args: LoaderFunctionArgs) {
   return { locale, items: await listPublishedContent(db, "post", locale) };
 }
 
-export default function OtherIndexRoute() {
+export default function WritingIndexRoute() {
   const { locale, items } = useLoaderData<typeof loader>();
   const isZh = locale === "zh";
 
   return (
     <main className="content-index-page" id="main-content">
       <header className="content-index-page__header">
-        <p className="eyebrow">NOTES / LINKS / UPDATES</p>
-        <h1>{isZh ? "其他內容" : "Other Work"}</h1>
+        <p className="eyebrow">WRITING / NOTES / LINKS</p>
+        <h1>{isZh ? "文章" : "Writing"}</h1>
         <p>
           {isZh
             ? "網站、社群貼文、個人公告與工作相關內容。"
@@ -43,7 +43,7 @@ export default function OtherIndexRoute() {
                 <h2>{item.title || (isZh ? "未命名文章" : "Untitled")}</h2>
                 {item.summary ? <p>{item.summary}</p> : null}
               </div>
-              <Link to={localePath(locale, `/other/${item.slug}`)}>
+              <Link to={localePath(locale, `/writing/${item.slug}`)}>
                 {isZh ? "閱讀內容" : "Read"} →
               </Link>
             </article>

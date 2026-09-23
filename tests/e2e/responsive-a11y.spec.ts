@@ -14,21 +14,31 @@ for (const width of [390, 768, 1024, 1440]) {
   });
 }
 
-test("desktop submenu works by keyboard and Escape", async ({ page }) => {
+test("primary navigation is a flat keyboard list", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/en");
 
-  const mixingLink = page
-    .getByRole("navigation", { name: "Primary navigation" })
-    .getByRole("link", { name: "Mixing", exact: true });
-  const fullMixingLink = page.getByRole("link", { name: "Full Song Mixing" });
-  await mixingLink.focus();
-  await expect(fullMixingLink).toBeVisible();
-  await page.keyboard.press("ArrowDown");
-  await expect(fullMixingLink).toBeFocused();
-  await page.keyboard.press("Escape");
-  await expect(fullMixingLink).toBeHidden();
-  await expect(mixingLink).toBeFocused();
+  const brand = page.getByRole("link", { name: "Kamel home" });
+  await brand.focus();
+  for (const name of [
+    "Work",
+    "Services",
+    "About",
+    "Writing",
+    "Start a project",
+  ]) {
+    await page.keyboard.press("Tab");
+    await expect(page.locator(":focus")).toHaveAccessibleName(name);
+  }
+
+  await brand.focus();
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/\/en\/services$/);
+  await expect(
+    page.getByRole("banner").getByRole("link", { name: "Full Song Mixing" }),
+  ).toHaveCount(0);
 });
 
 test("mobile controls meet the minimum touch target", async ({ page }) => {
@@ -40,6 +50,13 @@ test("mobile controls meet the minimum touch target", async ({ page }) => {
   expect(buttonBox?.width).toBeGreaterThanOrEqual(44);
   expect(buttonBox?.height).toBeGreaterThanOrEqual(44);
 
+  const headerCta = page
+    .getByRole("banner")
+    .getByRole("link", { name: "開始合作", exact: true });
+  const ctaBox = await headerCta.boundingBox();
+  expect(ctaBox?.width).toBeGreaterThanOrEqual(44);
+  expect(ctaBox?.height).toBeGreaterThanOrEqual(44);
+
   const summaries = page.locator("footer summary");
   await expect(summaries).toHaveCount(5);
   for (const summary of await summaries.all()) {
@@ -48,15 +65,18 @@ test("mobile controls meet the minimum touch target", async ({ page }) => {
   }
 });
 
-test("public landing has no serious axe violations", async ({ page }) => {
-  await page.goto("/en");
-  const results = await new AxeBuilder({ page })
-    .withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"])
-    .analyze();
+// Work agent: add "/en/works" to this list once the Work index is rebuilt.
+for (const path of ["/en", "/en/services/software", "/en/about"]) {
+  test(`${path} has no serious axe violations`, async ({ page }) => {
+    await page.goto(path);
+    const results = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"])
+      .analyze();
 
-  expect(
-    results.violations.filter((item) =>
-      ["critical", "serious"].includes(item.impact ?? ""),
-    ),
-  ).toEqual([]);
-});
+    expect(
+      results.violations.filter((item) =>
+        ["critical", "serious"].includes(item.impact ?? ""),
+      ),
+    ).toEqual([]);
+  });
+}

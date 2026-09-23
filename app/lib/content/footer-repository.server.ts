@@ -53,16 +53,25 @@ export function getDefaultFooterGroups(locale: Locale): FooterGroup[] {
       id: "navigate",
       label: groupLabel("navigate", locale),
       links: [
-        { id: "home", label: label("主頁", "Home"), url: localePath(locale) },
         {
           id: "works",
-          label: label("作品", "Works"),
+          label: label("作品", "Work"),
           url: localePath(locale, "/works"),
         },
         {
-          id: "other",
-          label: label("其他內容", "Other Work"),
-          url: localePath(locale, "/other"),
+          id: "services-overview",
+          label: label("服務", "Services"),
+          url: localePath(locale, "/services"),
+        },
+        {
+          id: "about",
+          label: label("關於", "About"),
+          url: localePath(locale, "/about"),
+        },
+        {
+          id: "writing",
+          label: label("文章", "Writing"),
+          url: localePath(locale, "/writing"),
         },
       ],
     },
@@ -81,8 +90,13 @@ export function getDefaultFooterGroups(locale: Locale): FooterGroup[] {
           url: localePath(locale, "/song-transition"),
         },
         {
+          id: "software",
+          label: label("軟體與互動", "Software & Interactive"),
+          url: localePath(locale, "/services/software"),
+        },
+        {
           id: "commission",
-          label: label("開始委託", "Start a commission"),
+          label: label("開始合作", "Start a project"),
           url: localePath(locale, "/commission"),
         },
       ],

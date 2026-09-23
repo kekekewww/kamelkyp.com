@@ -194,7 +194,7 @@ export default function HomeRoute() {
                 ? "之後會在這裡發布網站、社群與工作相關內容。"
                 : "Website notes, posts and work updates will appear here."}
             </p>
-            <Link to={localePath(locale, "/other")}>
+            <Link to={localePath(locale, "/writing")}>
               {isZh ? "查看其他內容" : "View other work"} →
             </Link>
           </article>

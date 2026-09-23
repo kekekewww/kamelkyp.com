@@ -13,7 +13,7 @@ describe("footer repository", () => {
       "contact",
       "legal",
     ]);
-    expect(groups.flatMap((group) => group.links)).toHaveLength(11);
+    expect(groups.flatMap((group) => group.links)).toHaveLength(13);
   });
 
   it("localizes navigation while retaining safe contact destinations", () => {

@@ -33,7 +33,7 @@
 
 .commission-category__price,
 .quote-summary__total dd {
-  color: var(--color-coral);
+  color: var(--color-text);
   font-family: var(--font-mono);
 }
 
@@ -58,7 +58,7 @@
 }
 
 .commission-wizard__header li[aria-current="step"] {
-  color: var(--color-coral);
+  color: var(--color-text);
 }
 
 .commission-step {
@@ -81,7 +81,7 @@
 
 .commission-fields legend {
   padding-inline: 0.5rem;
-  color: var(--color-coral);
+  color: var(--color-text);
   font-family: var(--font-display);
   font-size: 1.75rem;
 }
@@ -216,7 +216,7 @@
 .terms-acceptance {
   margin-block: 2rem;
   padding: 1rem;
-  border: 1px solid var(--color-coral);
+  border: 1px solid var(--color-control-border);
   scroll-margin-block: 7rem;
 }
 
@@ -244,8 +244,9 @@
 }
 
 .commission-actions button:last-child {
-  border-color: var(--color-coral);
-  background: var(--color-coral);
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
 }
 
 .commission-actions button:disabled {
@@ -255,7 +256,7 @@
 .error-summary {
   margin-bottom: 2rem;
   padding: 1rem;
-  border: 1px solid var(--color-coral);
+  border: 1px solid var(--color-danger);
 }
 
 .turnstile-widget {
@@ -265,7 +266,7 @@
 
 .commission-submit-status {
   padding: 1rem;
-  border-left: 2px solid var(--color-coral);
+  border-left: 2px solid var(--color-accent);
   background: var(--color-console);
 }
 

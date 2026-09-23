@@ -18,15 +18,15 @@ export async function loader(args: LoaderFunctionArgs) {
   return { locale, item, media };
 }
 
-export default function OtherDetailRoute() {
+export default function WritingDetailRoute() {
   const { locale, item, media } = useLoaderData<typeof loader>();
   return (
     <main className="content-detail-page" id="main-content">
       <Link
         className="content-detail-page__back"
-        to={localePath(locale, "/other")}
+        to={localePath(locale, "/writing")}
       >
-        ← {locale === "zh" ? "返回其他內容" : "Back to other work"}
+        ← {locale === "zh" ? "返回文章" : "Back to writing"}
       </Link>
       <article>
         <header>

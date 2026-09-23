@@ -10,6 +10,7 @@ import {
   getDefaultFooterGroups,
   listFooterGroups,
 } from "../../lib/content/footer-repository.server";
+import { getSiteCopy } from "../../lib/i18n/copy";
 import { isLocale, type Locale } from "../../lib/i18n/locale";
 
 export interface PublicOutletContext {
@@ -17,20 +18,11 @@ export interface PublicOutletContext {
 }
 
 export const meta: MetaFunction = ({ params }) => {
-  const isZh = params.lang !== "en";
+  const copy = getSiteCopy(params.lang === "en" ? "en" : "zh");
 
   return [
-    {
-      title: isZh
-        ? "Kamel — 音樂混音與歌曲銜接"
-        : "Kamel — Music Mixing & Song Transitions",
-    },
-    {
-      name: "description",
-      content: isZh
-        ? "Kamel 的混音、Vocal 製作與歌曲銜接委託網站。"
-        : "Kamel's commissions for mixing, vocal production and song transitions.",
-    },
+    { title: copy.metaTitleHome },
+    { name: "description", content: copy.metaDescription },
   ];
 };
 

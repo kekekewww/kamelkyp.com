@@ -42,8 +42,9 @@
 .media-consent button {
   justify-self: start;
   padding-inline: 1rem;
-  border: 1px solid var(--color-coral);
-  color: var(--color-chalk);
+  border: 1px solid var(--color-control-border);
+  border-radius: var(--radius-xs);
+  color: var(--color-text);
   background: transparent;
 }
 
@@ -58,14 +59,39 @@
   width: 52px;
   height: 52px;
   padding: 0;
-  border: 1px solid var(--color-coral);
-  border-radius: 50%;
-  color: var(--color-chalk);
-  background: var(--color-coral);
+  border: 1px solid var(--color-control-border);
+  border-radius: var(--radius-round);
+  color: var(--color-text);
+  background: transparent;
+  transition:
+    color var(--dur-1) var(--ease-out-quart),
+    background-color var(--dur-1) var(--ease-out-quart),
+    border-color var(--dur-1) var(--ease-out-quart);
+}
+
+@media (hover: hover) {
+  .direct-audio > button:hover:not(:disabled) {
+    border-color: var(--color-text);
+    background: color-mix(in srgb, var(--color-text) 8%, transparent);
+  }
+}
+
+/* Playing: the live-audio state is the only use of --color-accent-2. */
+.direct-audio > button[aria-pressed="true"] {
+  border-color: var(--color-accent-2);
+  color: var(--color-bg);
+  background: var(--color-accent-2);
 }
 
 .direct-audio > button:disabled {
-  opacity: 0.65;
+  border-color: var(--color-rule-strong);
+  color: var(--color-text-meta);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .direct-audio > button:active:not(:disabled) {
+    transform: scale(0.96);
+  }
 }
 
 .media-waveform {
@@ -75,15 +101,21 @@
   min-block-size: 72px;
   min-inline-size: 0;
   overflow: hidden;
-  border-block: 1px solid color-mix(in srgb, var(--color-line) 65%, transparent);
+  background:
+    linear-gradient(var(--color-rule-strong), var(--color-rule-strong)) center /
+    100% 1px no-repeat;
 }
 
 .media-waveform span {
   inline-size: 2px;
   block-size: 34%;
-  border-radius: 999px;
-  background: var(--color-cool-gray);
+  border-radius: 0;
+  background: var(--color-trace);
+  opacity: 0.8;
   transform-origin: center;
+  transition:
+    background-color var(--dur-1) var(--ease-out-quart),
+    opacity var(--dur-1) var(--ease-out-quart);
 }
 
 .media-waveform span:nth-child(3n) {
@@ -98,19 +130,11 @@
   block-size: 86%;
 }
 
+/* Playing: colour only. Real amplitude (when an analyser exists) is written
+   by DirectAudioPreview as transform: scaleY() via the CSSOM; no fake pulse. */
 .direct-audio[data-player-state="playing"] .media-waveform span {
-  background: var(--color-coral);
-  animation: waveform-pulse 900ms ease-in-out infinite alternate;
-}
-
-.direct-audio[data-player-state="playing"] .media-waveform span:nth-child(2n) {
-  animation-delay: -450ms;
-}
-
-@keyframes waveform-pulse {
-  to {
-    transform: scaleY(0.55);
-  }
+  background: var(--color-accent-2);
+  opacity: 1;
 }
 
 .direct-audio__fallback {
@@ -136,11 +160,5 @@
 
   .media-waveform {
     min-block-size: 56px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .direct-audio[data-player-state="playing"] .media-waveform span {
-    animation: none;
   }
 }
