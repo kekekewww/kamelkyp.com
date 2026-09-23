@@ -67,6 +67,8 @@ test("mobile controls meet the minimum touch target", async ({ page }) => {
 
 for (const path of ["/en", "/en/works", "/en/services/software", "/en/about"]) {
   test(`${path} has no serious axe violations`, async ({ page }) => {
+    // The hero intro fades controls in; axe must see their final colours.
+    await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto(path);
     const results = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"])

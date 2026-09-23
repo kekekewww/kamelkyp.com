@@ -160,6 +160,18 @@ h3 {
   letter-spacing: var(--tracking-heading-s);
 }
 
+/* Chinese headings break at punctuation, not inside a word (QA finding 1). */
+:lang(zh) h1,
+:lang(zh) h2,
+:lang(zh) h3,
+:lang(zh) .t-display,
+:lang(zh) .t-title-list,
+:lang(zh) .t-h1,
+:lang(zh) .t-h2 {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
 :lang(zh) h1 {
   font-size: var(--text-display-zh);
   font-weight: var(--weight-display-zh);
