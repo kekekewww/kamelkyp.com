@@ -95,9 +95,11 @@ export function ErrorBoundary() {
   const copy = getSiteCopy(locale);
   const status = isRouteErrorResponse(error) ? error.status : 500;
   const notFound = status === 404;
+  const title = notFound ? copy.error404Title : copy.errorGenericTitle;
 
   return (
     <main className="error-page" id="main-content" aria-live="polite">
+      <title>{`${title} — Kamel`}</title>
       <div className="grid">
         <a className="error-page__brand" href={localePath(locale)}>
           Kamel
@@ -109,7 +111,7 @@ export function ErrorBoundary() {
           <p className="eyebrow">
             {notFound ? "404 / NOT FOUND" : `${status} / ERROR`}
           </p>
-          <h1>{notFound ? copy.error404Title : copy.errorGenericTitle}</h1>
+          <h1>{title}</h1>
           <p className="error-page__body">
             {notFound ? copy.error404Body : copy.errorGenericBody}
           </p>

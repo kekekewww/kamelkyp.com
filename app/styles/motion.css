@@ -262,6 +262,23 @@
     scale: 1.12;
   }
 
+  /* The overscan scale must not push the cover's overlays (PLACEHOLDER badge,
+     index numeral) past the frame edge: re-place them in unscaled coordinates
+     (x' = 50% - (50% - x) / 1.12) and cancel the scale on the overlay itself. */
+  :root[data-motion="full"] .parallax__media > .project-cover__badge {
+    inset-block-start: calc(50% - (50% - var(--space-3)) / 1.12);
+    inset-inline-start: calc(50% - (50% - var(--space-3)) / 1.12);
+    scale: calc(1 / 1.12);
+    transform-origin: 0 0;
+  }
+
+  :root[data-motion="full"] .parallax__media > .project-cover__numeral {
+    inset-block-end: calc(50% - 50% / 1.12);
+    inset-inline-start: calc(50% - (50% - var(--space-4)) / 1.12);
+    scale: calc(1 / 1.12);
+    transform-origin: 0 100%;
+  }
+
   @supports (animation-timeline: view()) {
     :root[data-motion="full"] .parallax__media {
       --parallax-max: min(6cqh, 48px);

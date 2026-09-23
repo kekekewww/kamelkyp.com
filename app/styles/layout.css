@@ -75,6 +75,10 @@
   position: relative;
   display: inline-flex;
   min-block-size: var(--target-min);
+  /* 44px hit area for short labels (作品, Work) without moving the text:
+     the padding is cancelled by an equal negative margin. */
+  padding-inline: var(--space-2);
+  margin-inline: calc(-1 * var(--space-2));
   align-items: center;
   color: var(--color-text-secondary);
   font-size: var(--text-body-s);
@@ -85,8 +89,8 @@
 .site-nav__link::after {
   position: absolute;
   inset-block-end: 0.55rem;
-  inset-inline-start: 0;
-  inline-size: 100%;
+  inset-inline-start: var(--space-2);
+  inline-size: calc(100% - 2 * var(--space-2));
   block-size: 1px;
   background: currentColor;
   content: "";
@@ -247,6 +251,8 @@
   .site-nav__link {
     display: flex;
     min-block-size: 56px;
+    padding-inline: 0;
+    margin-inline: 0;
     color: var(--color-text);
     font-family: var(--font-display);
     font-size: var(--text-h1);
@@ -386,6 +392,7 @@
 .footer-group a {
   display: inline-flex;
   min-block-size: var(--target-min);
+  min-inline-size: var(--target-min);
   align-items: center;
   gap: 0.35em;
   color: var(--color-text-secondary);
@@ -561,6 +568,10 @@
 .breadcrumb a {
   display: inline-flex;
   min-block-size: var(--target-min);
+  /* Wider hit area for two-glyph zh labels (服務) without moving the text;
+     8px keeps adjacent link targets from overlapping across the "/". */
+  padding-inline: var(--space-2);
+  margin-inline: calc(-1 * var(--space-2));
   align-items: center;
   color: var(--color-text-secondary);
 }

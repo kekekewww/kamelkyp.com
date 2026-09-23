@@ -61,8 +61,11 @@ export function useHoverPreview(listRef: RefObject<HTMLElement | null>): {
       const listRect = list.getBoundingClientRect();
       const w = preview.offsetWidth;
       const h = preview.offsetHeight;
+      // design-system §6.8: the preview never covers the row's own title
+      // (cols 2–7), so it is clamped to cols 8–12.
+      const minX = listRect.width * (7 / 12);
       return {
-        x: Math.max(0, Math.min(listRect.width - w, px)),
+        x: Math.max(minX, Math.min(listRect.width - w, px)),
         y: Math.max(0, Math.min(listRect.height - h, py)),
       };
     };

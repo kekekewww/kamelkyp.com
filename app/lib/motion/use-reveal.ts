@@ -85,14 +85,56 @@ function extraDelay(element: HTMLElement): number {
   return Number.isFinite(value) ? Math.min(Math.max(value, 0), 4) * STAGGER : 0;
 }
 
+/**
+ * Safety net for IntersectionObserver misses. IO only samples at rendering
+ * updates, so a fast jump (End key, scrollbar drag, find-in-page, a starved
+ * main thread) can carry an armed element past the viewport without an
+ * `isIntersecting` entry, leaving it invisible. A passive, rAF-throttled
+ * scroll sweep reveals any pending target that has reached the reveal line.
+ */
+const pending = new Map<Element, () => void>();
+let sweepFrame = 0;
+
+function sweep() {
+  sweepFrame = 0;
+  const line = window.innerHeight * 0.9;
+  for (const [element, reveal] of Array.from(pending)) {
+    if (element.getBoundingClientRect().top < line) reveal();
+  }
+  if (pending.size === 0) window.removeEventListener("scroll", onScroll);
+}
+
+function onScroll() {
+  if (!sweepFrame) sweepFrame = requestAnimationFrame(sweep);
+}
+
+/** Call `onEnter` once when `element` reaches the reveal line (or was passed). */
+function watch(element: Element, onEnter: () => void): () => void {
+  let active = true;
+  const stop = () => {
+    if (!active) return;
+    active = false;
+    unobserve();
+    pending.delete(element);
+  };
+  const enter = () => {
+    if (!active) return;
+    stop();
+    onEnter();
+  };
+  const unobserve = observe(element, "reveal", (entry) => {
+    if (entry.isIntersecting || entry.boundingClientRect.bottom < 0) enter();
+  });
+  if (pending.size === 0) {
+    window.addEventListener("scroll", onScroll, { passive: true });
+  }
+  pending.set(element, enter);
+  return stop;
+}
+
 function arm(element: HTMLElement, delay: number, lite: boolean): () => void {
   element.setAttribute(PROCESSED, "armed");
-  const stop = observe(element, "reveal", (entry) => {
-    if (!entry.isIntersecting) return;
-    stop();
-    run(element, delay, lite);
-  });
-  return stop;
+  return watch(element, () => run(element, delay, lite));
 }
 
 /**
@@ -150,9 +192,7 @@ export function revealScan(root: Element | Document): () => void {
       continue;
     }
     for (const item of items) item.setAttribute(PROCESSED, "armed");
-    const stop = observe(group, "reveal", (entry) => {
-      if (!entry.isIntersecting) return;
-      stop();
+    const stop = watch(group, () => {
       items.forEach((item, index) => {
         const staggerIndex = Math.min(index, cap - 1);
         const inView = item.getBoundingClientRect().top < window.innerHeight;
