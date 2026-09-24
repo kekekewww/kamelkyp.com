@@ -1,12 +1,15 @@
 import { createRequestHandler } from "react-router";
 import { deleteOrphanAttempts } from "../app/lib/cases/retention.server";
 import { createCloudflareContextProvider } from "../app/lib/cloudflare/context";
+import { rebuildAllUsages } from "../app/lib/cms/db/usage.server";
+import { cleanupPendingUploads } from "../app/lib/cms/media/cleanup.server";
 import type { Env } from "../app/lib/env.server";
 import { refreshFxRate } from "../app/lib/pricing/fx-repository.server";
 import { createCspNonce } from "../app/lib/security/csp-nonce.server";
 import {
   buildSecurityHeaders,
   requiresNoStore,
+  securitySurface,
 } from "../app/lib/security/headers.server";
 import {
   publicErrorResponse,
@@ -56,7 +59,11 @@ export default {
     const headers = new Headers(response.headers);
     const mode =
       env.APP_ORIGIN === "https://kamelkyp.com" ? "production" : "preview";
-    for (const [name, value] of buildSecurityHeaders({ nonce, mode })) {
+    for (const [name, value] of buildSecurityHeaders({
+      nonce,
+      mode,
+      surface: securitySurface(url.pathname),
+    })) {
       headers.set(name, value);
     }
     headers.set("X-Request-ID", requestId);
@@ -71,10 +78,14 @@ export default {
     });
   },
   scheduled(_controller, env, ctx) {
+    const now = new Date();
     ctx.waitUntil(
       Promise.all([
         refreshFxRate(env.DB, env.FX_API_URL, fetch),
-        deleteOrphanAttempts(env.DB, new Date().toISOString()),
+        deleteOrphanAttempts(env.DB, now.toISOString()),
+        // Content Studio: expire abandoned uploads, heal the usage index.
+        cleanupPendingUploads(env.DB, env.MEDIA, now),
+        rebuildAllUsages(env.DB),
       ]),
     );
   },

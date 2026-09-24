@@ -55,9 +55,20 @@ export const links: Route.LinksFunction = () => [
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
-  const documentLanguage = location.pathname.startsWith("/en")
-    ? "en"
-    : "zh-Hant";
+  // Studio chrome is English (content fields carry their own lang attributes);
+  // preview pages render public content in the previewed locale (?locale).
+  const studio =
+    location.pathname === "/studio" || location.pathname.startsWith("/studio/");
+  const preview =
+    location.pathname === "/studio/preview" ||
+    location.pathname.startsWith("/studio/preview/");
+  const documentLanguage = preview
+    ? new URLSearchParams(location.search).get("locale") === "en"
+      ? "en"
+      : "zh-Hant"
+    : studio || location.pathname.startsWith("/en")
+      ? "en"
+      : "zh-Hant";
 
   return (
     <html lang={documentLanguage}>

@@ -6,7 +6,7 @@ import {
 } from "./access-jwt.server";
 import { verifyCsrfToken } from "./csrf.server";
 
-const MUTATION_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+export const MUTATION_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
 export async function requireAdmin(
   request: Request,
@@ -16,18 +16,25 @@ export async function requireAdmin(
   return verifyAccessRequest(request, env, verifier);
 }
 
-export async function requireAdminMutation(
-  request: Request,
-  env: Env,
-  formData: FormData,
-  verifier?: JwtVerifier,
-): Promise<AdminIdentity> {
+export function assertMutationMethod(request: Request): void {
   if (!MUTATION_METHODS.has(request.method.toUpperCase())) {
     throw new Response("Method Not Allowed", { status: 405 });
   }
-  const identity = await requireAdmin(request, env, verifier);
+}
+
+/**
+ * CSRF check shared by the FormData field (`csrfToken`) and the header
+ * (`X-Studio-CSRF`, JSON and upload requests) variants: HMAC token bound to
+ * the Access subject, 30-minute lifetime, Origin must equal APP_ORIGIN.
+ * Any failure → 403.
+ */
+export async function verifyMutationToken(
+  request: Request,
+  env: Env,
+  identity: AdminIdentity,
+  token: string | null | undefined,
+): Promise<void> {
   try {
-    const token = formData.get("csrfToken");
     if (typeof token !== "string" || !token) throw new Error("csrf_missing");
     await verifyCsrfToken({
       token,
@@ -37,8 +44,38 @@ export async function requireAdminMutation(
       expectedOrigin: env.APP_ORIGIN,
       now: new Date(),
     });
-    return identity;
   } catch {
     throw new Response("Forbidden", { status: 403 });
   }
+}
+
+export async function requireAdminMutation(
+  request: Request,
+  env: Env,
+  formData: FormData,
+  verifier?: JwtVerifier,
+): Promise<AdminIdentity> {
+  assertMutationMethod(request);
+  const identity = await requireAdmin(request, env, verifier);
+  const token = formData.get("csrfToken");
+  await verifyMutationToken(
+    request,
+    env,
+    identity,
+    typeof token === "string" ? token : null,
+  );
+  return identity;
+}
+
+/** Header-token variant (JSON and streamed-upload requests). */
+export async function requireAdminMutationWithToken(
+  request: Request,
+  env: Env,
+  token: string | null,
+  verifier?: JwtVerifier,
+): Promise<AdminIdentity> {
+  assertMutationMethod(request);
+  const identity = await requireAdmin(request, env, verifier);
+  await verifyMutationToken(request, env, identity, token);
+  return identity;
 }

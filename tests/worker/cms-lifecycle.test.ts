@@ -246,6 +246,44 @@ describe("publishing", () => {
     }
   });
 
+  it("clears TODO_CONTENT only when the save says it is real content", async () => {
+    const { id, content } = await completeProject();
+    await env.DB.prepare(
+      "UPDATE projects SET todo_content = 1, revision = revision + 1 WHERE id = ?",
+    )
+      .bind(id)
+      .run();
+    const flagged = await getEntity(env.DB, "project", id);
+    expect(flagged?.meta.todoContent).toBe(true);
+    const kept = await saveEntity(
+      env.DB,
+      "project",
+      id,
+      flagged?.meta.revision ?? -1,
+      content,
+      later,
+    );
+    expect(kept.todoContent).toBe(true);
+    const cleared = await saveEntity(
+      env.DB,
+      "project",
+      id,
+      kept.revision,
+      content,
+      later,
+      { clearTodoContent: true },
+    );
+    expect(cleared.todoContent).toBe(false);
+    const outcome = await publishEntity(
+      env.DB,
+      "project",
+      id,
+      cleared.revision,
+      later,
+    );
+    expect(outcome.ok).toBe(true);
+  });
+
   it("refuses public text with a personal-name variant", async () => {
     const { id, content } = await completeProject();
     await saveEntity(

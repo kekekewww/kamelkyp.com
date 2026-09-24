@@ -357,7 +357,11 @@ export async function createEntity<T extends EntityType>(
   });
 }
 
-/** Saves the working copy. Never blocked by completeness; 409 on a stale revision. */
+/**
+ * Saves the working copy. Never blocked by completeness; 409 on a stale
+ * revision. `clearTodoContent` is the editor's "This is real content" box —
+ * the only way a seeded TODO_CONTENT row becomes publishable.
+ */
 export async function saveEntity<T extends EntityType>(
   db: D1Database,
   type: T,
@@ -365,6 +369,7 @@ export async function saveEntity<T extends EntityType>(
   expectedRevision: number,
   input: ContentOf<T>,
   now: Date,
+  options: { clearTodoContent?: boolean } = {},
 ): Promise<EntityMeta> {
   const descriptor = descriptorFor(type);
   const current = await loadMeta(db, type, id);
@@ -394,7 +399,9 @@ export async function saveEntity<T extends EntityType>(
       .prepare(
         `UPDATE ${descriptor.table} SET ${names
           .map((name, index) => `${name} = ?${index + 4}`)
-          .join(", ")}, revision = revision + 1, updated_at = ?3
+          .join(", ")}${
+          options.clearTodoContent ? ", todo_content = 0" : ""
+        }, revision = revision + 1, updated_at = ?3
          WHERE id = ?1 AND revision = ?2`,
       )
       .bind(

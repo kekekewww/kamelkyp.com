@@ -27,9 +27,14 @@ const validEnvironment = {
   APPS_SCRIPT_HMAC_SECRET: "production-hmac-secret-at-least-32-characters",
   CSRF_SECRET: "production-csrf-secret-at-least-32-characters",
   LEGAL_REVIEW_CONFIRMED: "true",
+  R2_MEDIA_BUCKET: "kamelkyp-media",
+  MEDIA_PUBLIC_BASE_URL: "https://media.kamelkyp.com",
 };
 
-async function verify(overrides: Record<string, string | undefined> = {}) {
+async function verify(
+  overrides: Record<string, string | undefined> = {},
+  configOverrides: Record<string, unknown> = {},
+) {
   const directory = await mkdtemp(join(tmpdir(), "production-config-"));
   const configPath = join(directory, "wrangler.jsonc");
   const secretsPath = join(directory, ".wrangler.secrets.json");
@@ -55,13 +60,17 @@ async function verify(overrides: Record<string, string | undefined> = {}) {
         },
       ],
       secrets: { required: approvedSecretNames },
+      r2_buckets: [{ binding: "MEDIA", bucket_name: "kamelkyp-media" }],
       vars: {
         APP_ORIGIN: "https://kamelkyp.com",
         ACCESS_TEAM_DOMAIN: "https://team.cloudflareaccess.com",
         ACCESS_AUD: "access-audience",
         ADMIN_EMAIL: "admin@example.com",
         TURNSTILE_SITE_KEY: "production-site-key",
+        MEDIA_PUBLIC_BASE_URL: "https://media.kamelkyp.com",
+        IMAGE_TRANSFORMATIONS: "off",
       },
+      ...configOverrides,
     }),
   );
   await writeFile(
@@ -127,6 +136,85 @@ describe("production deployment verifier", () => {
       expect(result.stderr).not.toContain(
         validEnvironment.CLOUDFLARE_API_TOKEN,
       );
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it.each([
+    [{ R2_MEDIA_BUCKET: undefined }, "missing_r2_media_bucket"],
+    [{ MEDIA_PUBLIC_BASE_URL: undefined }, "missing_media_public_base_url"],
+    [
+      { MEDIA_PUBLIC_BASE_URL: "http://media.kamelkyp.com" },
+      "invalid_media_public_base_url",
+    ],
+    [{ R2_MEDIA_BUCKET: "other-bucket" }, "production_r2_media_mismatch"],
+  ])(
+    "requires the approved media bucket and base URL",
+    async (overrides, code) => {
+      const { directory, result } = await verify(overrides);
+      try {
+        expect(result.status).not.toBe(0);
+        expect(result.stderr).toContain(code);
+      } finally {
+        await rm(directory, { recursive: true, force: true });
+      }
+    },
+  );
+
+  it("rejects a config without the media binding", async () => {
+    const { directory, result } = await verify({}, { r2_buckets: [] });
+    try {
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toContain("production_r2_media_mismatch");
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects a config that defines the Studio dev owner", async () => {
+    const { directory, result } = await verify(
+      {},
+      {
+        vars: {
+          APP_ORIGIN: "https://kamelkyp.com",
+          ACCESS_TEAM_DOMAIN: "https://team.cloudflareaccess.com",
+          ACCESS_AUD: "access-audience",
+          ADMIN_EMAIL: "admin@example.com",
+          TURNSTILE_SITE_KEY: "production-site-key",
+          MEDIA_PUBLIC_BASE_URL: "https://media.kamelkyp.com",
+          STUDIO_DEV_OWNER_EMAIL: "admin@example.com",
+        },
+      },
+    );
+    try {
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toContain("studio_dev_owner_forbidden");
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects a build containing the Studio dev owner", async () => {
+    const { directory } = await verify();
+    try {
+      const buildDirectory = join(directory, "build");
+      await writeFile(
+        join(buildDirectory, "server.js"),
+        "if (env.STUDIO_DEV_OWNER_EMAIL) {}",
+      );
+      const result = spawnSync(process.execPath, [verifier], {
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          ...validEnvironment,
+          WRANGLER_CONFIG: join(directory, "wrangler.jsonc"),
+          WRANGLER_SECRETS_FILE: join(directory, ".wrangler.secrets.json"),
+          BUILD_DIRECTORY: buildDirectory,
+        },
+      });
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toContain("studio_dev_owner_in_production_build");
     } finally {
       await rm(directory, { recursive: true, force: true });
     }

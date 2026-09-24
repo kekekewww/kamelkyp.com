@@ -11,6 +11,12 @@
       "migrations_dir": "migrations"
     }
   ],
+  "r2_buckets": [
+    {
+      "binding": "MEDIA",
+      "bucket_name": "kamelkyp-media-local"
+    }
+  ],
   "triggers": {
     "crons": ["15 1 * * *"]
   },
