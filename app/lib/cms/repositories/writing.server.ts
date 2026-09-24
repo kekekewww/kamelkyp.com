@@ -205,10 +205,6 @@ export async function loadWritingList({
   return { rows, facets, filters };
 }
 
-export async function loadWritingNew({ db }: Pick<StudioLoaderArgs, "db">) {
-  return { categories: await listTerms(db, "writing_category") };
-}
-
 /** An entry links out when it is external and has no internal content. */
 function isLinkCard(content: WritingContent): boolean {
   return content.platform !== "internal" && Boolean(content.externalUrl);

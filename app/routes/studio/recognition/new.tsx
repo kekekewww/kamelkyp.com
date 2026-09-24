@@ -1,9 +1,23 @@
-/** STUB (P3 Recognition): quick create. */
-import { StubPanel } from "../../../components/studio/shell/stub-panel";
-import { withOwner } from "../../../lib/cms/studio/auth.server";
+/** `/studio/recognition/new`: quick create → 303 to the editor. */
+import { useLoaderData } from "react-router";
+import { RecognitionNew } from "../../../components/studio/recognition/recognition-new";
+import {
+  handleRecognitionCreate,
+  loadRecognitionNew,
+} from "../../../lib/cms/repositories/recognition.server";
+import {
+  withOwner,
+  withOwnerMutation,
+} from "../../../lib/cms/studio/auth.server";
+import recognitionStyles from "../../../styles/studio/recognition.css?url";
 
-export const loader = withOwner(() => null);
+export const links = () => [{ rel: "stylesheet", href: recognitionStyles }];
+
+export const loader = withOwner(loadRecognitionNew);
+
+export const action = withOwnerMutation(handleRecognitionCreate);
 
 export default function NewRecognitionRoute() {
-  return <StubPanel title="New recognition" />;
+  const data = useLoaderData<typeof loader>();
+  return <RecognitionNew types={data.types} />;
 }

@@ -1,9 +1,32 @@
-/** STUB (P3 Recognition): editor. */
-import { StubPanel } from "../../../components/studio/shell/stub-panel";
-import { withOwner } from "../../../lib/cms/studio/auth.server";
+/** `/studio/recognition/:id`: editor (save, publish, lifecycle, feature). */
+import { useState } from "react";
+import { useLoaderData } from "react-router";
+import { RecognitionEditor } from "../../../components/studio/recognition/recognition-editor";
+import {
+  handleRecognitionEditorAction,
+  loadRecognitionEditor,
+} from "../../../lib/cms/repositories/recognition.server";
+import {
+  withOwner,
+  withOwnerMutation,
+} from "../../../lib/cms/studio/auth.server";
+import recognitionStyles from "../../../styles/studio/recognition.css?url";
 
-export const loader = withOwner(() => null);
+export const links = () => [{ rel: "stylesheet", href: recognitionStyles }];
+
+export const loader = withOwner(loadRecognitionEditor);
+
+export const action = withOwnerMutation(handleRecognitionEditorAction);
 
 export default function EditRecognitionRoute() {
-  return <StubPanel title="Recognition entry" />;
+  const data = useLoaderData<typeof loader>();
+  // Bumped after "Revert" / "Reload latest": remount with the server copy.
+  const [epoch, setEpoch] = useState(0);
+  return (
+    <RecognitionEditor
+      key={`${data.meta.id}:${epoch}`}
+      data={data}
+      onReset={() => setEpoch((value) => value + 1)}
+    />
+  );
 }
