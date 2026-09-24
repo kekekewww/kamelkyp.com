@@ -1,0 +1,388 @@
+/* ==========================================================================
+   KAMEL STUDIO — settings screens and the shared P4 form kit.
+   Brand, Site, Taxonomies, the settings index; also loaded by Services and
+   Homepage for the save footer, backup banner, notes and read-only values.
+   Same tokens as base.css; everything scoped under `.studio`.
+   ========================================================================== */
+
+/* ---- Form kit ------------------------------------------------------------ */
+
+.studio .studio-kit-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin-block-end: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-inline-start: 2px solid var(--color-warning);
+  background: var(--color-bg-2);
+}
+
+.studio .studio-kit-banner__text {
+  margin: 0 auto 0 0;
+}
+
+.studio .studio-kit-error {
+  margin: 0 0 var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-inline-start: 2px solid var(--color-danger);
+  color: var(--color-danger);
+  background: var(--color-bg-2);
+}
+
+.studio .studio-kit-live {
+  color: var(--color-text-meta);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta-xs);
+  letter-spacing: 0.04em;
+}
+
+@media (max-width: 767px) {
+  .studio .studio-kit-live {
+    display: none;
+  }
+}
+
+.studio .studio-kit-footer {
+  position: sticky;
+  z-index: 5;
+  inset-block-end: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2) var(--space-3);
+  margin-block-start: var(--space-4);
+  padding: var(--space-3) 0;
+  border-block-start: 1px solid var(--color-rule);
+  background: var(--color-bg);
+}
+
+.studio .studio-kit-footer .studio-hint {
+  margin: 0;
+}
+
+.studio .studio-kit-footer__state {
+  margin-inline-end: auto;
+  color: var(--color-text-meta);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.studio .studio-kit-footer[data-state="unsaved"] .studio-kit-footer__state {
+  color: var(--color-warning);
+}
+
+.studio .studio-kit-footer[data-state="error"] .studio-kit-footer__state {
+  color: var(--color-danger);
+}
+
+.studio .studio-kit-warning {
+  margin: 0;
+  padding-inline-start: var(--space-3);
+  border-inline-start: 2px solid var(--color-warning);
+  color: var(--color-text);
+}
+
+/* ---- Settings forms ------------------------------------------------------ */
+
+.studio .studio-settings-form {
+  display: grid;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+/* Scroll targets for links from the Studio home (#contact, #review…). */
+.studio .studio-settings-anchor {
+  scroll-margin-block-start: calc(var(--studio-topbar-h) + var(--space-6));
+}
+
+.studio .studio-settings-group,
+.studio .studio-settings-cta {
+  display: grid;
+  gap: var(--space-4);
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.studio fieldset.studio-settings-group + fieldset.studio-settings-group {
+  padding-block-start: var(--space-5);
+  border-block-start: 1px solid var(--color-rule);
+}
+
+.studio .studio-settings-short {
+  max-inline-size: 12rem;
+}
+
+/* The contact note: a suggestion, never a change. */
+.studio .studio-settings-note {
+  display: grid;
+  gap: var(--space-2);
+  max-inline-size: var(--studio-measure);
+  padding: var(--space-3) var(--space-4);
+  border-inline-start: 2px solid var(--color-warning);
+  background: var(--color-bg-2);
+}
+
+.studio .studio-settings-note p {
+  margin: 0;
+}
+
+.studio .studio-settings-note p + p {
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+}
+
+.studio .studio-settings-stamp {
+  margin: 0;
+  color: var(--color-success);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta-xs);
+  letter-spacing: 0.06em;
+}
+
+.studio .studio-settings-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+}
+
+.studio .studio-settings-readonly {
+  display: grid;
+  gap: var(--space-1);
+  justify-items: start;
+}
+
+.studio .studio-settings-readonly p {
+  margin: 0;
+}
+
+.studio .studio-settings-readonly__value {
+  font-family: var(--font-mono);
+  font-size: var(--text-body-s);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.studio .studio-settings-sample {
+  color: var(--color-text);
+  font-family: var(--font-mono);
+}
+
+/* Navigation order */
+.studio .studio-settings-nav {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-block-start: 1px solid var(--color-rule);
+  max-inline-size: 32rem;
+}
+
+.studio .studio-settings-nav__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-block-size: var(--studio-row-h);
+  padding-inline: var(--space-3);
+  border-block-end: 1px solid var(--color-rule);
+}
+
+.studio .studio-settings-nav__moves {
+  display: flex;
+  gap: 2px;
+}
+
+/* ---- Settings index -------------------------------------------------------- */
+
+.studio .studio-settings-index {
+  margin: var(--space-5) 0 0;
+  padding: 0;
+  list-style: none;
+  border-block-start: 1px solid var(--color-rule);
+}
+
+.studio .studio-settings-index__row {
+  border-block-end: 1px solid var(--color-rule);
+}
+
+.studio .studio-settings-index__link {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-4) var(--space-3);
+  color: var(--color-text);
+  text-decoration: none;
+  transition: background-color var(--dur-1) var(--ease-standard);
+}
+
+@media (hover: hover) {
+  .studio .studio-settings-index__link:hover {
+    background: var(--color-surface-hover);
+  }
+}
+
+.studio .studio-settings-index__link:focus-visible {
+  outline-offset: -2px;
+}
+
+.studio .studio-settings-index__title {
+  font-family: var(--font-display);
+  font-size: var(--text-h3);
+  font-weight: 600;
+}
+
+.studio .studio-settings-index__body {
+  max-inline-size: var(--studio-measure);
+  color: var(--color-text-secondary);
+}
+
+/* ---- Taxonomies -------------------------------------------------------------- */
+
+.studio .studio-taxonomy__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  margin-block-end: var(--space-4);
+  border-block-end: 1px solid var(--color-rule);
+}
+
+.studio .studio-taxonomy__tab {
+  position: relative;
+  padding: var(--space-3) var(--space-4);
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta-xs);
+  letter-spacing: 0.08em;
+  text-decoration: none;
+  text-transform: uppercase;
+  transition: color var(--dur-1) var(--ease-standard);
+}
+
+.studio .studio-taxonomy__tab[aria-current="page"] {
+  color: var(--color-text);
+}
+
+.studio .studio-taxonomy__tab[aria-current="page"]::after {
+  position: absolute;
+  inset: auto 0 -1px;
+  block-size: 2px;
+  background: var(--color-accent);
+  content: "";
+}
+
+@media (hover: hover) {
+  .studio .studio-taxonomy__tab:hover {
+    color: var(--color-text);
+  }
+}
+
+.studio .studio-taxonomy {
+  display: grid;
+  gap: var(--space-5);
+  margin-block-start: var(--space-5);
+}
+
+.studio .studio-taxonomy__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-block-start: 1px solid var(--color-rule);
+}
+
+.studio .studio-taxonomy__row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-block-end: 1px solid var(--color-rule);
+}
+
+.studio .studio-taxonomy__row[data-archived] {
+  grid-template-columns: minmax(0, 1fr);
+  color: var(--color-text-secondary);
+}
+
+.studio .studio-taxonomy__handle {
+  padding-block-start: 1.375rem;
+}
+
+.studio .studio-taxonomy__form,
+.studio .studio-taxonomy__add {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  align-items: end;
+  gap: var(--space-2) var(--space-3);
+  min-inline-size: 0;
+}
+
+.studio .studio-taxonomy__add {
+  padding: var(--space-4);
+  background: var(--color-bg-2);
+}
+
+.studio .studio-taxonomy__add > .studio-section-label,
+.studio .studio-taxonomy__form > .studio-field__error,
+.studio .studio-taxonomy__add > .studio-field__error {
+  grid-column: 1 / -1;
+}
+
+.studio .studio-taxonomy__field {
+  display: grid;
+  gap: var(--space-1);
+  min-inline-size: 0;
+}
+
+.studio .studio-taxonomy__label {
+  color: var(--color-text-meta);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta-xs);
+  letter-spacing: 0.08em;
+}
+
+.studio .studio-taxonomy__slug {
+  font-family: var(--font-mono);
+}
+
+.studio .studio-taxonomy__usage {
+  align-self: center;
+  color: var(--color-text-meta);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.studio .studio-taxonomy__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.studio .studio-taxonomy__empty {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.studio .studio-taxonomy__archived > summary {
+  cursor: pointer;
+  padding-block: var(--space-2);
+}
+
+@media (min-width: 1024px) {
+  .studio .studio-taxonomy__form {
+    grid-template-columns:
+      minmax(8rem, 1fr) minmax(8rem, 1fr) minmax(8rem, 1fr)
+      auto auto;
+  }
+
+  .studio .studio-taxonomy__form:has(select[name="data.area"]) {
+    grid-template-columns:
+      minmax(7rem, 1fr) minmax(7rem, 1fr) minmax(7rem, 1fr)
+      minmax(10rem, 1.2fr) auto auto;
+  }
+}

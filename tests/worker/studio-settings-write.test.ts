@@ -9,6 +9,10 @@ import {
   acknowledgeRedesignCopy,
   confirmContactEmail,
   contactEmailNeedsReview,
+  handleBrandSettingsAction,
+  handleSiteSettingsAction,
+  loadBrandScreen,
+  loadSiteScreen,
   patchBrandSettings,
   patchSiteSettings,
   readSettingsWithMeta,
@@ -383,5 +387,151 @@ describe("site settings", () => {
       ),
       "invalid_content",
     );
+  });
+});
+
+describe("settings screen actions", () => {
+  type Result = {
+    data?: Record<string, unknown>;
+    init?: { status?: number } | null;
+  };
+  const body = (result: unknown) =>
+    ((result as Result).data ?? {}) as Record<string, unknown>;
+  const status = (result: unknown) => (result as Result).init?.status ?? 200;
+  function form(fields: Record<string, string>): FormData {
+    const data = new FormData();
+    for (const [key, value] of Object.entries(fields)) data.append(key, value);
+    return data;
+  }
+
+  it("loads the brand screen with the contact note flag and categories", async () => {
+    const screen = await loadBrandScreen(env.DB, env as never);
+    expect(screen.brand.value.brandName).toBe("Kamel");
+    expect(screen.contactNeedsReview).toBe(true);
+    expect(screen.categories.map((term) => term.slug)).toContain("software");
+  });
+
+  it("saves the brand form, turning empty asset pickers into none", async () => {
+    const brand = await getBrandSettings(env.DB);
+    const result = await handleBrandSettingsAction({
+      db: env.DB,
+      formData: form({
+        expectedRevision: String(brand.revision),
+        "tagline.zh": "新標語",
+        "tagline.en": "New tagline",
+        portraitId: "",
+        "brandAssetIds.0": "",
+        "secondaryCtaEnabled:bool": "true",
+        "secondaryCta.label.zh": "作品",
+        "secondaryCta.label.en": "Work",
+        "secondaryCta.href": "/works",
+      }),
+      intent: "save",
+      now,
+    });
+    expect(body(result)).toMatchObject({ ok: true });
+    const saved = (await getBrandSettings(env.DB)).value;
+    expect(saved.tagline.en).toBe("New tagline");
+    expect(saved.portraitId).toBeNull();
+    expect(saved.brandAssetIds).toEqual([]);
+    expect(saved.contactEmail).toBe(brand.value.contactEmail);
+  });
+
+  it("confirms the contact email together with the form's edits", async () => {
+    const brand = await getBrandSettings(env.DB);
+    const result = await handleBrandSettingsAction({
+      db: env.DB,
+      formData: form({
+        expectedRevision: String(brand.revision),
+        "tagline.zh": "保留",
+        "tagline.en": "Kept edit",
+        contactEmail: brand.value.contactEmail,
+      }),
+      intent: "confirm-contact-email",
+      now,
+    });
+    expect(body(result).ok).toBe(true);
+    const saved = (await getBrandSettings(env.DB)).value;
+    expect(saved.tagline.en).toBe("Kept edit");
+    expect(saved.contactEmail).toBe(brand.value.contactEmail);
+    expect(saved.contactEmailConfirmedAt).toBe(now.toISOString());
+  });
+
+  it("acknowledges the redesign copy from the brand screen", async () => {
+    const brand = await getBrandSettings(env.DB);
+    const result = await handleBrandSettingsAction({
+      db: env.DB,
+      formData: form({ expectedRevision: String(brand.revision) }),
+      intent: "acknowledge-redesign-copy",
+      now,
+    });
+    expect(body(result).ok).toBe(true);
+    expect(
+      (await getBrandSettings(env.DB)).value.redesignCopyAcknowledgedAt,
+    ).toBe(now.toISOString());
+  });
+
+  it("answers 409 and 422 with the action result shape", async () => {
+    const brand = await getBrandSettings(env.DB);
+    const stale = await handleBrandSettingsAction({
+      db: env.DB,
+      formData: form({ expectedRevision: String(brand.revision + 5) }),
+      intent: "save",
+      now,
+    });
+    expect(status(stale)).toBe(409);
+    const invalid = await handleBrandSettingsAction({
+      db: env.DB,
+      formData: form({
+        expectedRevision: String(brand.revision),
+        brandName: "",
+      }),
+      intent: "save",
+      now,
+    });
+    expect(status(invalid)).toBe(422);
+    expect(body(invalid).issues).toEqual(
+      expect.arrayContaining([expect.objectContaining({ field: "brandName" })]),
+    );
+  });
+
+  it("saves the site form including navigation order and visibility", async () => {
+    const site = await getSiteSettings(env.DB);
+    const result = await handleSiteSettingsAction({
+      db: env.DB,
+      formData: form({
+        expectedRevision: String(site.revision),
+        "navigation.items.0.key": "writing",
+        "navigation.items.0.visible:bool": "true",
+        "navigation.items.1.key": "work",
+        "navigation.items.1.visible:bool": "false",
+        "navigation.items.2.key": "services",
+        "navigation.items.2.visible:bool": "true",
+        "navigation.items.3.key": "about",
+        "navigation.items.3.visible:bool": "true",
+        ogImageId: "",
+        "copyright.zh": "© {year} {brand}",
+        "copyright.en": "© {year} {brand}",
+      }),
+      intent: "save",
+      now,
+    });
+    expect(body(result).ok).toBe(true);
+    const saved = (await getSiteSettings(env.DB)).value;
+    expect(saved.navigation.items).toEqual([
+      { key: "writing", visible: true },
+      { key: "work", visible: false },
+      { key: "services", visible: true },
+      { key: "about", visible: true },
+    ]);
+    expect(saved.ogImageId).toBeNull();
+  });
+
+  it("loads the site screen with the brand contact email read-only", async () => {
+    const screen = await loadSiteScreen(env.DB, env as never);
+    expect(screen.contactEmail).toBe(
+      (await getBrandSettings(env.DB)).value.contactEmail,
+    );
+    expect(screen.site.value.homepage.featuredProjectCount).toBe(4);
   });
 });

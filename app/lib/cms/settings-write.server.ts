@@ -10,16 +10,22 @@
  * from a form; they change only through their own actions.
  */
 import type { z } from "zod";
+import type { Env } from "../env.server";
 import { findBrandViolations, matchBrandTerm } from "./brand-guard.server";
 import { CmsError } from "./db/errors";
 import { extractAssetRefs, syncUsages } from "./db/usage.server";
+import { formDataToObject, readExpectedRevision } from "./forms";
 import { getAssets } from "./media/assets.server";
+import { readMediaConfig } from "./media/config.server";
+import { type MediaSummary, toMediaSummary } from "./media/summary";
 import {
   type BrandSettings,
   BrandSettingsSchema,
 } from "./schemas/brand-settings";
 import { type SiteSettings, SiteSettingsSchema } from "./schemas/site-settings";
 import { settingsFromRows } from "./settings.server";
+import { actionOk, cmsErrorResult, unknownIntent } from "./studio/responses";
+import { listTerms } from "./taxonomy.server";
 import type { UsageEntityType, ValidationIssue } from "./types";
 
 export type SettingsKey = "brand" | "site";
@@ -365,6 +371,10 @@ export async function patchBrandSettings(
   expectedRevision: number,
   patch: Record<string, unknown>,
   now: Date = new Date(),
+  options: {
+    confirmContactEmail?: boolean;
+    acknowledgeRedesignCopy?: boolean;
+  } = {},
 ): Promise<{ revision: number; value: BrandSettings }> {
   const current = (await readSettingsWithMeta(db)).brand.value;
   const { secondaryCtaEnabled, ...rest } = patch;
@@ -382,6 +392,12 @@ export async function patchBrandSettings(
     merged.contactEmailConfirmedAt = normalizedEmail(safe.contactEmail)
       ? now.toISOString()
       : null;
+  }
+  if (options.confirmContactEmail) {
+    merged.contactEmailConfirmedAt = now.toISOString();
+  }
+  if (options.acknowledgeRedesignCopy) {
+    merged.redesignCopyAcknowledgedAt = now.toISOString();
   }
   return saveBrandSettings(db, expectedRevision, merged, now);
 }
@@ -430,4 +446,153 @@ export async function acknowledgeRedesignCopy(
     { ...current, redesignCopyAcknowledgedAt: now.toISOString() },
     now,
   );
+}
+
+// ---- Settings screens (Studio → Settings → Brand / Site) ---------------------
+
+async function assetSummaries(
+  db: D1Database,
+  env: Env,
+  ids: ReadonlyArray<string | null>,
+): Promise<Record<string, MediaSummary>> {
+  const wanted = ids.filter((id): id is string => !!id);
+  if (wanted.length === 0) return {};
+  const config = readMediaConfig(env);
+  const assets = await getAssets(db, wanted);
+  return Object.fromEntries(
+    [...assets.values()].map((asset) => [
+      asset.id,
+      toMediaSummary(asset, config),
+    ]),
+  );
+}
+
+export async function loadBrandScreen(db: D1Database, env: Env) {
+  const settings = await readSettingsWithMeta(db);
+  const brand = settings.brand;
+  const [assets, categories] = await Promise.all([
+    assetSummaries(db, env, [
+      brand.value.portraitId,
+      brand.value.logoId,
+      brand.value.faviconId,
+      ...brand.value.brandAssetIds,
+    ]),
+    listTerms(db, "project_category", { includeArchived: true }),
+  ]);
+  return {
+    brand,
+    contactNeedsReview: contactEmailNeedsReview(brand.value.contactEmail),
+    assets,
+    categories,
+  };
+}
+
+export async function loadSiteScreen(db: D1Database, env: Env) {
+  const settings = await readSettingsWithMeta(db);
+  const site = settings.site;
+  return {
+    site,
+    contactEmail: settings.brand.value.contactEmail,
+    brandName: settings.brand.value.brandName,
+    assets: await assetSummaries(db, env, [
+      site.value.ogImageId,
+      site.value.defaultSocialImageId,
+    ]),
+  };
+}
+
+const FORM_ONLY_KEYS = ["intent", "expectedRevision", "confirm"];
+
+/**
+ * Form → settings patch: drops form plumbing, turns empty asset pickers
+ * ("") into null and removes empty entries from asset lists.
+ */
+export function settingsFormPatch(formData: FormData): Record<string, unknown> {
+  const tree = formDataToObject(formData);
+  for (const key of FORM_ONLY_KEYS) delete tree[key];
+  for (const [key, value] of Object.entries(tree)) {
+    if (key.endsWith("Id") && typeof value === "string" && !value.trim()) {
+      tree[key] = null;
+    }
+    if (key.endsWith("Ids") && Array.isArray(value)) {
+      tree[key] = value.filter(
+        (item) => typeof item === "string" && item.trim() !== "",
+      );
+    }
+  }
+  return tree;
+}
+
+type ScreenActionArgs = {
+  db: D1Database;
+  formData: FormData | null;
+  intent: string | null;
+  now: Date;
+};
+
+const SAVED_LIVE = "Saved. Live on the site now.";
+
+export async function handleBrandSettingsAction({
+  db,
+  formData,
+  intent,
+  now,
+}: ScreenActionArgs) {
+  const data = formData ?? new FormData();
+  const revision = readExpectedRevision(data);
+  try {
+    if (revision === null) throw new CmsError("stale_revision");
+    switch (intent) {
+      case "save":
+      case "confirm-contact-email":
+      case "acknowledge-redesign-copy": {
+        const saved = await patchBrandSettings(
+          db,
+          revision,
+          settingsFormPatch(data),
+          now,
+          {
+            confirmContactEmail: intent === "confirm-contact-email",
+            acknowledgeRedesignCopy: intent === "acknowledge-redesign-copy",
+          },
+        );
+        return actionOk({
+          revision: saved.revision,
+          message:
+            intent === "confirm-contact-email"
+              ? "Contact email confirmed"
+              : intent === "acknowledge-redesign-copy"
+                ? "Copy marked as reviewed"
+                : SAVED_LIVE,
+        });
+      }
+      default:
+        return unknownIntent(intent);
+    }
+  } catch (error) {
+    return cmsErrorResult(error);
+  }
+}
+
+export async function handleSiteSettingsAction({
+  db,
+  formData,
+  intent,
+  now,
+}: ScreenActionArgs) {
+  const data = formData ?? new FormData();
+  const revision = readExpectedRevision(data);
+  try {
+    if (revision === null) throw new CmsError("stale_revision");
+    if (intent !== "save") return unknownIntent(intent);
+    const saved = await patchSiteSettings(
+      db,
+      revision,
+      settingsFormPatch(data),
+      now,
+    );
+    return actionOk({ revision: saved.revision, message: SAVED_LIVE });
+  } catch (error) {
+    return cmsErrorResult(error);
+  }
 }
