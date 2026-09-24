@@ -10,7 +10,9 @@ export default defineConfig({
       wrangler: { configPath: "./wrangler.base.jsonc" },
       miniflare: {
         compatibilityDate: "2026-06-30",
-        d1Databases: ["DB"],
+        // LEGACY_DB: an empty second database the legacy-import tests migrate
+        // in stages (0001–0004, legacy rows, then 0005–0008).
+        d1Databases: ["DB", "LEGACY_DB"],
         bindings: {
           TEST_MIGRATIONS: await readD1Migrations("./migrations"),
         },
