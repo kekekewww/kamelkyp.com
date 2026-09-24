@@ -1,12 +1,9 @@
 /**
- * `PUT /api/studio/media/:id/content` — stream the file body into R2.
- *
- * STUB owned by the foundation, handed to P2 (uploads). Guarded now (Access +
- * `X-Studio-CSRF` + mutation method); answers 501 until the pipeline lands.
+ * `PUT /api/studio/media/:id/content` (`X-Studio-CSRF`) — stream the file body
+ * into R2 → 200 `{ asset: MediaSummary }`. The body is never buffered; it is
+ * checked by its first bytes and its length on the way through.
  */
+import { handleUploadContent } from "../../../lib/cms/media/upload.server";
 import { withOwnerMutation } from "../../../lib/cms/studio/auth.server";
-import { jsonError } from "../../../lib/cms/studio/responses";
 
-export const action = withOwnerMutation(async () =>
-  jsonError("not_built", 501),
-);
+export const action = withOwnerMutation(handleUploadContent);
