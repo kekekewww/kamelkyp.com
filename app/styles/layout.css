@@ -648,3 +648,78 @@
     grid-column: 4 / 10;
   }
 }
+
+/* ==========================================================================
+   Studio preview (admin-architecture §2.4): the real public page with a
+   fixed bar at the bottom edge, so the public header stays untouched. The
+   dashed amber rule repeats the PLACEHOLDER badge's "not final" language.
+   ========================================================================== */
+.preview-frame {
+  padding-block-end: calc(var(--target-min) + var(--space-5));
+}
+
+.preview-bar {
+  position: fixed;
+  z-index: calc(var(--z-skip) - 1);
+  inset-inline: 0;
+  inset-block-end: 0;
+  display: flex;
+  min-block-size: calc(var(--target-min) + var(--space-3));
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--space-5);
+  padding-block: var(--space-1);
+  padding-inline: var(--page-margin);
+  border-block-start: 1px dashed var(--color-warning);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta);
+  letter-spacing: var(--tracking-meta);
+}
+
+.preview-bar__status {
+  margin: 0;
+  color: var(--color-warning);
+  text-transform: uppercase;
+}
+
+.preview-bar__locales {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.preview-bar__locale,
+.preview-bar__close {
+  display: inline-flex;
+  min-block-size: var(--target-min);
+  min-inline-size: var(--target-min);
+  align-items: center;
+  justify-content: center;
+  padding-inline: var(--space-2);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.preview-bar__locale[aria-current="page"] {
+  color: var(--color-on-accent);
+  background: var(--color-accent);
+}
+
+.preview-bar__note {
+  display: none;
+  margin: 0;
+}
+
+.preview-bar__close {
+  margin-inline-start: auto;
+  text-decoration-line: underline;
+  text-decoration-color: var(--color-control-border);
+  text-underline-offset: 0.3em;
+}
+
+@media (min-width: 768px) {
+  .preview-bar__note {
+    display: block;
+  }
+}

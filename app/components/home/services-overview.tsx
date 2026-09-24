@@ -1,53 +1,40 @@
 import { Link } from "react-router";
+import type { PublicSite } from "../../lib/cms/public/view-models";
 import type { Locale } from "../../lib/i18n/locale";
 import { localePath } from "../../lib/i18n/path";
 
-const GROUPS = [
-  {
-    id: "mixing",
-    index: "01",
-    path: "/mixing",
-    name: { zh: "混音", en: "Mixing" },
-    body: {
-      zh: "完整歌曲或 Vocal 混音，含母帶。",
-      en: "Full-song or vocal mixing, mastering included.",
-    },
-    link: { zh: "查看混音服務", en: "View mixing" },
-  },
-  {
-    id: "transition",
-    index: "02",
-    path: "/song-transition",
-    name: { zh: "歌曲銜接", en: "Song Transition" },
-    body: {
-      zh: "舞蹈、活動與表演用的歌曲銜接與剪輯。",
-      en: "Transitions and edits for dance, events and performance.",
-    },
-    link: { zh: "查看歌曲銜接服務", en: "View song transition" },
-  },
-  {
-    id: "software",
-    index: "03",
-    path: "/services/software",
-    name: { zh: "軟體與互動", en: "Software & Interactive" },
-    body: {
-      zh: "網站、原型、AI 整合、互動裝置。",
-      en: "Websites, prototypes, AI integrations, interactive installations.",
-    },
-    link: { zh: "查看軟體與互動服務", en: "View software & interactive" },
-  },
-] as const;
+export type ServiceArea = PublicSite["serviceAreas"][number];
 
-/** Home §5: three open service-group rows (design-system §6.13). */
-export function ServicesOverview({ locale }: { locale: Locale }) {
+/** Public page of each service area (site structure, not content). */
+export const SERVICE_AREA_PATHS: Record<ServiceArea["key"], string> = {
+  mixing: "/mixing",
+  song_transition: "/song-transition",
+  software: "/services/software",
+};
+
+/**
+ * Home §5: open service-area rows (design-system §6.13). Names, blurbs and
+ * link labels come from site settings; with none the section is not rendered.
+ */
+export function ServicesOverview({
+  areas,
+  locale,
+}: {
+  areas: readonly ServiceArea[];
+  locale: Locale;
+}) {
   const isZh = locale === "zh";
+  const rows = areas.filter((area) => area.name);
+  if (rows.length === 0) return null;
   return (
     <section
       className="home-section home-services"
       aria-labelledby="home-services-title"
     >
       <div className="grid section-head">
-        <p className="eyebrow">SERVICES / 03</p>
+        <p className="eyebrow">
+          SERVICES / {String(rows.length).padStart(2, "0")}
+        </p>
         <h2
           className="section-head__title t-h1"
           id="home-services-title"
@@ -66,18 +53,18 @@ export function ServicesOverview({ locale }: { locale: Locale }) {
       </div>
       <div className="grid">
         <ul className="home-rows home-services__list" data-reveal-group>
-          {GROUPS.map((group) => (
-            <li key={group.id} className="home-service" data-reveal-item>
-              <span className="home-service__index t-meta">{group.index}</span>
-              <h3 className="home-service__name t-h2">{group.name[locale]}</h3>
-              <p className="home-service__body t-secondary">
-                {group.body[locale]}
-              </p>
+          {rows.map((area, position) => (
+            <li key={area.key} className="home-service" data-reveal-item>
+              <span className="home-service__index t-meta">
+                {String(position + 1).padStart(2, "0")}
+              </span>
+              <h3 className="home-service__name t-h2">{area.name}</h3>
+              <p className="home-service__body t-secondary">{area.summary}</p>
               <Link
                 className="home-service__link text-link"
-                to={localePath(locale, group.path)}
+                to={localePath(locale, SERVICE_AREA_PATHS[area.key])}
               >
-                {group.link[locale]}
+                {area.linkLabel || area.name}
                 <span className="text-link__arrow" aria-hidden="true">
                   →
                 </span>

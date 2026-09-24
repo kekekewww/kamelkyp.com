@@ -1,14 +1,24 @@
-import { type LoaderFunctionArgs, useLoaderData } from "react-router";
+import {
+  type LoaderFunctionArgs,
+  type MetaFunction,
+  useLoaderData,
+} from "react-router";
 import { ServiceBreadcrumb } from "../../components/services/service-breadcrumb";
 import { ServiceChoice } from "../../components/services/service-choice";
-import { getPublicPriceContext } from "../../lib/pricing/public-price.server";
+import { loadServiceArea } from "../../components/services/service-detail-loader.server";
+import { pageMeta } from "../../lib/cms/public/meta";
 
 export async function loader(args: LoaderFunctionArgs) {
-  return getPublicPriceContext(args);
+  return loadServiceArea(args, "song_transition");
 }
 
+export const meta: MetaFunction<typeof loader> = ({ loaderData, matches }) =>
+  pageMeta(matches, {
+    title: loaderData?.locale === "en" ? "Song Transition" : "歌曲銜接",
+  });
+
 export default function TransitionIndexRoute() {
-  const { locale, fxSnapshot } = useLoaderData<typeof loader>();
+  const { locale, fxSnapshot, services } = useLoaderData<typeof loader>();
   return (
     <main className="page service-select-page" id="main-content">
       <div className="grid">
@@ -28,7 +38,7 @@ export default function TransitionIndexRoute() {
         </p>
       </header>
       <ServiceChoice
-        category="song_transition"
+        services={services}
         locale={locale}
         fxSnapshot={fxSnapshot}
       />

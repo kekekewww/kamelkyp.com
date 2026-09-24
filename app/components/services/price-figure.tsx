@@ -1,3 +1,4 @@
+import type { PublicServiceItem } from "../../lib/cms/public/view-models";
 import type { Locale } from "../../lib/i18n/locale";
 import type { FxSnapshot } from "../../lib/pricing/fx-repository.server";
 import { ServicePrice } from "../pricing/service-price";
@@ -55,6 +56,77 @@ export function PriceQuote({
       {label ? <p className="price__label">{label}</p> : null}
       <p className="price__quote">{quote}</p>
     </div>
+  );
+}
+
+/**
+ * The price slot of one service view: commission rows show the active price
+ * rule; other rows follow their price mode. A number is never invented:
+ * without one the slot says how to get a quote.
+ */
+export function ServiceItemPrice({
+  service,
+  locale,
+  fxSnapshot,
+  label,
+  size = "s",
+}: {
+  service: Pick<
+    PublicServiceItem,
+    "price" | "priceMode" | "commissionServiceId"
+  >;
+  locale: Locale;
+  fxSnapshot: FxSnapshot | null;
+  /** Overrides the mode label ("Base price" on commission pages). */
+  label?: string;
+  size?: "l" | "s";
+}) {
+  const isZh = locale === "zh";
+  const { price } = service;
+  const modeLabel =
+    label ??
+    (service.priceMode === "fixed"
+      ? isZh
+        ? "價格"
+        : "Price"
+      : isZh
+        ? "起價"
+        : "Starting at");
+  if (price?.currency === "TWD") {
+    return (
+      <PriceFigure
+        locale={locale}
+        twd={price.amount}
+        fxSnapshot={fxSnapshot}
+        label={modeLabel}
+        size={size}
+      />
+    );
+  }
+  if (price?.currency === "USD") {
+    return (
+      <div className="price">
+        <p className="price__label">{modeLabel}</p>
+        <p
+          className={`price__figure${size === "s" ? " price__figure--s" : ""}`}
+        >
+          {`US$${new Intl.NumberFormat("en-US").format(price.amount)}`}
+        </p>
+      </div>
+    );
+  }
+  return (
+    <PriceQuote
+      quote={
+        service.priceMode === "contact"
+          ? isZh
+            ? "請來信洽詢"
+            : "Get in touch"
+          : isZh
+            ? "依專案報價"
+            : "Contact for quote"
+      }
+    />
   );
 }
 

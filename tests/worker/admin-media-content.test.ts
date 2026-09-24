@@ -9,8 +9,9 @@ import {
   replaceDraftMedia,
   replaceLinkGroup,
 } from "../../app/lib/admin/media-content-service.server";
-import { listFooterGroups } from "../../app/lib/content/footer-repository.server";
+import { getPublicSiteContext } from "../../app/lib/cms/public/site.server";
 import { getPublishedContent } from "../../app/lib/db/content-repository.server";
+import { createTestEnv } from "../helpers/test-env";
 
 describe("admin external media and links", () => {
   it("stores URL metadata only on drafts and keeps published versions immutable", async () => {
@@ -65,7 +66,7 @@ describe("admin external media and links", () => {
     ).rejects.toThrow("draft_version_not_found");
   });
 
-  it("publishes more than three Footer links and skips empty groups", async () => {
+  it("shows more than three Footer links publicly and skips empty groups", async () => {
     await replaceLinkGroup({
       db: env.DB,
       group: {
@@ -81,7 +82,13 @@ describe("admin external media and links", () => {
       db: env.DB,
       group: { key: "social", label: { zh: "社群", en: "Social" }, links: [] },
     });
-    const groups = await listFooterGroups(env.DB, "zh");
+    // The public footer (site context) composes D1 link groups with the code
+    // structure; the legacy "social" group is replaced by social_links.
+    const { footerGroups: groups } = await getPublicSiteContext(
+      env.DB,
+      createTestEnv({ DB: env.DB }),
+      "zh",
+    );
     expect(groups.find((group) => group.label === "更多")?.links).toHaveLength(
       8,
     );

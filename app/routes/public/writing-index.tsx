@@ -1,17 +1,14 @@
-import { Link, type LoaderFunctionArgs, useLoaderData } from "react-router";
-import { EmptyState } from "../../components/content/empty-state";
-import type { PublicRouteHandle } from "../../components/layout/public-shell";
 import {
-  formatMetaDate,
-  mergeWriting,
-  WRITING,
-  type WritingKind,
-  type WritingListItem,
-} from "../../content";
-import { listPublishedContent } from "../../lib/content/public-content.server";
+  type LoaderFunctionArgs,
+  type MetaFunction,
+  useLoaderData,
+} from "react-router";
+import { EmptyState } from "../../components/content/empty-state";
+import { WritingEntry } from "../../components/content/writing-entries";
+import type { PublicRouteHandle } from "../../components/layout/public-shell";
+import { pageMeta } from "../../lib/cms/public/meta";
+import { listPublicWriting } from "../../lib/cms/public/writing.server";
 import { getPublicLoaderContext } from "../../lib/content/public-loader.server";
-import { getSiteCopy } from "../../lib/i18n/copy";
-import type { Locale } from "../../lib/i18n/locale";
 
 export const handle: PublicRouteHandle = {
   contactBand: { variant: "default", size: "small" },
@@ -20,83 +17,19 @@ export const handle: PublicRouteHandle = {
 /** Only the first cards take part in the scroll reveal (motion-system §2.2). */
 const REVEAL_LIMIT = 8;
 
-const KIND_LABELS: Record<WritingKind, string> = {
-  article: "ARTICLE",
-  thread: "THREAD",
-  post: "POST",
-};
-
 export async function loader(args: LoaderFunctionArgs) {
-  const { locale, db } = getPublicLoaderContext(args);
-  const posts = await listPublishedContent(db, "post", locale);
-  const untitled = locale === "zh" ? "未命名文章" : "Untitled";
-  const items = mergeWriting(
-    posts.map((post) => ({
-      slug: post.slug,
-      title: post.title || untitled,
-      publishedAt: post.publishedAt,
-    })),
-    WRITING,
-    locale,
-  );
-  return { locale, items };
+  const { locale, db, env } = getPublicLoaderContext(args);
+  return { locale, items: await listPublicWriting(db, env, locale) };
 }
 
-function WritingAction({
-  item,
-  locale,
-  titleId,
-}: {
-  item: WritingListItem;
-  locale: Locale;
-  titleId: string;
-}) {
-  const isZh = locale === "zh";
-  const arrow = item.external ? "↗" : "→";
-
-  if (item.href === null) {
-    return (
-      <span className="link-pending writing-entry__action">
-        {isZh ? "連結待補" : "Link pending"}
-      </span>
-    );
-  }
-
-  if (item.external) {
-    return (
-      <a
-        className="text-link text-link--external writing-entry__action"
-        href={item.href}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-describedby={titleId}
-      >
-        {isZh ? `在 ${item.sourceLabel} 閱讀` : `Read on ${item.sourceLabel}`}
-        <span className="text-link__arrow" aria-hidden="true">
-          {arrow}
-        </span>
-      </a>
-    );
-  }
-
-  return (
-    <Link
-      className="text-link writing-entry__action"
-      to={item.href}
-      aria-describedby={titleId}
-    >
-      {isZh ? "閱讀全文" : "Read"}
-      <span className="text-link__arrow" aria-hidden="true">
-        {arrow}
-      </span>
-    </Link>
-  );
-}
+export const meta: MetaFunction<typeof loader> = ({ loaderData, matches }) =>
+  pageMeta(matches, {
+    title: loaderData?.locale === "en" ? "Writing" : "文章",
+  });
 
 export default function WritingIndexRoute() {
   const { locale, items } = useLoaderData<typeof loader>();
   const isZh = locale === "zh";
-  const copy = getSiteCopy(locale);
 
   return (
     <main className="page writing-page" id="main-content">
@@ -125,48 +58,14 @@ export default function WritingIndexRoute() {
           </div>
         ) : (
           <ul className="writing-list" data-reveal-group>
-            {items.map((item, index) => {
-              const titleId = `writing-${item.id}`;
-              return (
-                <li
-                  className="writing-entry"
-                  key={item.id}
-                  data-reveal-item={index < REVEAL_LIMIT ? "" : undefined}
-                >
-                  <article
-                    className="writing-entry__article"
-                    aria-labelledby={titleId}
-                  >
-                    <p className="meta-row writing-entry__meta">
-                      <span>{KIND_LABELS[item.kind]}</span>
-                      <span>
-                        <time dateTime={item.date}>
-                          {formatMetaDate(item.date)}
-                        </time>
-                      </span>
-                    </p>
-                    <div className="writing-entry__main">
-                      <h2 className="writing-entry__title" id={titleId}>
-                        {item.title}
-                      </h2>
-                      <p className="writing-entry__source">
-                        {item.sourceLabel}
-                        {item.placeholder ? (
-                          <span className="badge-placeholder">
-                            {copy.badgePlaceholder}
-                          </span>
-                        ) : null}
-                      </p>
-                    </div>
-                    <WritingAction
-                      item={item}
-                      locale={locale}
-                      titleId={titleId}
-                    />
-                  </article>
-                </li>
-              );
-            })}
+            {items.map((item, index) => (
+              <WritingEntry
+                key={item.id}
+                item={item}
+                locale={locale}
+                reveal={index < REVEAL_LIMIT}
+              />
+            ))}
           </ul>
         )}
       </div>

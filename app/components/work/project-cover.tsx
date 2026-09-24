@@ -1,17 +1,18 @@
 import { useMemo } from "react";
-import type { ProjectCategory } from "../../content";
+import type { PublicImage } from "../../lib/cms/public/view-models";
 import { getSiteCopy } from "../../lib/i18n/copy";
 import type { Locale } from "../../lib/i18n/locale";
 
 /**
  * Project cover (design-system §7.1).
  *
- * `cover` present → the real image (object-fit: cover). `cover: null` → a
- * server-rendered procedural <svg>, seeded from the slug, whose *structure* is
- * keyed to the primary category (never its colour). No canvas, no JS, no
- * inline style attributes: geometry lives in SVG attributes, colour and size
- * in app/styles/components.css via classes and data attributes. Works under
- * CSP and reduced motion.
+ * `cover` present → the real image (object-fit: cover; focal point through
+ * `focal-x-* focal-y-*` classes). `cover: null` (no image, or a missing
+ * asset) → a server-rendered procedural <svg>, seeded from the slug, whose
+ * *structure* is keyed to the primary category slug (never its colour). No
+ * canvas, no JS, no inline style attributes: geometry lives in SVG
+ * attributes, colour and size in app/styles/components.css via classes and
+ * data attributes. Works under CSP and reduced motion.
  */
 
 /** `hero` = 21:9 on lg+, 16:9 below (project detail). */
@@ -22,10 +23,12 @@ const H = 800;
 
 type Pattern = "trace" | "lattice" | "contour" | "wave" | "spectrum";
 
-const PATTERN_BY_CATEGORY: Record<ProjectCategory, Pattern> = {
+/** Keyed by `project_category` term slug; new categories draw a trace. */
+const PATTERN_BY_CATEGORY: Readonly<Record<string, Pattern>> = {
   software: "trace",
   ai: "lattice",
   interactive: "contour",
+  "creative-technology": "lattice",
   music: "wave",
   mixing: "wave",
   research: "spectrum",
@@ -203,14 +206,14 @@ const GEOMETRY: Record<Pattern, (random: () => number) => CoverGeometry> = {
   spectrum: spectrumGeometry,
 };
 
-export function coverPattern(category: ProjectCategory): Pattern {
-  return PATTERN_BY_CATEGORY[category];
+export function coverPattern(category: string | null | undefined): Pattern {
+  return (category && PATTERN_BY_CATEGORY[category]) || "trace";
 }
 
 /** Exported for tests: deterministic geometry for a slug + category. */
 export function coverGeometry(
   slug: string,
-  category: ProjectCategory,
+  category: string | null | undefined,
 ): CoverGeometry {
   return GEOMETRY[coverPattern(category)](seeded(hashSlug(slug)));
 }
@@ -220,7 +223,7 @@ function ProceduralCover({
   category,
 }: {
   slug: string;
-  category: ProjectCategory;
+  category: string | null | undefined;
 }) {
   const geometry = useMemo(
     () => coverGeometry(slug, category),
@@ -278,11 +281,12 @@ export function ProjectCover({
   locale,
   className,
   decorative = true,
+  priority = false,
 }: {
   slug: string;
-  /** Primary category: drives the procedural pattern. */
-  category: ProjectCategory;
-  cover: { src: string; alt: string } | null;
+  /** Primary category slug: drives the procedural pattern. */
+  category: string | null | undefined;
+  cover: PublicImage | null;
   /** 1-based index shown as the numeral on procedural covers. */
   index?: number;
   placeholder?: boolean;
@@ -293,6 +297,8 @@ export function ProjectCover({
   className?: string;
   /** Decorative covers (rows, previews) get an empty alt. */
   decorative?: boolean;
+  /** The first above-the-fold cover loads eagerly (content-architecture §4.5). */
+  priority?: boolean;
 }) {
   const classes = ["project-cover", className].filter(Boolean).join(" ");
   return (
@@ -303,10 +309,16 @@ export function ProjectCover({
     >
       {cover ? (
         <img
-          className="project-cover__image"
+          className={["project-cover__image", cover.focalClass]
+            .filter(Boolean)
+            .join(" ")}
           src={cover.src}
+          srcSet={cover.srcSet}
+          sizes={cover.sizes}
+          width={cover.width}
+          height={cover.height}
           alt={decorative ? "" : cover.alt}
-          loading="lazy"
+          loading={priority ? "eager" : "lazy"}
           decoding="async"
         />
       ) : (

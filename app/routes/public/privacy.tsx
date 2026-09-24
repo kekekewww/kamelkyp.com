@@ -1,6 +1,11 @@
-import { type LoaderFunctionArgs, useLoaderData } from "react-router";
+import {
+  type LoaderFunctionArgs,
+  type MetaFunction,
+  useLoaderData,
+} from "react-router";
 import { EmptyState } from "../../components/content/empty-state";
 import type { PublicRouteHandle } from "../../components/layout/public-shell";
+import { usePublicSite } from "../../components/layout/use-public-site";
 import {
   formatLegalDate,
   LegalClosing,
@@ -8,6 +13,7 @@ import {
   latestEffectiveDate,
   legalAnchorId,
 } from "../../components/legal/legal-document";
+import { pageMeta } from "../../lib/cms/public/meta";
 import { listPublishedTerms } from "../../lib/content/public-content.server";
 import { getPublicLoaderContext } from "../../lib/content/public-loader.server";
 
@@ -19,8 +25,14 @@ export async function loader(args: LoaderFunctionArgs) {
   return { locale, terms: await listPublishedTerms(db, locale, "privacy") };
 }
 
+export const meta: MetaFunction<typeof loader> = ({ loaderData, matches }) =>
+  pageMeta(matches, {
+    title: loaderData?.locale === "en" ? "Privacy" : "隱私說明",
+  });
+
 export default function PrivacyRoute() {
   const { locale, terms } = useLoaderData<typeof loader>();
+  const { brandName } = usePublicSite().brand;
   const isZh = locale === "zh";
   const effective = latestEffectiveDate(
     terms.map((document) => document.effectiveFrom),
@@ -63,8 +75,8 @@ export default function PrivacyRoute() {
               }
               description={
                 isZh
-                  ? "正式收集委託資料前，Kamel 會從後台發布完整隱私說明。"
-                  : "Kamel will publish the full privacy notice before collecting commission data."
+                  ? `正式收集委託資料前，${brandName} 會從後台發布完整隱私說明。`
+                  : `${brandName} will publish the full privacy notice before collecting commission data.`
               }
             />
           </div>

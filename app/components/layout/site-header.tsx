@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { Link, useLocation } from "react-router";
-import { getSiteCopy } from "../../lib/i18n/copy";
+import { brandHomeLabel, getSiteCopy } from "../../lib/i18n/copy";
 import type { Locale } from "../../lib/i18n/locale";
 import {
   isNavSectionActive,
@@ -11,14 +11,21 @@ import { useMagnetic } from "../../lib/motion/use-magnetic";
 import { NavigationProgress } from "../motion/navigation-progress";
 import { LanguageSwitcher } from "./language-switcher";
 
-const NAV_ITEMS: ReadonlyArray<{
-  section: Exclude<NavSection, "home" | "cta">;
-  path: string;
-}> = [
-  { section: "work", path: "/works" },
-  { section: "services", path: "/services" },
-  { section: "about", path: "/about" },
-  { section: "writing", path: "/writing" },
+type NavKey = Exclude<NavSection, "home" | "cta">;
+
+/** Site structure: each navigation key's page. Labels stay UI copy. */
+const NAV_PATHS: Record<NavKey, string> = {
+  work: "/works",
+  services: "/services",
+  about: "/about",
+  writing: "/writing",
+};
+
+const DEFAULT_NAVIGATION: ReadonlyArray<{ key: NavKey; visible: boolean }> = [
+  { key: "work", visible: true },
+  { key: "services", visible: true },
+  { key: "about", visible: true },
+  { key: "writing", visible: true },
 ];
 
 /** Magnetic only on the four desktop nav links and the CTA (motion-system §2.5). */
@@ -54,8 +61,23 @@ function NavItem({
   );
 }
 
-export function SiteHeader({ locale }: { locale: Locale }) {
+/**
+ * Site header: the brand wordmark (brand settings, "Kamel" by default) and
+ * the primary navigation in the order and visibility set in site settings.
+ */
+export function SiteHeader({
+  locale,
+  brandName = "Kamel",
+  navigation = DEFAULT_NAVIGATION,
+}: {
+  locale: Locale;
+  brandName?: string;
+  navigation?: ReadonlyArray<{ key: NavKey; visible: boolean }>;
+}) {
   const copy = getSiteCopy(locale);
+  const navItems = navigation.filter(
+    (item) => item.visible && item.key in NAV_PATHS,
+  );
   const location = useLocation();
   const navigationId = useId();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -128,12 +150,12 @@ export function SiteHeader({ locale }: { locale: Locale }) {
           className="site-header__brand"
           to={localePath(locale)}
           viewTransition
-          aria-label={copy.brandLabel}
+          aria-label={brandHomeLabel(locale, brandName || "Kamel")}
           aria-current={
             isNavSectionActive(pathname, "home") ? "page" : undefined
           }
         >
-          Kamel
+          {brandName || "Kamel"}
         </Link>
 
         <nav
@@ -144,12 +166,12 @@ export function SiteHeader({ locale }: { locale: Locale }) {
         >
           <div className="site-nav__inner">
             <ul className="site-nav__list">
-              {NAV_ITEMS.map((item) => (
+              {navItems.map((item) => (
                 <NavItem
-                  key={item.section}
-                  href={localePath(locale, item.path)}
-                  label={copy[item.section]}
-                  current={isNavSectionActive(pathname, item.section)}
+                  key={item.key}
+                  href={localePath(locale, NAV_PATHS[item.key])}
+                  label={copy[item.key]}
+                  current={isNavSectionActive(pathname, item.key)}
                   onNavigate={close}
                 />
               ))}

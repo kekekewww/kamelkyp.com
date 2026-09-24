@@ -1,11 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { getDefaultFooterGroups } from "../../app/lib/content/footer-repository.server";
 
-describe("footer repository", () => {
-  it("provides five expandable groups without truncating their links", () => {
+describe("footer structure (code defaults)", () => {
+  it("provides the site-structure groups; contact is filled from brand settings", () => {
     const groups = getDefaultFooterGroups("zh");
 
-    expect(groups).toHaveLength(5);
     expect(groups.map((group) => group.id)).toEqual([
       "navigate",
       "services",
@@ -13,17 +12,19 @@ describe("footer repository", () => {
       "contact",
       "legal",
     ]);
-    expect(groups.flatMap((group) => group.links)).toHaveLength(13);
+    // The contact address is not code: it comes from brand.contactEmail.
+    expect(groups.find((group) => group.id === "contact")?.links).toEqual([]);
+    expect(groups.flatMap((group) => group.links)).toHaveLength(11);
   });
 
-  it("localizes navigation while retaining safe contact destinations", () => {
+  it("localizes navigation and keeps only safe destinations", () => {
     const groups = getDefaultFooterGroups("en");
     const links = groups.flatMap((group) => group.links);
 
     expect(groups[0]?.label).toBe("Navigate");
-    expect(
-      links.some((link) => link.url === "mailto:kevinyaungputra@gmail.com"),
-    ).toBe(true);
+    expect(groups.find((group) => group.id === "contact")?.label).toBe(
+      "Contact",
+    );
     expect(
       links.every(
         (link) =>
@@ -32,5 +33,13 @@ describe("footer repository", () => {
           link.url.startsWith("mailto:"),
       ),
     ).toBe(true);
+  });
+
+  it("carries no personal address and no repository link", () => {
+    const serialized = JSON.stringify([
+      ...getDefaultFooterGroups("zh"),
+      ...getDefaultFooterGroups("en"),
+    ]);
+    expect(serialized).not.toMatch(/mailto:|gmail|kamelkyp\.com"/);
   });
 });

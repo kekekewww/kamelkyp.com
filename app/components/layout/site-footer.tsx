@@ -1,5 +1,9 @@
-import type { FooterGroup } from "../../lib/content/footer-repository.server";
-import { CONTACT_EMAIL, getSiteCopy } from "../../lib/i18n/copy";
+import type {
+  FooterGroup,
+  PublicBrand,
+  PublicSite,
+} from "../../lib/cms/public/view-models";
+import { getSiteCopy } from "../../lib/i18n/copy";
 import type { Locale } from "../../lib/i18n/locale";
 
 function isExternal(url: string): boolean {
@@ -28,27 +32,42 @@ function FooterLinkList({ group }: { group: FooterGroup }) {
   );
 }
 
-/** Footer (IA §3; design-system §6.24). Never shows prices. */
+/**
+ * Footer (IA §3; design-system §6.24). Never shows prices. The lead line,
+ * contact email, copyright and location line come from brand and site
+ * settings; empty groups and a missing email are omitted.
+ */
 export function SiteFooter({
   locale,
   groups,
+  brand,
+  site,
 }: {
   locale: Locale;
-  groups: FooterGroup[];
+  groups: readonly FooterGroup[];
+  brand: Pick<PublicBrand, "brandName" | "contactEmail" | "locationDisplay">;
+  site: Pick<PublicSite, "footerMessage" | "copyright">;
 }) {
   const copy = getSiteCopy(locale);
+  const visibleGroups = groups.filter((group) => group.links.length > 0);
+  const email = brand.contactEmail.trim();
+  const copyright =
+    site.copyright || `© ${new Date().getUTCFullYear()} ${brand.brandName}`;
 
   return (
     <footer className="site-footer">
       <div className="site-footer__lead grid">
-        <p className="eyebrow col-rail">KAMEL / CONTACT</p>
-        <p className="site-footer__lead-text">{copy.footerLead}</p>
-        <a
-          className="site-footer__email text-link"
-          href={`mailto:${CONTACT_EMAIL}`}
-        >
-          {CONTACT_EMAIL}
-        </a>
+        <p className="eyebrow col-rail">
+          {`${brand.brandName.toUpperCase()} / CONTACT`}
+        </p>
+        {site.footerMessage ? (
+          <p className="site-footer__lead-text">{site.footerMessage}</p>
+        ) : null}
+        {email ? (
+          <a className="site-footer__email text-link" href={`mailto:${email}`}>
+            {email}
+          </a>
+        ) : null}
       </div>
 
       <div className="site-footer__groups container">
@@ -56,7 +75,7 @@ export function SiteFooter({
           className="site-footer__desktop-groups"
           aria-label={copy.footerNavigation}
         >
-          {groups.map((group) => (
+          {visibleGroups.map((group) => (
             <section className="footer-group" key={group.id}>
               <h2 data-localized>{group.label}</h2>
               <FooterLinkList group={group} />
@@ -65,7 +84,7 @@ export function SiteFooter({
         </nav>
 
         <div className="site-footer__mobile-groups">
-          {groups.map((group) => (
+          {visibleGroups.map((group) => (
             <details className="footer-group" key={group.id}>
               <summary>{group.label}</summary>
               <FooterLinkList group={group} />
@@ -75,8 +94,8 @@ export function SiteFooter({
       </div>
 
       <div className="site-footer__base container">
-        <span>© {new Date().getUTCFullYear()} Kamel</span>
-        <span>{copy.footerBase}</span>
+        <span>{copyright}</span>
+        {brand.locationDisplay ? <span>{brand.locationDisplay}</span> : null}
       </div>
     </footer>
   );

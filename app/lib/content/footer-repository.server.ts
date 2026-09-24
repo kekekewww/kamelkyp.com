@@ -13,15 +13,6 @@ export interface FooterGroup {
   links: FooterLink[];
 }
 
-interface FooterRow {
-  group_id: string;
-  stable_key: string;
-  group_label: string | null;
-  link_id: string;
-  label: string;
-  url: string;
-}
-
 const GROUP_LABELS: Record<string, Record<Locale, string>> = {
   navigate: { zh: "導覽", en: "Navigate" },
   services: { zh: "服務", en: "Services" },
@@ -35,16 +26,14 @@ function groupLabel(stableKey: string, locale: Locale): string {
   return GROUP_LABELS[stableKey]?.[locale] ?? stableKey.replaceAll("_", " ");
 }
 
-function isSafeFooterUrl(url: string): boolean {
-  if (url.startsWith("/") && !url.startsWith("//")) return true;
-
-  try {
-    return ["https:", "mailto:"].includes(new URL(url).protocol);
-  } catch {
-    return false;
-  }
-}
-
+/**
+ * Footer structure from code (content-schema §6.1): site navigation, service
+ * areas and legal pages, plus the labels of the editable groups. The public
+ * footer (`getPublicSiteContext`) fills "Contact" from `brand.contactEmail`,
+ * "Find me" from enabled social links and "Work & Resources" from D1 link
+ * groups; this default is also the fallback when D1 cannot be read. It holds
+ * no personal address and no repository link (seeded disabled in D1).
+ */
 export function getDefaultFooterGroups(locale: Locale): FooterGroup[] {
   const label = (zh: string, en: string) => (locale === "zh" ? zh : en);
 
@@ -110,23 +99,12 @@ export function getDefaultFooterGroups(locale: Locale): FooterGroup[] {
           label: "GitHub",
           url: "https://github.com/kekekewww",
         },
-        {
-          id: "site-repository",
-          label: label("網站專案", "Website repository"),
-          url: "https://github.com/kekekewww/kamelkyp.com",
-        },
       ],
     },
     {
       id: "contact",
       label: groupLabel("contact", locale),
-      links: [
-        {
-          id: "email",
-          label: "kevinyaungputra@gmail.com",
-          url: "mailto:kevinyaungputra@gmail.com",
-        },
-      ],
+      links: [],
     },
     {
       id: "legal",
@@ -145,45 +123,4 @@ export function getDefaultFooterGroups(locale: Locale): FooterGroup[] {
       ],
     },
   ];
-}
-
-export async function listFooterGroups(
-  db: D1Database,
-  locale: Locale,
-): Promise<FooterGroup[]> {
-  const result = await db
-    .prepare(
-      `SELECT
-        g.id AS group_id,
-        g.stable_key,
-        gl.label AS group_label,
-        l.id AS link_id,
-        l.label,
-        l.url
-      FROM link_groups g
-      JOIN links l ON l.group_id = g.id
-      LEFT JOIN link_group_labels gl
-        ON gl.group_id = g.id AND gl.locale = l.locale
-      WHERE g.enabled = 1 AND l.enabled = 1 AND l.locale = ?
-      ORDER BY g.sort_order, l.sort_order`,
-    )
-    .bind(locale)
-    .all<FooterRow>();
-
-  const groups = new Map<string, FooterGroup>();
-  for (const row of result.results) {
-    if (!isSafeFooterUrl(row.url)) continue;
-
-    const group = groups.get(row.group_id) ?? {
-      id: row.group_id,
-      label: row.group_label ?? groupLabel(row.stable_key, locale),
-      links: [],
-    };
-    group.links.push({ id: row.link_id, label: row.label, url: row.url });
-    groups.set(row.group_id, group);
-  }
-
-  return groups.size > 0
-    ? [...groups.values()]
-    : getDefaultFooterGroups(locale);
 }

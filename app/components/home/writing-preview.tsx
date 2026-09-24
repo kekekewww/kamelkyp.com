@@ -1,10 +1,15 @@
 import { Link } from "react-router";
-import { formatMetaDate, type WritingListItem } from "../../content";
+import type { PublicWritingItem } from "../../lib/cms/public/view-models";
 import { getSiteCopy } from "../../lib/i18n/copy";
 import type { Locale } from "../../lib/i18n/locale";
 import { localePath } from "../../lib/i18n/path";
+import {
+  formatMetaDate,
+  writingKind,
+  writingSource,
+} from "../content/writing-meta";
 
-function Action({ item, locale }: { item: WritingListItem; locale: Locale }) {
+function Action({ item, locale }: { item: PublicWritingItem; locale: Locale }) {
   const isZh = locale === "zh";
   if (!item.href) {
     return (
@@ -21,9 +26,15 @@ function Action({ item, locale }: { item: WritingListItem; locale: Locale }) {
       </Link>
     );
   }
+  const source = writingSource(item);
   return (
-    <a className="text-link" href={item.href} target="_blank" rel="noreferrer">
-      {isZh ? `在 ${item.sourceLabel} 閱讀` : `Read on ${item.sourceLabel}`}
+    <a
+      className="text-link"
+      href={item.href}
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      {isZh ? `在 ${source} 閱讀` : `Read on ${source}`}
       <span className="text-link__arrow" aria-hidden="true">
         ↗
       </span>
@@ -31,12 +42,15 @@ function Action({ item, locale }: { item: WritingListItem; locale: Locale }) {
   );
 }
 
-/** Home §8: newest three writing entries as rows (design-system §6.16). */
+/**
+ * Home §8: featured, then newest writing entries as rows
+ * (design-system §6.16). With none the section is not rendered.
+ */
 export function WritingPreview({
   items,
   locale,
 }: {
-  items: WritingListItem[];
+  items: readonly PublicWritingItem[];
   locale: Locale;
 }) {
   const copy = getSiteCopy(locale);
@@ -72,18 +86,18 @@ export function WritingPreview({
             <li key={item.id} data-reveal-item>
               <article className="home-entry">
                 <p className="home-entry__meta meta-row">
-                  <span>{item.kind}</span>
-                  <span>{formatMetaDate(item.date)}</span>
+                  <span>{writingKind(item)}</span>
+                  {item.date ? <span>{formatMetaDate(item.date)}</span> : null}
                 </p>
                 <div className="home-entry__main">
                   <h3 className="home-entry__title t-h2">{item.title}</h3>
-                  {item.placeholder ? (
+                  {item.todoContent ? (
                     <span className="badge-placeholder">
                       {copy.badgePlaceholder}
                     </span>
                   ) : null}
                   <p className="home-entry__source t-body-s t-secondary">
-                    {item.sourceLabel}
+                    {writingSource(item)}
                   </p>
                 </div>
                 <div className="home-entry__action">
