@@ -1,0 +1,188 @@
+/*
+ * Studio music: list with the homepage showreel slot, row menu, editor
+ * field groups and the live placement controls. Scoped under `.studio`;
+ * loaded by the music routes.
+ */
+
+.studio .studio-music {
+  display: grid;
+  gap: var(--space-5);
+}
+
+/* The showreel slot: one measured line with the current track on it. */
+.studio .studio-showreel {
+  display: grid;
+  gap: var(--space-2);
+  padding-block: var(--space-3);
+  border-block: 1px solid var(--color-rule);
+}
+
+.studio .studio-showreel h2 {
+  margin: 0;
+}
+
+.studio .studio-showreel__line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: var(--studio-control-h);
+}
+
+.studio .studio-showreel__trace {
+  inline-size: 3rem;
+  block-size: 1px;
+  background: var(--color-trace);
+}
+
+.studio .studio-showreel__title {
+  color: var(--color-text);
+  font-family: var(--font-display);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.studio .studio-showreel__title:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.studio .studio-showreel__empty {
+  color: var(--color-text-secondary);
+}
+
+.studio .studio-showreel .studio-hint {
+  margin: 0;
+}
+
+/* Row menu (⋯): a disclosure of real buttons. */
+.studio .studio-menu {
+  position: relative;
+}
+
+.studio .studio-menu__toggle {
+  display: inline-grid;
+  place-items: center;
+  inline-size: var(--studio-control-h-compact);
+  block-size: var(--studio-control-h-compact);
+  border: 1px solid transparent;
+  border-radius: var(--radius-xs);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  list-style: none;
+}
+
+.studio .studio-menu__toggle::-webkit-details-marker {
+  display: none;
+}
+
+.studio .studio-menu[open] .studio-menu__toggle,
+.studio .studio-menu__toggle:hover {
+  border-color: var(--color-control-border);
+  color: var(--color-text);
+}
+
+.studio .studio-menu__list {
+  position: absolute;
+  z-index: var(--z-menu);
+  inset-inline-end: 0;
+  inset-block-start: calc(100% + var(--space-1));
+  display: grid;
+  min-inline-size: 13rem;
+  margin: 0;
+  padding: var(--space-1);
+  border-radius: var(--radius-xs);
+  background: var(--color-surface);
+  box-shadow: var(--studio-edge), var(--studio-float);
+  list-style: none;
+}
+
+.studio .studio-menu__item {
+  display: block;
+  inline-size: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  color: var(--color-text);
+  background: none;
+  font: inherit;
+  font-size: var(--text-body-s);
+  text-align: start;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.studio .studio-menu__item:hover,
+.studio .studio-menu__item:focus-visible {
+  background: var(--color-surface-hover);
+}
+
+/* Editor field groups */
+.studio .studio-music-form {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.studio .studio-music-form__pair {
+  display: grid;
+  gap: var(--space-3);
+}
+
+@media (min-width: 768px) {
+  .studio .studio-music-form__pair {
+    grid-template-columns: repeat(2, minmax(0, 14rem));
+  }
+}
+
+.studio .studio-music-form__duration {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--space-3);
+}
+
+.studio .studio-music-form__duration .studio-field {
+  flex: 0 1 12rem;
+}
+
+.studio .studio-music-form__duration .studio-input {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Live placement (homepage feature, showreel): separate from Save. */
+.studio .studio-placement {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-4) 0 0;
+  padding: var(--space-4) 0 0;
+  border: 0;
+  border-block-start: 1px solid var(--color-rule);
+}
+
+.studio .studio-placement .studio-hint {
+  margin: 0;
+}
+
+.studio .studio-placement__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.studio .studio-placement-form {
+  display: contents;
+}
+
+/* Quick create */
+.studio .studio-music-new {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.studio .studio-music-new__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+}

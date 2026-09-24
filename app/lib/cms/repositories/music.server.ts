@@ -629,6 +629,17 @@ function isMeta(value: unknown): value is EntityMeta {
   return Boolean(value && typeof value === "object" && "revision" in value);
 }
 
+/**
+ * Lifecycle buttons live inside the editor form: when it was submitted from
+ * there (it carries `expectedRevision`), the working copy is saved first so
+ * "Saved" stays true. Returns an error result to answer with, or null.
+ */
+async function savePendingEdits(args: MusicActionArgs, id: string) {
+  if (readExpectedRevision(formOf(args)) === null) return null;
+  const saved = await saveFromForm(args, id);
+  return isMeta(saved) ? null : saved;
+}
+
 /** `/studio/music/:id` actions. */
 export async function handleMusicEditorAction(args: MusicActionArgs) {
   const { db, now, intent } = args;
@@ -668,33 +679,42 @@ export async function handleMusicEditorAction(args: MusicActionArgs) {
         });
       });
     case "unpublish":
-      return run(async () =>
-        actionOk({ meta: await unpublishEntity(db, "music", id, now) }),
-      );
+      return run(async () => {
+        const saved = await savePendingEdits(args, id);
+        if (saved) return saved;
+        return actionOk({ meta: await unpublishEntity(db, "music", id, now) });
+      });
     case "archive":
-      return run(async () =>
-        actionOk({ meta: await archiveEntity(db, "music", id, now) }),
-      );
+      return run(async () => {
+        const saved = await savePendingEdits(args, id);
+        if (saved) return saved;
+        return actionOk({ meta: await archiveEntity(db, "music", id, now) });
+      });
     case "restore":
-      return run(async () =>
-        actionOk({
-          meta: await restoreEntity(db, "music", id, now),
-          reset: true,
-        }),
-      );
+      return run(async () => {
+        const saved = await savePendingEdits(args, id);
+        if (saved) return saved;
+        return actionOk({ meta: await restoreEntity(db, "music", id, now) });
+      });
     case "revert":
       return run(async () => {
         const expected = readExpectedRevision(formOf(args));
         if (expected === null) return missingRevision();
         return actionOk({
           meta: await revertToPublished(db, "music", id, expected, now),
+          // The form must show the published copy again.
           reset: true,
         });
       });
     case "duplicate":
       return run(async () => {
+        const saved = await savePendingEdits(args, id);
+        if (saved) return saved;
         const meta = await duplicateEntity(db, "music", id, now);
-        throw redirect(`/studio/music/${meta.id}?duplicated=1`, 303);
+        return actionOk({
+          duplicateId: meta.id,
+          redirectTo: `/studio/music/${meta.id}?duplicated=1`,
+        });
       });
     case "delete":
       return run(async () => {
@@ -704,7 +724,7 @@ export async function handleMusicEditorAction(args: MusicActionArgs) {
           id,
           readString(formOf(args), "confirm") ?? "",
         );
-        throw redirect("/studio/music?deleted=1", 303);
+        return actionOk({ deleted: true, redirectTo: "/studio/music?deleted=1" });
       });
     case "feature":
     case "unfeature":

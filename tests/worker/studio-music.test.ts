@@ -467,18 +467,60 @@ describe("music editor", () => {
       now,
     })) as unknown as Result;
     expect(mismatch.data.code).toBe("confirmation_mismatch");
-    const response = await thrown(
-      handleMusicEditorAction({
-        db: env.DB,
-        env: testEnv(),
-        params: { id },
-        formData: form({ confirm: "DELETE" }),
-        intent: "delete",
-        now,
-      }),
-    );
-    expect(response.headers.get("Location")).toBe("/studio/music?deleted=1");
+    // The editor navigates once its save state settles (no unsaved-changes prompt).
+    const deleted = (await handleMusicEditorAction({
+      db: env.DB,
+      env: testEnv(),
+      params: { id },
+      formData: form({ confirm: "DELETE" }),
+      intent: "delete",
+      now,
+    })) as unknown as Result;
+    expect(deleted.data).toMatchObject({
+      ok: true,
+      redirectTo: "/studio/music?deleted=1",
+    });
     expect(await getEntity(env.DB, "music", id)).toBeNull();
+  });
+
+  it("saves pending edits before archiving or duplicating from the editor", async () => {
+    const id = await track("Before archive");
+    const archived = (await handleMusicEditorAction({
+      db: env.DB,
+      env: testEnv(),
+      params: { id },
+      formData: form(fullForm({ "title.en": "Edited before archive" })),
+      intent: "archive",
+      now,
+    })) as unknown as Result;
+    expect(archived.data).toMatchObject({
+      ok: true,
+      meta: { status: "archived", revision: 1 },
+    });
+    const loaded = await getEntity(env.DB, "music", id);
+    expect(loaded?.content.title.en).toBe("Edited before archive");
+
+    const restored = (await handleMusicEditorAction({
+      db: env.DB,
+      env: testEnv(),
+      params: { id },
+      formData: form(fullForm({ expectedRevision: "1" })),
+      intent: "restore",
+      now,
+    })) as unknown as Result;
+    expect(restored.data).toMatchObject({ ok: true, meta: { status: "draft" } });
+
+    const duplicated = (await handleMusicEditorAction({
+      db: env.DB,
+      env: testEnv(),
+      params: { id },
+      formData: form(fullForm({ expectedRevision: "2" })),
+      intent: "duplicate",
+      now,
+    })) as unknown as Result;
+    expect(duplicated.data.redirectTo).toMatch(
+      /^\/studio\/music\/[0-9a-f-]{36}\?duplicated=1$/,
+    );
   });
 
   it("toggles featured and the showreel from the editor", async () => {
