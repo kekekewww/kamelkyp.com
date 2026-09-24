@@ -63,6 +63,35 @@ export function isManualOrder(query: ProjectListQuery): boolean {
   return query.sort === "order" && !hasActiveFilters(query);
 }
 
+export type HomepageSlot = {
+  /** shown: on the homepage · over: live but past the limit · draft / unlisted: never shown. */
+  state: "shown" | "over" | "draft" | "unlisted";
+  /** Draw the "Homepage shows the first N" line right before this row. */
+  cutBefore: boolean;
+};
+
+/**
+ * Where each featured row lands on the homepage (content-schema §2.2):
+ * published, listed rows in featured order, up to the site limit. Drafts
+ * and unlisted rows keep their place in the order but take no slot.
+ */
+export function homepageSlots(
+  rows: ReadonlyArray<{ status: EntryStatus; listed: boolean }>,
+  limit: number,
+): HomepageSlot[] {
+  let live = 0;
+  let cut = false;
+  return rows.map((row) => {
+    if (row.status !== "published") return { state: "draft", cutBefore: false };
+    if (!row.listed) return { state: "unlisted", cutBefore: false };
+    live += 1;
+    if (live <= limit) return { state: "shown", cutBefore: false };
+    const cutBefore = !cut;
+    cut = true;
+    return { state: "over", cutBefore };
+  });
+}
+
 /** "just now", "5 min ago", "3 h ago", "2 d ago", then the date. */
 export function relativeTime(iso: string, nowIso: string): string {
   const seconds = Math.max(0, (Date.parse(nowIso) - Date.parse(iso)) / 1000);

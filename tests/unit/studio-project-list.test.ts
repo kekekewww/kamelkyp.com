@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   hasActiveFilters,
+  homepageSlots,
   isManualOrder,
   parseProjectListParams,
   relativeTime,
@@ -81,6 +82,45 @@ describe("manual order", () => {
       false,
     );
     expect(hasActiveFilters(parseProjectListParams(params("q=x")))).toBe(true);
+  });
+});
+
+describe("homepageSlots", () => {
+  const live = { status: "published" as const, listed: true };
+  it("counts only live, listed rows against the homepage limit", () => {
+    const slots = homepageSlots(
+      [
+        live,
+        { status: "draft", listed: true },
+        { status: "published", listed: false },
+        live,
+        live,
+        { status: "draft", listed: true },
+      ],
+      2,
+    );
+    expect(slots.map((slot) => slot.state)).toEqual([
+      "shown",
+      "draft",
+      "unlisted",
+      "shown",
+      "over",
+      "draft",
+    ]);
+    // The cut line sits right before the first live row that does not fit.
+    expect(slots.map((slot) => slot.cutBefore)).toEqual([
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+    ]);
+  });
+
+  it("draws no cut when everything fits", () => {
+    const slots = homepageSlots([live, live], 4);
+    expect(slots.some((slot) => slot.cutBefore)).toBe(false);
   });
 });
 

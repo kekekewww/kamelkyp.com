@@ -17,7 +17,11 @@ import {
   type ProjectListQuery,
   parseProjectListParams,
 } from "../../../components/studio/projects/project-list";
-import type { StudioProjectRow } from "../../../components/studio/projects/types";
+import type {
+  ProjectEditorData,
+  ProjectsListData,
+  StudioProjectRow,
+} from "../../../components/studio/projects/types";
 import type { Env } from "../../env.server";
 import { CmsError } from "../db/errors";
 import {
@@ -283,7 +287,7 @@ export async function loadProjectsList({
   db: D1Database;
   request: Request;
   now: Date;
-}) {
+}): Promise<ProjectsListData> {
   const query = parseProjectListParams(new URL(request.url).searchParams);
   const [rows, featured, facets, allTerms, limit] = await Promise.all([
     listStudioProjects(db, query),
@@ -490,7 +494,11 @@ export async function loadProjectEditor({
   env,
   params,
   now,
-}: { db: D1Database; env: MediaEnv; now: Date } & Params) {
+}: {
+  db: D1Database;
+  env: MediaEnv;
+  now: Date;
+} & Params): Promise<ProjectEditorData> {
   const id = params.id ?? "";
   const loaded = id ? await getEntity(db, "project", id) : null;
   if (!loaded) throw new Response("Not Found", { status: 404 });
