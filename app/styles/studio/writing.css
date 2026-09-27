@@ -1,0 +1,230 @@
+/*
+ * Writing screens and the content block editor (package P3). Loaded after
+ * recognition.css (the shared editorial kit) on the writing routes only.
+ */
+
+/* ---- Where the entry goes ---------------------------------------------------- */
+
+.studio .p3-route {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-inline-start: 1px solid var(--color-rule-strong);
+  background: var(--color-bg-2);
+}
+
+.studio .p3-route__label {
+  color: var(--color-text-meta);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta-xs);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.studio .p3-route__target code {
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  overflow-wrap: anywhere;
+}
+
+.studio .p3-route__target--missing {
+  color: var(--color-warning);
+}
+
+/* ---- Block editor ------------------------------------------------------------ */
+
+.studio .studio-blocks {
+  display: grid;
+  gap: var(--space-3);
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.studio .studio-blocks > legend {
+  margin-block-end: var(--space-2);
+  padding: 0;
+}
+
+.studio .studio-blocks__tabs {
+  display: flex;
+  border-block-end: 1px solid var(--color-rule-strong);
+}
+
+.studio .studio-blocks__tab {
+  position: relative;
+  min-block-size: var(--studio-control-h);
+  padding-inline: var(--space-4);
+  border: 0;
+  color: var(--color-text-secondary);
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: var(--text-meta-xs);
+  letter-spacing: 0.1em;
+  transition: color var(--dur-1) var(--ease-standard);
+}
+
+.studio .studio-blocks__tab[aria-selected="true"] {
+  color: var(--color-text);
+}
+
+/* The active tab of the set: the one accent in the editor body. */
+.studio .studio-blocks__tab[aria-selected="true"]::after {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: -1px;
+  block-size: 2px;
+  background: var(--color-accent);
+  content: "";
+}
+
+.studio .studio-blocks__tab[data-invalid] {
+  color: var(--color-danger);
+}
+
+.studio .studio-blocks__tab:focus-visible {
+  outline-offset: -2px;
+}
+
+@media (hover: hover) {
+  .studio .studio-blocks__tab:hover {
+    color: var(--color-text);
+  }
+}
+
+.studio .studio-blocks__count {
+  color: var(--color-text-meta);
+  letter-spacing: 0.04em;
+}
+
+.studio .studio-blocks__list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.studio .studio-block {
+  display: grid;
+  gap: var(--space-3);
+  padding-block: var(--space-4);
+  border-block-end: 1px solid var(--color-rule);
+}
+
+.studio .studio-block[data-invalid] {
+  padding-inline-start: var(--space-3);
+  box-shadow: inset 2px 0 0 var(--color-danger);
+}
+
+.studio .studio-block__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.studio .studio-block__index {
+  color: var(--color-text-meta);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.studio .studio-block__type {
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta-xs);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.studio .studio-block__controls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-inline-start: auto;
+}
+
+/* Block move buttons are always visible (they are the only way to reorder). */
+.studio .studio-block .studio-order__step {
+  opacity: 1;
+}
+
+.studio .studio-block__grid {
+  display: grid;
+  gap: var(--space-3);
+}
+
+@media (min-width: 768px) {
+  .studio .studio-block__grid--heading {
+    grid-template-columns: 11rem minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+.studio .studio-block__field {
+  display: grid;
+  gap: var(--space-1);
+  min-inline-size: 0;
+}
+
+.studio .studio-block__field .studio-textarea {
+  max-inline-size: var(--studio-measure);
+}
+
+.studio .studio-block__media {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.studio .studio-block__media-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.studio .studio-block__media-name {
+  overflow-wrap: anywhere;
+}
+
+.studio .studio-block__divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0;
+  color: var(--color-text-meta);
+}
+
+.studio .studio-block__rule {
+  display: inline-block;
+  inline-size: 4rem;
+  block-size: 1px;
+  background: var(--color-rule-strong);
+}
+
+.studio .studio-blocks__empty {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-3);
+  padding-block: var(--space-4);
+}
+
+.studio .studio-blocks__add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  padding: var(--space-3) 0 0;
+  border: 0;
+  border-block-start: 1px dashed var(--color-rule-strong);
+}
+
+.studio .studio-blocks__add > legend {
+  float: inline-start;
+  inline-size: 100%;
+  margin-block-end: var(--space-2);
+  padding: 0;
+}

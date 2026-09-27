@@ -1,9 +1,20 @@
-/** STUB (P3 Social links): inline table, enable/disable, order. */
-import { StubPanel } from "../../components/studio/shell/stub-panel";
-import { withOwner } from "../../lib/cms/studio/auth.server";
+/** `/studio/social`: social links table (create, update, toggle, delete, reorder). */
+import { useLoaderData } from "react-router";
+import { SocialLinks } from "../../components/studio/social/social-links";
+import {
+  handleSocialAction,
+  loadSocialLinks,
+} from "../../lib/cms/repositories/social-links.server";
+import { withOwner, withOwnerMutation } from "../../lib/cms/studio/auth.server";
+import socialStyles from "../../styles/studio/social.css?url";
 
-export const loader = withOwner(() => null);
+export const links = () => [{ rel: "stylesheet", href: socialStyles }];
+
+export const loader = withOwner(loadSocialLinks);
+
+export const action = withOwnerMutation(handleSocialAction);
 
 export default function SocialLinksRoute() {
-  return <StubPanel title="Social links" legacyHref="/admin/links" />;
+  const data = useLoaderData<typeof loader>();
+  return <SocialLinks links={data.links} />;
 }

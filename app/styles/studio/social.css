@@ -1,0 +1,273 @@
+/*
+ * Social links (package P3): inline rows, the show/hide switch and the
+ * public footer preview. Loaded only by /studio/social.
+ */
+
+.studio .p3-intro {
+  max-inline-size: 64ch;
+  margin: 0 0 var(--space-5);
+  color: var(--color-text-secondary);
+}
+
+.studio .p3-social {
+  --p3-order-w: calc(var(--studio-control-h-compact) * 3 + 4px);
+  --p3-social-cols: 8.5rem minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.6fr) 8rem
+    8.5rem;
+
+  display: grid;
+  gap: var(--space-6);
+}
+
+@media (min-width: 1200px) {
+  .studio .p3-social {
+    grid-template-columns: minmax(0, 1fr) 17rem;
+    align-items: start;
+  }
+
+  .studio .p3-footer-preview {
+    position: sticky;
+    inset-block-start: calc(var(--studio-topbar-h) + var(--space-4));
+  }
+}
+
+.studio .p3-social__main {
+  display: grid;
+  gap: var(--space-4);
+  min-inline-size: 0;
+}
+
+.studio .p3-social__head {
+  display: none;
+}
+
+.studio .p3-social__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-block-start: 1px solid var(--color-rule-strong);
+}
+
+.studio .p3-social__row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-3);
+  padding-block: var(--space-3);
+  border-block-end: 1px solid var(--color-rule);
+}
+
+.studio .p3-social__row[data-dirty] {
+  box-shadow: inset 2px 0 0 var(--color-warning);
+}
+
+.studio .p3-social__order {
+  padding-block-start: var(--space-1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .studio .p3-social__row:hover .studio-order__step,
+  .studio .p3-social__row:focus-within .studio-order__step {
+    opacity: 1;
+  }
+}
+
+.studio .p3-social__form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2) var(--space-3);
+  min-inline-size: 0;
+}
+
+.studio .p3-social__cell {
+  display: grid;
+  align-content: start;
+  gap: var(--space-1);
+  min-inline-size: 0;
+}
+
+.studio .p3-social__url,
+.studio .p3-social__actions {
+  grid-column: 1 / -1;
+}
+
+.studio .p3-social__label {
+  color: var(--color-text-meta);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta-xs);
+  letter-spacing: 0.08em;
+}
+
+.studio .p3-social__row:not([data-enabled]) .studio-input {
+  color: var(--color-text-secondary);
+}
+
+.studio .p3-social__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.studio .p3-social__state {
+  margin-inline-end: auto;
+  color: var(--color-text-meta);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta-xs);
+  letter-spacing: 0.08em;
+}
+
+.studio .p3-social__state[data-state="unsaved"] {
+  color: var(--color-warning);
+}
+
+.studio .p3-social__state[data-state="error"] {
+  color: var(--color-danger);
+}
+
+@media (min-width: 1024px) {
+  .studio .p3-social__head {
+    display: grid;
+    grid-template-columns: var(--p3-social-cols);
+    gap: var(--space-3);
+    padding: 0 0 var(--space-2) calc(var(--p3-order-w) + var(--space-3));
+    color: var(--color-text-meta);
+    font-family: var(--font-mono);
+    font-size: var(--text-meta-xs);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .studio .p3-social__form {
+    grid-template-columns: var(--p3-social-cols);
+  }
+
+  .studio .p3-social__url {
+    grid-column: auto;
+  }
+
+  /* The column header names the fields of listed rows. */
+  .studio .p3-social__list .p3-social__label {
+    position: absolute;
+    overflow: hidden;
+    inline-size: 1px;
+    block-size: 1px;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+/* ---- Show / hide switch -------------------------------------------------------- */
+
+.studio .p3-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: var(--studio-control-h-compact);
+  padding: 0;
+  border: 0;
+  color: var(--color-text);
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+.studio .p3-switch__track {
+  position: relative;
+  display: inline-block;
+  inline-size: 2.25rem;
+  block-size: 1.25rem;
+  border: 1px solid var(--color-control-border);
+  border-radius: var(--radius-xs);
+  background: var(--color-bg-2);
+}
+
+.studio .p3-switch__thumb {
+  position: absolute;
+  inset-block: 2px;
+  inset-inline-start: 2px;
+  inline-size: calc(1.25rem - 6px);
+  background: var(--color-text-secondary);
+  transition:
+    translate var(--dur-1) var(--ease-standard),
+    background-color var(--dur-1) var(--ease-standard);
+}
+
+/* Checked state of a set: an allowed accent. */
+.studio .p3-switch[aria-checked="true"] .p3-switch__thumb {
+  background: var(--color-accent);
+  translate: 1rem 0;
+}
+
+.studio .p3-switch[aria-checked="false"] .p3-switch__label {
+  color: var(--color-text-meta);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .studio .p3-switch__thumb {
+    transition: none;
+  }
+}
+
+/* ---- Add a link ------------------------------------------------------------ */
+
+.studio .p3-social__add {
+  display: grid;
+  gap: var(--space-3);
+  margin-block-start: var(--space-4);
+  padding-block-start: var(--space-4);
+  border-block-start: 1px dashed var(--color-rule-strong);
+}
+
+.studio .p3-social__add .studio-section-label {
+  margin: 0;
+}
+
+.studio .p3-social__enable {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-inline-end: auto;
+}
+
+.studio .p3-social__enable input {
+  accent-color: var(--color-accent);
+}
+
+/* ---- Footer preview ---------------------------------------------------------- */
+
+.studio .p3-footer-preview {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-block-start: 1px solid var(--color-rule-strong);
+  background: var(--color-bg-2);
+}
+
+.studio .p3-footer-preview__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.studio .p3-footer-preview__head .studio-section-label {
+  margin: 0;
+}
+
+.studio .p3-footer-preview__group {
+  margin: 0;
+  color: var(--color-text-meta);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta-xs);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.studio .p3-footer-preview__list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  color: var(--color-text-secondary);
+  list-style: none;
+}

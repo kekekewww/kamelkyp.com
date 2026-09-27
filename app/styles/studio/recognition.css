@@ -1,0 +1,338 @@
+/*
+ * Recognition screens and the editorial kit shared with Writing (package P3).
+ * Scoped to `.studio`; loaded only by the recognition and writing routes.
+ * Tokens: app/styles/tokens.css; density: app/styles/studio/base.css.
+ */
+
+/* ---- List: count line ------------------------------------------------------ */
+
+.studio .p3-count {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  margin: 0 0 var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+}
+
+.studio .p3-count__n {
+  color: var(--color-text-meta);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta-xs);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.08em;
+  line-height: 1.8;
+}
+
+/* ---- List: the year rail --------------------------------------------------- */
+
+.studio .p3-year {
+  display: grid;
+  gap: var(--space-2) var(--space-6);
+  padding-block-end: var(--space-6);
+}
+
+.studio .p3-year__label {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  margin: 0;
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--color-rule-strong);
+  font-weight: inherit;
+}
+
+.studio .p3-year__numeral {
+  color: var(--color-text);
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-stretch: 125%;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-weight: 300;
+  letter-spacing: -0.01em;
+  line-height: 1;
+}
+
+.studio .p3-year__numeral[data-empty] {
+  color: var(--color-text-secondary);
+  font-family: var(--font-body);
+  font-size: var(--text-body-s);
+  font-stretch: 100%;
+  font-weight: 500;
+}
+
+.studio .p3-year__count {
+  color: var(--color-text-meta);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta-xs);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.studio .p3-year__rows {
+  min-inline-size: 0;
+  border-block-start: 1px solid var(--color-rule-strong);
+}
+
+@media (min-width: 1024px) {
+  .studio .p3-year {
+    grid-template-columns: 7.5rem minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .studio .p3-year__label {
+    position: sticky;
+    inset-block-start: calc(var(--studio-topbar-h) + var(--space-4));
+    display: grid;
+    gap: var(--space-2);
+  }
+
+  .studio .p3-year__numeral {
+    font-size: 2rem;
+  }
+}
+
+/* Rows that cannot move keep the columns aligned with those that can. */
+.studio .p3-handle-spacer {
+  display: inline-block;
+  inline-size: calc(var(--studio-control-h-compact) * 3 + 4px);
+}
+
+/* ---- Row menu -------------------------------------------------------------- */
+
+.studio .p3-menu {
+  position: relative;
+}
+
+.studio .p3-menu__button {
+  display: inline-grid;
+  place-items: center;
+  inline-size: var(--studio-control-h-compact);
+  block-size: var(--studio-control-h-compact);
+  border: 1px solid transparent;
+  border-radius: var(--radius-xs);
+  color: var(--color-text-secondary);
+  background: transparent;
+  font-size: 1rem;
+  line-height: 1;
+  transition:
+    border-color var(--dur-1) var(--ease-standard),
+    color var(--dur-1) var(--ease-standard);
+}
+
+.studio .p3-menu__button[aria-expanded="true"] {
+  border-color: var(--color-control-border);
+  color: var(--color-text);
+}
+
+@media (hover: hover) {
+  .studio .p3-menu__button:hover {
+    border-color: var(--color-control-border);
+    color: var(--color-text);
+  }
+}
+
+.studio .p3-menu__list {
+  position: absolute;
+  z-index: 20;
+  inset-block-start: calc(100% + 4px);
+  inset-inline-end: 0;
+  display: grid;
+  min-inline-size: 13rem;
+  padding: var(--space-1);
+  border: 1px solid var(--color-rule-strong);
+  border-radius: var(--radius-xs);
+  background: var(--color-surface);
+  box-shadow: var(--studio-edge), var(--studio-float);
+}
+
+.studio .p3-menu__item {
+  display: flex;
+  align-items: center;
+  min-block-size: var(--studio-control-h-compact);
+  padding-inline: var(--space-3);
+  border: 0;
+  color: var(--color-text);
+  background: transparent;
+  font: inherit;
+  text-align: start;
+  text-decoration: none;
+}
+
+.studio .p3-menu__item:focus-visible {
+  outline-offset: -2px;
+  background: var(--color-surface-hover);
+}
+
+@media (hover: hover) {
+  .studio .p3-menu__item:hover {
+    background: var(--color-surface-hover);
+  }
+}
+
+/* ---- Editor chrome --------------------------------------------------------- */
+
+.studio .p3-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin: 0 0 var(--space-5);
+  padding: var(--space-3) var(--space-4);
+  border-inline-start: 2px solid var(--color-warning);
+  background: var(--color-surface);
+  box-shadow: var(--studio-edge);
+}
+
+.studio .p3-banner > p {
+  flex: 1 1 20rem;
+  margin: 0;
+}
+
+.studio .p3-banner--error {
+  border-inline-start-color: var(--color-danger);
+}
+
+.studio .p3-banner--error strong {
+  color: var(--color-danger);
+  font-weight: 600;
+}
+
+.studio .p3-banner__issues {
+  display: grid;
+  flex-basis: 100%;
+  gap: var(--space-1);
+  margin: 0;
+  padding-inline-start: var(--space-4);
+}
+
+.studio .p3-editor-form {
+  display: grid;
+  gap: var(--space-4);
+  min-inline-size: 0;
+}
+
+.studio .p3-fields-row {
+  display: grid;
+  gap: var(--space-4);
+}
+
+@media (min-width: 768px) {
+  .studio .p3-fields-row {
+    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+    align-items: start;
+  }
+}
+
+.studio .p3-term {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+  min-inline-size: 0;
+}
+
+.studio .p3-term > .studio-field {
+  justify-self: stretch;
+}
+
+.studio .p3-term__add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.studio .p3-term__add legend {
+  float: inline-start;
+  inline-size: 100%;
+  margin-block-end: var(--space-1);
+  padding: 0;
+}
+
+.studio .p3-term__add .studio-input {
+  inline-size: 9rem;
+}
+
+.studio .p3-feature {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+  padding-block-start: var(--space-4);
+  border-block-start: 1px solid var(--color-rule);
+}
+
+.studio .p3-note {
+  margin: 0;
+  padding-inline-start: var(--space-3);
+  border-inline-start: 1px solid var(--color-rule-strong);
+}
+
+.studio .p3-wide-only {
+  display: none;
+}
+
+@media (min-width: 1200px) {
+  .studio .p3-wide-only {
+    display: inline-flex;
+  }
+}
+
+/* Quick create pages. */
+.studio .p3-new {
+  display: grid;
+  gap: var(--space-5);
+  max-inline-size: 48rem;
+}
+
+.studio .p3-new__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+/* Small screens: a sticky bottom bar carries the save state, Save and Publish. */
+.studio .p3-mobilebar {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .studio .p3-mobilebar {
+    position: fixed;
+    z-index: 15;
+    inset-inline: 0;
+    inset-block-end: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-4)
+      calc(var(--space-2) + env(safe-area-inset-bottom, 0px));
+    border-block-start: 1px solid var(--color-rule-strong);
+    background: var(--color-bg-2);
+  }
+
+  .studio .p3-mobilebar__state {
+    margin-inline-end: auto;
+    color: var(--color-text-secondary);
+    font-family: var(--font-mono);
+    font-size: var(--text-meta-xs);
+    letter-spacing: 0.08em;
+  }
+
+  .studio .p3-topbar-save,
+  .studio .p3-topbar-publish {
+    display: none;
+  }
+
+  .studio .p3-editor-form {
+    padding-block-end: 4.5rem;
+  }
+
+  .studio:has(.p3-mobilebar) .studio-toasts {
+    inset-block-end: 4rem;
+  }
+}
