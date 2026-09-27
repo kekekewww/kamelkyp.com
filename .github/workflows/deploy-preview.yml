@@ -64,6 +64,11 @@ jobs:
           ADMIN_EMAIL: ${{ vars.ADMIN_EMAIL }}
           WORKERS_DEV_SUBDOMAIN: ${{ vars.WORKERS_DEV_SUBDOMAIN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          # Content Studio media; unset → no R2 binding, uploads stay off.
+          R2_MEDIA_BUCKET: ${{ vars.R2_MEDIA_BUCKET }}
+          MEDIA_PUBLIC_BASE_URL: ${{ vars.MEDIA_PUBLIC_BASE_URL }}
+          MEDIA_CORS_HOSTS: ${{ vars.MEDIA_CORS_HOSTS }}
+          IMAGE_TRANSFORMATIONS: ${{ vars.IMAGE_TRANSFORMATIONS }}
         run: node scripts/render-wrangler-config.mjs preview
       - name: Render ephemeral Worker secrets
         env:

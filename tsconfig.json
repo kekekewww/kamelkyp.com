@@ -17,6 +17,7 @@
     "tests/**/*.ts",
     "workers/**/*.ts",
     "playwright.config.ts",
+    "playwright.studio.config.ts",
     "worker-configuration.d.ts",
     "react-router.config.ts",
     "vite.config.ts"

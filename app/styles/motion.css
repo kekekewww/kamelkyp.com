@@ -1,102 +1,549 @@
-.site-header__menu-button span,
-.nav-group__disclosure span,
-.landing-services > a,
-.landing-updates__items article,
-.service-choice__item,
-.commission-entry__choices > a,
-button,
-.button {
+/* ==========================================================================
+   Motion (docs/motion-system.md §2, §5, §8.1).
+   - Every transform rule lives inside @media (prefers-reduced-motion: no-preference).
+   - Hover rules live inside @media (hover: hover).
+   - No endlessly looping animations in public CSS (unit-tested).
+   - Runtime values arrive via the CSSOM / WAAPI from app/lib/motion/*, never via
+     server-rendered style="" attributes (CSP style-src 'self').
+   ========================================================================== */
+
+/* ---- Tier hooks: :root[data-motion="static" | "lite" | "full"] (set by <MotionTierSync />) ---- */
+
+/* ==========================================================================
+   Colour / opacity transitions (allowed in every tier, --dur-1 under RM)
+   ========================================================================== */
+.button,
+.text-link,
+.chip,
+.site-nav__link,
+.language-switcher span,
+.footer-group a,
+.site-header__menu-button,
+.site-header,
+.breadcrumb a {
   transition:
-    color var(--motion-fast) ease,
-    background-color var(--motion-fast) ease,
-    border-color var(--motion-fast) ease,
-    opacity var(--motion-fast) ease,
-    transform var(--motion-normal) ease;
+    color var(--dur-1) var(--ease-out-quart),
+    background-color var(--dur-1) var(--ease-out-quart),
+    border-color var(--dur-1) var(--ease-out-quart),
+    text-decoration-color var(--dur-1) var(--ease-out-quart),
+    opacity var(--dur-1) var(--ease-out-quart);
 }
 
-.nav-group__menu {
-  visibility: hidden;
+:focus-visible {
+  transition: outline-color var(--dur-1) var(--ease-out-quart);
+}
+
+/* ==========================================================================
+   Micro-interactions (§5): transforms only under no-preference
+   ========================================================================== */
+@media (prefers-reduced-motion: no-preference) {
+  .button {
+    transition:
+      color var(--dur-1) var(--ease-out-quart),
+      background-color var(--dur-1) var(--ease-out-quart),
+      border-color var(--dur-1) var(--ease-out-quart),
+      opacity var(--dur-1) var(--ease-out-quart),
+      transform var(--dur-1) var(--ease-out-quart);
+  }
+
+  .button:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+
+  .button__arrow,
+  .text-link__arrow,
+  .link-arrow__icon {
+    transition: transform var(--dur-2) var(--ease-out-quart);
+  }
+
+  .button__label {
+    transition: transform var(--dur-2) var(--ease-out-quart);
+  }
+
+  @media (hover: hover) {
+    .button--primary:hover .button__arrow,
+    .text-link:hover .text-link__arrow,
+    .text-link:hover .link-arrow__icon {
+      transform: translateX(4px);
+    }
+
+    .button--primary:hover .button__label:not([data-magnetic-label]) {
+      transform: translateX(2px);
+    }
+
+    .text-link:hover .text-link__arrow[data-arrow="external"] {
+      transform: translate(2px, -2px);
+    }
+
+    .text-link:hover .text-link__arrow[data-arrow="back"] {
+      transform: translateX(-4px);
+    }
+  }
+
+  .text-link:focus-visible .text-link__arrow:not([data-arrow]) {
+    transform: translateX(4px);
+  }
+
+  /* Nav underline (scaleX from the left) */
+  .site-nav__link::after {
+    transition:
+      transform var(--dur-2) var(--ease-out-quart),
+      background-color var(--dur-1) var(--ease-out-quart);
+  }
+
+  /* Filter chip active underline hook (§2.9) */
+  .chip::after {
+    transition: transform var(--dur-2) var(--ease-out-quart);
+  }
+
+  /* Footer accordion + / − */
+  .site-footer__mobile-groups summary::after {
+    transition: transform var(--dur-2) var(--ease-out-quart);
+  }
+
+  /* Menu button icon morph (§2.10) */
+  .site-header__menu-button span {
+    transition: transform var(--dur-2) var(--ease-out-quart);
+  }
+
+  /* Mobile menu panel: opacity + 8px drop (§2.10), links not staggered */
+  @media (max-width: 1023.98px) {
+    .site-nav[data-open] {
+      animation: menu-panel-in var(--dur-3) var(--ease-out-quart) both;
+    }
+  }
+
+  /* Choice cards, stepper bar */
+  .choice-card {
+    transition:
+      background-color var(--dur-2) var(--ease-out-quart),
+      transform var(--dur-1) var(--ease-out-quart);
+  }
+
+  .choice-card:active {
+    transform: scale(0.99);
+  }
+
+  .stepper__bar {
+    transform-origin: left center;
+    transition: transform var(--dur-3) var(--ease-out-quart);
+  }
+}
+
+@keyframes menu-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ==========================================================================
+   Reveal (§2.1, §2.2). JS arms only below-the-fold elements
+   (data-reveal-state="armed"); SSR markup is always the visible end state.
+   ========================================================================== */
+@media (prefers-reduced-motion: no-preference) {
+  [data-reveal][data-reveal-state="armed"],
+  [data-reveal-group] [data-reveal-item][data-reveal-state="armed"] {
+    opacity: 0;
+    transform: translateY(var(--reveal-y, 16px));
+  }
+
+  [data-reveal="up"][data-reveal-state="armed"] {
+    --reveal-y: 24px;
+  }
+
+  [data-reveal="fade"][data-reveal-state="armed"] {
+    transform: none;
+  }
+
+  [data-reveal="mask"][data-reveal-state="armed"] {
+    clip-path: inset(0 0 100% 0);
+    transform: translateY(min(0.25em, 24px));
+  }
+
+  :root[data-motion="lite"] [data-reveal][data-reveal-state="armed"] {
+    --reveal-y: 8px;
+  }
+
+  :root[data-motion="lite"] [data-reveal="up"][data-reveal-state="armed"] {
+    --reveal-y: 12px;
+  }
+}
+
+/* Keyboard focus, anchors and print always force the end state. */
+[data-reveal-state="armed"]:focus-within,
+[data-reveal-state="armed"]:target {
+  clip-path: none;
+  opacity: 1;
+  transform: none;
+}
+
+@media print {
+  [data-reveal-state] {
+    clip-path: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* ---- Hero intro: CSS-only, first document load only (§2.1) ---- */
+@media (prefers-reduced-motion: no-preference) {
+  .hero-intro .hero-intro__item {
+    animation: hero-rise-in var(--dur-5) var(--ease-out-expo) both;
+  }
+
+  .hero-intro .hero-intro__item[data-reveal="mask"],
+  .hero-intro h1.hero-intro__item {
+    animation-name: hero-mask-in;
+  }
+
+  .hero-intro [data-intro-step="0"] {
+    animation-delay: 0ms;
+  }
+  .hero-intro [data-intro-step="1"] {
+    animation-delay: 80ms;
+  }
+  .hero-intro [data-intro-step="2"] {
+    animation-delay: 160ms;
+  }
+  .hero-intro [data-intro-step="3"] {
+    animation-delay: 240ms;
+  }
+  .hero-intro [data-intro-step="4"] {
+    animation-delay: 320ms;
+  }
+  .hero-intro [data-intro-step="5"] {
+    animation-delay: 400ms;
+    animation-duration: var(--dur-4);
+  }
+}
+
+@keyframes hero-mask-in {
+  from {
+    clip-path: inset(0 0 100% 0);
+    transform: translateY(min(0.25em, 24px));
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+    transform: none;
+  }
+}
+
+@keyframes hero-rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ==========================================================================
+   Project media parallax (§2.3): CSS scroll-driven path; JS fallback in use-parallax.ts
+   ========================================================================== */
+.parallax {
+  overflow: clip;
+}
+
+@media (prefers-reduced-motion: no-preference) and (hover: hover) and (
+    min-width: 1024px
+  ) {
+  :root[data-motion="full"] .parallax {
+    container-type: size;
+  }
+
+  :root[data-motion="full"] .parallax__media {
+    scale: 1.12;
+  }
+
+  /* The overscan scale must not push the cover's overlays (PLACEHOLDER badge,
+     index numeral) past the frame edge: re-place them in unscaled coordinates
+     (x' = 50% - (50% - x) / 1.12) and cancel the scale on the overlay itself. */
+  :root[data-motion="full"] .parallax__media > .project-cover__badge {
+    inset-block-start: calc(50% - (50% - var(--space-3)) / 1.12);
+    inset-inline-start: calc(50% - (50% - var(--space-3)) / 1.12);
+    scale: calc(1 / 1.12);
+    transform-origin: 0 0;
+  }
+
+  :root[data-motion="full"] .parallax__media > .project-cover__numeral {
+    inset-block-end: calc(50% - 50% / 1.12);
+    inset-inline-start: calc(50% - (50% - var(--space-4)) / 1.12);
+    scale: calc(1 / 1.12);
+    transform-origin: 0 100%;
+  }
+
+  @supports (animation-timeline: view()) {
+    :root[data-motion="full"] .parallax__media {
+      --parallax-max: min(6cqh, 48px);
+      animation: parallax linear both;
+      animation-timeline: view();
+      animation-range: cover 0% cover 100%;
+    }
+  }
+}
+
+@keyframes parallax {
+  from {
+    translate: 0 var(--parallax-max, 0px);
+  }
+  to {
+    translate: 0 calc(var(--parallax-max, 0px) * -1);
+  }
+}
+
+/* ==========================================================================
+   Hover preview (§2.4). Data contract: rows [data-preview-id], images
+   [data-preview-for]; the hook sets data-visible / data-active / data-anchored.
+   ========================================================================== */
+.hover-preview {
+  position: absolute;
+  z-index: var(--z-preview);
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  display: none;
+  inline-size: clamp(15rem, 22vw, 22.5rem);
+  aspect-ratio: 4 / 3;
+  overflow: clip;
+  background: var(--color-surface);
+  box-shadow: var(--edge-light), var(--shadow-float);
   opacity: 0;
-  transform: translateY(-0.5rem) scale(0.98);
-  transform-origin: top left;
-  transition:
-    visibility 0s linear var(--motion-normal),
-    opacity var(--motion-fast) ease,
-    transform var(--motion-normal) ease;
   pointer-events: none;
 }
 
-.nav-group:hover .nav-group__menu,
-.nav-group[data-mobile-open] .nav-group__menu {
-  visibility: visible;
+@media (hover: hover) and (pointer: fine) and (min-width: 1024px) {
+  .hover-preview {
+    display: block;
+  }
+
+  :root[data-motion="lite"] .hover-preview {
+    display: none;
+  }
+}
+
+.hover-preview[data-visible] {
   opacity: 1;
-  transform: translateY(0) scale(1);
-  transition-delay: 0s;
-  pointer-events: auto;
 }
 
-.landing-services > a:hover,
-.landing-services > a:focus-visible,
-.landing-updates__items article:hover,
-.service-choice__item:hover,
-.commission-entry__choices > a:hover {
-  background: var(--color-console);
+.hover-preview__item {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+  opacity: 0;
 }
 
-.landing-services > a:hover > span:last-child,
-.landing-services > a:focus-visible > span:last-child {
-  transform: translateX(0.25rem);
+.hover-preview__item[data-active] {
+  opacity: 1;
 }
 
-button:active:not(:disabled),
-.button:active,
-.commission-entry__choices > a:active {
-  transform: scale(0.98);
+.hover-preview,
+.hover-preview__item {
+  transition: opacity var(--dur-1) linear;
 }
 
-@media (max-width: 960px) {
-  .site-navigation {
-    transform: translateY(-0.75rem);
+@media (prefers-reduced-motion: no-preference) {
+  .hover-preview {
+    scale: 0.96;
     transition:
-      opacity var(--motion-fast) ease,
-      transform var(--motion-normal) ease;
+      opacity var(--dur-2) var(--ease-in-quart),
+      scale var(--dur-2) var(--ease-in-quart);
   }
 
-  .site-navigation[data-open] {
-    transform: translateY(0);
+  .hover-preview[data-visible] {
+    scale: 1;
+    transition:
+      opacity var(--dur-3) var(--ease-weighted),
+      scale var(--dur-3) var(--ease-weighted);
   }
 
-  .nav-group__menu,
-  .nav-group:hover .nav-group__menu,
-  .nav-group[data-mobile-open] .nav-group__menu {
-    visibility: visible;
-    opacity: 1;
-    transform: none;
-    transition: none;
-    pointer-events: auto;
+  .hover-preview__item {
+    transition: opacity var(--dur-2) var(--ease-out-quart);
+  }
+
+  .project-row__title {
+    transition:
+      transform var(--dur-2) var(--ease-out-quart),
+      color var(--dur-2) var(--ease-out-quart);
+  }
+
+  .project-row__meta {
+    transition: opacity var(--dur-2) var(--ease-out-quart);
+  }
+
+  @media (hover: hover) {
+    .project-row:hover .project-row__title {
+      transform: translateX(8px);
+    }
+  }
+
+  .project-row:focus-visible .project-row__title {
+    transform: translateX(8px);
+  }
+}
+
+/* Touch: no floating preview, inline thumbnail instead (page CSS sizes it). */
+.project-row__thumb {
+  display: none;
+}
+
+@media (hover: none), (max-width: 767.98px) {
+  .project-row__thumb {
+    display: block;
+  }
+}
+
+/* ==========================================================================
+   Magnetic (§2.5). No static rules: the targets are already inline-flex /
+   inline-block, and use-magnetic.ts writes transform via the CSSOM.
+   ========================================================================== */
+
+/* ==========================================================================
+   View transitions (§2.6). data-vt="active" is set only on the item being
+   navigated (useVtFlag); detail pages carry the names via class.
+   ========================================================================== */
+.site-header {
+  view-transition-name: site-header;
+}
+
+::view-transition-group(site-header) {
+  animation: none;
+}
+
+[data-vt="active"] .project-row__title,
+[data-vt="active"].project-row__title,
+.project-hero__title {
+  view-transition-name: vt-project-title;
+}
+
+[data-vt="active"] .project-row__cover,
+[data-vt="active"].project-row__cover,
+.hover-preview__item[data-vt="active"],
+.project-hero__cover {
+  view-transition-name: vt-project-cover;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-old(root) {
+    animation: vt-fade-out var(--dur-2) var(--ease-in-quart) both;
+  }
+
+  ::view-transition-new(root) {
+    animation: vt-rise-in var(--dur-4) var(--ease-out-expo) both;
+  }
+
+  ::view-transition-group(vt-project-title),
+  ::view-transition-group(vt-project-cover) {
+    animation-duration: var(--dur-4);
+    animation-timing-function: var(--ease-in-out-quint);
+  }
+
+  ::view-transition-old(vt-project-title),
+  ::view-transition-new(vt-project-title) {
+    mix-blend-mode: normal;
+    animation-duration: var(--dur-3);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
+  ::view-transition-group(*) {
+    animation: none;
   }
 
-  *,
-  *::before,
-  *::after {
-    animation-duration: 1ms;
-    animation-iteration-count: 1;
-    transition-duration: 1ms;
+  ::view-transition-old(root) {
+    animation: vt-fade-out var(--dur-1) linear both;
   }
 
-  .nav-group__menu,
-  .site-navigation,
-  .landing-services > a:hover > span:last-child,
-  .landing-services > a:focus-visible > span:last-child,
-  button:active:not(:disabled),
-  .button:active,
-  .commission-entry__choices > a:active {
-    transform: none;
+  ::view-transition-new(root) {
+    animation: vt-fade-in var(--dur-1) linear both;
   }
+}
+
+@keyframes vt-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes vt-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes vt-rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+/* ==========================================================================
+   Navigation progress hairline (§2.6)
+   ========================================================================== */
+.nav-progress {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: -1px;
+  block-size: 1px;
+  background: var(--color-text-secondary);
+  opacity: 0;
+  pointer-events: none;
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+.nav-progress[data-state="loading"] {
+  opacity: 1;
+}
+
+.nav-progress[data-state="done"] {
+  opacity: 0;
+  transform: scaleX(1);
+  transition: opacity var(--dur-2) var(--ease-out-quart);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .nav-progress[data-state="loading"] {
+    transform: scaleX(0.8);
+    transition:
+      transform 2400ms var(--ease-out-quart),
+      opacity var(--dur-1) linear;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-progress[data-state="loading"] {
+    transform: scaleX(1);
+  }
+}
+
+/* ==========================================================================
+   Audio-reactive bars (§2.8): JS writes transform: scaleY() via CSSOM.
+   ========================================================================== */
+/* transform-origin stays centre (media.css): the design-system waveform has a
+   centred baseline, so bars grow symmetrically around it. */
+
+/* ==========================================================================
+   Hero canvas (§4): position/size only; the Home agent owns the component.
+   ========================================================================== */
+.hero-canvas {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.hero-canvas[data-ready] {
+  opacity: 1;
+  transition: opacity var(--dur-4) linear;
 }

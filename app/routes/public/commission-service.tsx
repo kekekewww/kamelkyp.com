@@ -1,5 +1,6 @@
 import { type LoaderFunctionArgs, useLoaderData } from "react-router";
 import { CommissionWizard } from "../../components/commission/commission-wizard";
+import type { PublicRouteHandle } from "../../components/layout/public-shell";
 import { getActiveTerms } from "../../lib/commission/terms-repository.server";
 import { getPublicLoaderContext } from "../../lib/content/public-loader.server";
 import { getUsableFxSnapshot } from "../../lib/pricing/fx-repository.server";
@@ -12,6 +13,9 @@ const ROUTE_SERVICES: Record<string, ServiceId> = {
   "song-transition/simple": "simple_transition",
   "song-transition/edit": "edit_transition",
 };
+
+// No contact band on commission pages (IA §5.1).
+export const handle: PublicRouteHandle = { contactBand: false };
 
 export async function loader(args: LoaderFunctionArgs) {
   const routeKey = `${args.params.category ?? ""}/${args.params.service ?? ""}`;

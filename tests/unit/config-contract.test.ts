@@ -35,6 +35,8 @@ async function render(
       main: "./index.js",
       assets: { directory: "../client" },
       compatibility_date: "2026-08-10",
+      r2_buckets: [{ binding: "MEDIA", bucket_name: "kamelkyp-media-local" }],
+      vars: { STUDIO_DEV_OWNER_EMAIL: "leaked@example.com" },
     }),
   );
 
@@ -151,6 +153,92 @@ describe("cloud project configuration", () => {
       ]);
     } finally {
       await rm(result.directory, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps a local-only media bucket in the base config", async () => {
+    const wranglerConfig = JSON.parse(
+      await readFile("wrangler.base.jsonc", "utf8"),
+    );
+    expect(wranglerConfig.r2_buckets).toEqual([
+      { binding: "MEDIA", bucket_name: "kamelkyp-media-local" },
+    ]);
+  });
+
+  it("renders the media bucket and media vars when configured", async () => {
+    const result = await render("production", {
+      ...required,
+      APP_ORIGIN: "https://kamelkyp.com",
+      R2_MEDIA_BUCKET: "kamelkyp-media",
+      MEDIA_PUBLIC_BASE_URL: "https://media.kamelkyp.com",
+      MEDIA_CORS_HOSTS: "media.kamelkyp.com,raw.githubusercontent.com",
+      IMAGE_TRANSFORMATIONS: "on",
+    });
+
+    try {
+      expect(result.status).toBe(0);
+      const config = await result.readOutput();
+      expect(config.r2_buckets).toEqual([
+        { binding: "MEDIA", bucket_name: "kamelkyp-media" },
+      ]);
+      expect(config.vars).toMatchObject({
+        MEDIA_PUBLIC_BASE_URL: "https://media.kamelkyp.com",
+        MEDIA_CORS_HOSTS: "media.kamelkyp.com,raw.githubusercontent.com",
+        IMAGE_TRANSFORMATIONS: "on",
+      });
+    } finally {
+      await rm(result.directory, { recursive: true, force: true });
+    }
+  });
+
+  it("turns uploads off and never ships the local bucket or a dev owner", async () => {
+    const result = await render("preview", {
+      ...required,
+      PR_NUMBER: "42",
+      WORKERS_DEV_SUBDOMAIN: "example-workers",
+      R2_MEDIA_BUCKET: undefined,
+      MEDIA_PUBLIC_BASE_URL: undefined,
+      MEDIA_CORS_HOSTS: undefined,
+      IMAGE_TRANSFORMATIONS: undefined,
+      STUDIO_DEV_OWNER_EMAIL: "admin@example.com",
+    });
+
+    try {
+      expect(result.status).toBe(0);
+      const config = await result.readOutput();
+      expect(config.r2_buckets).toEqual([]);
+      expect(config.vars.IMAGE_TRANSFORMATIONS).toBe("off");
+      expect(config.vars).not.toHaveProperty("MEDIA_PUBLIC_BASE_URL");
+      expect(JSON.stringify(config)).not.toContain("STUDIO_DEV_OWNER");
+      expect(JSON.stringify(config)).not.toContain("kamelkyp-media-local");
+    } finally {
+      await rm(result.directory, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects invalid media configuration", async () => {
+    for (const [name, value, code] of [
+      [
+        "MEDIA_PUBLIC_BASE_URL",
+        "http://media.example.com",
+        "invalid_media_public_base_url",
+      ],
+      ["R2_MEDIA_BUCKET", "Bad_Bucket", "invalid_r2_media_bucket"],
+      ["MEDIA_CORS_HOSTS", "https://x.example", "invalid_media_cors_hosts"],
+      ["IMAGE_TRANSFORMATIONS", "yes", "invalid_image_transformations"],
+    ] as const) {
+      const result = await render("preview", {
+        ...required,
+        PR_NUMBER: "42",
+        WORKERS_DEV_SUBDOMAIN: "example-workers",
+        [name]: value,
+      });
+      try {
+        expect(result.status).not.toBe(0);
+        expect(result.stderr).toContain(code);
+      } finally {
+        await rm(result.directory, { recursive: true, force: true });
+      }
     }
   });
 

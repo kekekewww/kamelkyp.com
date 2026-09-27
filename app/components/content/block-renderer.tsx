@@ -9,7 +9,7 @@ function renderBlock(
   options: {
     locale: Locale | null;
     mediaById: ReadonlyMap<string, MediaItem>;
-    r2Hosts: ReadonlySet<string>;
+    r2Hosts: ReadonlySet<string> | undefined;
   },
 ) {
   switch (block.type) {
@@ -63,11 +63,15 @@ function renderBlock(
   }
 }
 
+/**
+ * `r2Hosts` is optional: without it, media previews read the approved hosts
+ * from `MediaConfigProvider` (configured media host, legacy host by default).
+ */
 export function BlockRenderer({
   blocks,
   locale = null,
   media = [],
-  r2Hosts = new Set(["media.kamelkyp.com"]),
+  r2Hosts,
 }: {
   blocks: ContentBlock[];
   locale?: Locale | null;

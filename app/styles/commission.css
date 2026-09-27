@@ -1,313 +1,806 @@
-.commission-category > header,
+/* ==========================================================================
+   Commission wizard surfaces (docs/design-system.md §6.23, motion §5).
+   Stepper, fields, choice cards, review summary, quote, Turnstile slot,
+   actions and the success page. Page-level layout for /commission and
+   /commission/:category lives in pages/commission.css.
+   ========================================================================== */
+
+/* ---- Wizard column: eyebrows on the rail, everything else cols 4–10 ---- */
+.commission-wizard {
+  row-gap: var(--space-7);
+}
+
 .commission-wizard__header,
+.commission-step,
 .commission-step > header {
-  max-width: 64rem;
-  margin-bottom: clamp(2rem, 5vw, 4rem);
-}
-
-.commission-category h1,
-.commission-wizard__header h1 {
-  margin-bottom: 1rem;
-  font-size: clamp(3rem, 8vw, 7rem);
-}
-
-.commission-category__choices {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  border-block: 1px solid var(--color-line);
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
 }
 
-.commission-category__choices article {
-  min-width: 0;
-  padding: clamp(2rem, 5vw, 4rem);
-}
-
-.commission-category__choices article + article {
-  border-left: 1px solid var(--color-line);
-}
-
-.commission-category__choices h2,
-.commission-step h2 {
-  font-size: clamp(2.5rem, 6vw, 5rem);
-}
-
-.commission-category__price,
-.quote-summary__total dd {
-  color: var(--color-coral);
-  font-family: var(--font-mono);
-}
-
-.commission-category__choices a,
-.commission-actions button,
-.commission-fields button,
-.review-card button {
-  min-height: 44px;
-}
-
-.commission-wizard__header ol {
-  display: flex;
-  margin: 2rem 0 0;
-  padding: 0;
-  flex-wrap: wrap;
-  gap: 0.75rem 1.5rem;
-  color: var(--color-cool-gray);
-  font-family: var(--font-mono);
-  font-size: 0.74rem;
-  list-style: none;
-  text-transform: uppercase;
-}
-
-.commission-wizard__header li[aria-current="step"] {
-  color: var(--color-coral);
+.commission-wizard__header {
+  row-gap: var(--space-5);
 }
 
 .commission-step {
-  animation: commission-enter var(--motion-normal) ease both;
+  row-gap: var(--space-7);
 }
 
+.commission-step > header {
+  row-gap: var(--space-3);
+}
+
+.commission-wizard__header h1 {
+  max-inline-size: 22ch;
+}
+
+.commission-step__intro {
+  max-inline-size: 60ch;
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+@media (min-width: 1024px) {
+  .commission-wizard > .commission-wizard__header,
+  .commission-wizard > .commission-step,
+  .commission-step > header {
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid;
+  }
+
+  .commission-wizard__header > *,
+  .commission-step > *,
+  .commission-step > header > * {
+    grid-column: 4 / 11;
+  }
+
+  .commission-wizard__header > .eyebrow,
+  .commission-step > header > .eyebrow {
+    grid-column: 1 / 4;
+    align-self: start;
+    margin-block-start: 0.35em;
+  }
+
+  /* Eyebrow and heading share a row. */
+  .commission-wizard__header > .eyebrow + h1,
+  .commission-step > header > .eyebrow + h2 {
+    grid-row: 1;
+  }
+
+  .commission-wizard__header > .eyebrow,
+  .commission-step > header > .eyebrow {
+    grid-row: 1;
+  }
+}
+
+/* ---- Stepper ---- */
+.stepper {
+  display: grid;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-block-end: 1px solid var(--color-rule-strong);
+  list-style: none;
+}
+
+.stepper__item {
+  position: relative;
+  display: flex;
+  min-inline-size: 0;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding-block: var(--space-3);
+  color: var(--color-text-meta);
+}
+
+.stepper__index,
+.stepper__check,
+.stepper__count {
+  font-family: var(--font-mono);
+  font-size: var(--text-meta);
+  font-weight: 500;
+  letter-spacing: var(--tracking-meta);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.stepper__label,
+.stepper__compact-label {
+  font-size: var(--text-body-s);
+  font-weight: var(--weight-label);
+  letter-spacing: var(--tracking-meta);
+  text-transform: uppercase;
+}
+
+.stepper__item[data-state="done"] {
+  color: var(--color-text-secondary);
+}
+
+.stepper__item[data-state="done"] .stepper__index {
+  color: var(--color-text);
+}
+
+.stepper__item[data-state="current"] {
+  color: var(--color-text);
+}
+
+/* Current step: a 2px accent bar over the track segment (accent budget §2.4.3). */
+.stepper__bar {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: -1px;
+  block-size: 2px;
+  background: var(--color-accent);
+  transform: scaleX(0);
+}
+
+.stepper__item[data-state="current"] .stepper__bar {
+  transform: scaleX(1);
+}
+
+.stepper__compact {
+  display: none;
+  margin: 0;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding-block: var(--space-3);
+  border-block-end: 1px solid var(--color-rule-strong);
+  color: var(--color-text);
+}
+
+.stepper__count {
+  color: var(--color-text-meta);
+}
+
+@media (max-width: 767.98px) {
+  .stepper__compact {
+    display: flex;
+  }
+
+  /* Full list kept for screen readers only. */
+  .stepper {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+}
+
+/* ---- Fieldsets and fields ---- */
 .commission-step form {
   display: grid;
-  gap: 2rem;
+  gap: var(--space-8);
 }
 
 .commission-fields {
   display: grid;
-  min-width: 0;
+  min-inline-size: 0;
   margin: 0;
-  padding: clamp(1.25rem, 4vw, 2.5rem);
-  gap: 0.65rem;
-  border: 1px solid var(--color-line);
+  padding: 0;
+  border: 0;
 }
 
 .commission-fields legend {
-  padding-inline: 0.5rem;
-  color: var(--color-coral);
+  margin-block-end: var(--space-2);
+  padding: 0;
+  color: var(--color-text);
   font-family: var(--font-display);
-  font-size: 1.75rem;
+  font-size: var(--text-h2);
+  font-weight: var(--weight-heading);
+  line-height: var(--leading-heading-s);
+  letter-spacing: var(--tracking-heading-s);
 }
 
-.commission-fields input,
+:lang(zh) .commission-fields legend {
+  font-size: var(--text-h2-zh);
+  font-weight: var(--weight-heading-zh);
+  line-height: 1.3;
+  letter-spacing: 0.01em;
+}
+
+.commission-fields label:not(.checkbox-field) {
+  display: block;
+  margin-block: var(--space-5) var(--space-2);
+  color: var(--color-text);
+  font-size: var(--text-body-s);
+  font-weight: var(--weight-label);
+  line-height: var(--leading-body-s);
+}
+
+.commission-fields h3,
+.commission-song h3 {
+  font-size: var(--text-h3);
+  line-height: 1.25;
+  letter-spacing: 0;
+}
+
+:lang(zh) .commission-fields h3 {
+  font-size: var(--text-h3);
+}
+
+.commission-fields input:not([type="checkbox"]),
 .commission-fields select,
 .commission-fields textarea {
-  width: 100%;
-  min-height: 44px;
-  margin-bottom: 0.8rem;
-  padding: 0.75rem;
-  border: 1px solid var(--color-line);
-  border-radius: 0;
-  color: var(--color-chalk);
-  background: var(--color-console);
+  display: block;
+  inline-size: 100%;
+  min-block-size: var(--control-h);
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-control-border);
+  border-radius: var(--radius-xs);
+  color: var(--color-text);
+  background-color: var(--color-bg-2);
+  font-size: var(--text-body);
+  line-height: 1.4;
+  transition: border-color var(--dur-1) var(--ease-out-quart);
 }
 
 .commission-fields textarea {
-  min-height: 7rem;
+  min-block-size: 8rem;
   resize: vertical;
 }
 
-.checkbox-field,
-.terms-acceptance {
-  display: flex;
-  min-height: 44px;
-  align-items: center;
-  gap: 0.75rem;
+.commission-fields ::placeholder {
+  color: var(--color-text-meta);
+  opacity: 1;
 }
 
-.checkbox-field input,
-.terms-acceptance input {
-  width: 44px;
-  min-width: 44px;
-  min-height: 44px;
-  margin: 0;
+/* Custom chevron from two 1px lines; native semantics kept. */
+.commission-fields select {
+  padding-inline-end: var(--space-7);
+  appearance: none;
+  background-image:
+    linear-gradient(
+      45deg,
+      transparent calc(50% - 0.5px),
+      var(--color-text-secondary) calc(50% - 0.5px),
+      var(--color-text-secondary) calc(50% + 0.5px),
+      transparent calc(50% + 0.5px)
+    ),
+    linear-gradient(
+      -45deg,
+      transparent calc(50% - 0.5px),
+      var(--color-text-secondary) calc(50% - 0.5px),
+      var(--color-text-secondary) calc(50% + 0.5px),
+      transparent calc(50% + 0.5px)
+    );
+  background-position:
+    right var(--space-5) center,
+    calc(100% - var(--space-5) + 6px) center;
+  background-repeat: no-repeat;
+  background-size: 6px 6px;
 }
 
-.field-help,
-.quote-summary > p {
-  color: var(--color-cool-gray);
+.commission-fields input[type="date"] {
+  color-scheme: dark;
 }
 
-.commission-step > header p,
-.commission-category > header p {
-  color: var(--color-cool-gray);
+@media (hover: hover) {
+  .commission-fields input:not([type="checkbox"]):hover,
+  .commission-fields select:hover,
+  .commission-fields textarea:hover {
+    border-color: var(--color-text-secondary);
+  }
 }
 
+.commission-fields input:not([type="checkbox"]):focus-visible,
+.commission-fields select:focus-visible,
+.commission-fields textarea:focus-visible {
+  border-color: var(--color-accent);
+}
+
+.commission-fields [aria-invalid="true"] {
+  border-color: var(--color-danger);
+}
+
+.commission-fields input:disabled,
+.commission-fields input[readonly],
+.commission-fields select:disabled,
+.commission-fields textarea:disabled {
+  border-color: var(--color-rule-strong);
+  color: var(--color-text-secondary);
+  background-color: var(--color-bg);
+}
+
+.field-help {
+  max-inline-size: 60ch;
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-body-s);
+  line-height: var(--leading-body-s);
+}
+
+/* Repeatable groups (contacts, project links) and songs: space, not boxes. */
 .commission-repeatable,
 .commission-song {
-  margin-block: 1rem;
-  padding: 1rem;
-  border-left: 2px solid var(--color-line);
+  margin-block-start: var(--space-6);
 }
 
 .commission-repeatable__heading,
 .review-card__heading {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: var(--space-3) var(--space-4);
 }
 
 .commission-repeatable__row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.65rem 1rem;
+  padding-block: var(--space-2) var(--space-4);
+  grid-template-columns: minmax(0, 1fr);
+  border-block-end: 1px solid var(--color-rule);
 }
 
-.quote-summary,
-.review-card {
-  margin-top: 2rem;
-  padding: clamp(1.25rem, 4vw, 2.5rem);
-  border: 1px solid var(--color-line);
-  background: var(--color-console);
+.commission-song {
+  padding-block-end: var(--space-5);
+  border-block-end: 1px solid var(--color-rule);
 }
 
-.quote-summary h2,
-.review-card h3 {
-  font-size: 2rem;
+.commission-add {
+  justify-self: start;
+  margin-block-start: var(--space-4);
 }
 
-.quote-summary dl > div,
-.review-card dl > div {
-  display: grid;
-  padding-block: 0.65rem;
-  grid-template-columns: minmax(9rem, 1fr) minmax(0, 2fr);
-  gap: 1rem;
-  border-top: 1px solid var(--color-line-soft);
+@media (min-width: 768px) {
+  .commission-repeatable__row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-flow: column;
+    grid-template-rows: auto auto;
+    column-gap: var(--space-4);
+  }
 }
 
-.quote-summary dd,
-.review-card dd {
-  min-width: 0;
-  margin: 0;
+/* ---- Choice cards: label wrapping a checkbox (§6.23) ---- */
+.checkbox-field,
+.terms-acceptance {
+  display: flex;
+  min-block-size: var(--target-min);
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--color-rule-strong);
+  border-radius: var(--radius-xs);
+  color: var(--color-text);
+  background-color: var(--color-surface);
+  box-shadow: var(--edge-light);
+  font-size: var(--text-body-s);
+  font-weight: var(--weight-label);
+  line-height: var(--leading-body-s);
+  cursor: pointer;
+  transition:
+    background-color var(--dur-2) var(--ease-out-quart),
+    border-color var(--dur-1) var(--ease-out-quart);
 }
 
-.review-card pre {
-  max-width: 100%;
-  overflow: auto;
-  white-space: pre-wrap;
+.checkbox-field {
+  margin-block-start: var(--space-3);
 }
 
-.commission-terms {
-  display: grid;
-  gap: 1rem;
+/* A run of choice cards sits closer together than the fields around it. */
+.commission-fields > :not(.checkbox-field) + .checkbox-field {
+  margin-block-start: var(--space-5);
 }
 
-.commission-terms > article {
-  padding: clamp(1.25rem, 4vw, 2.5rem);
-  border: 1px solid var(--color-line);
+@media (hover: hover) {
+  .checkbox-field:hover,
+  .terms-acceptance:hover {
+    background-color: var(--color-surface-hover);
+  }
 }
 
-.commission-terms section + section {
-  margin-top: 2rem;
+.checkbox-field:has(input:checked),
+.terms-acceptance:has(input:checked) {
+  border-color: var(--color-text);
 }
 
-.commission-terms h3 {
-  margin-bottom: 0.6rem;
-  font-size: 1.6rem;
+.checkbox-field:has(input:focus-visible),
+.terms-acceptance:has(input:focus-visible) {
+  outline: var(--focus-width) solid var(--focus-color);
+  outline-offset: var(--focus-offset);
 }
 
-.commission-terms section > p {
-  color: var(--color-cool-gray);
+.checkbox-field:has(input:disabled),
+.terms-acceptance:has(input:disabled) {
+  border-color: var(--color-rule);
+  color: var(--color-text-meta);
+  cursor: not-allowed;
 }
 
-.commission-terms__version {
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
+/* 20px square indicator; the whole card is the 44px target. */
+.checkbox-field input,
+.terms-acceptance input {
+  position: relative;
+  display: inline-grid;
+  flex: none;
+  inline-size: 20px;
+  block-size: 20px;
+  margin: 0.1em 0 0;
+  place-content: center;
+  border: 1px solid var(--color-control-border);
+  border-radius: var(--radius-xs);
+  background-color: var(--color-bg-2);
+  appearance: none;
+  cursor: pointer;
+}
+
+.checkbox-field input::before,
+.terms-acceptance input::before {
+  inline-size: 10px;
+  block-size: 6px;
+  border-block-end: 2px solid var(--color-bg);
+  border-inline-start: 2px solid var(--color-bg);
+  content: "";
+  opacity: 0;
+  transform: translateY(-1px) rotate(-45deg);
+}
+
+.checkbox-field input:checked,
+.terms-acceptance input:checked {
+  border-color: var(--color-text);
+  background-color: var(--color-text);
+}
+
+.checkbox-field input:checked::before,
+.terms-acceptance input:checked::before {
+  opacity: 1;
+}
+
+/* The card carries the ring; avoid a second ring on the 20px box. */
+.checkbox-field input:focus-visible,
+.terms-acceptance input:focus-visible {
+  outline: none;
 }
 
 .terms-acceptance {
-  margin-block: 2rem;
-  padding: 1rem;
-  border: 1px solid var(--color-coral);
-  scroll-margin-block: 7rem;
+  scroll-margin-block: calc(var(--header-h) + var(--space-6));
 }
 
-.commission-actions {
-  position: sticky;
-  z-index: 1;
-  inset-block-end: 0;
-  display: flex;
-  margin-top: 2rem;
-  padding: 1rem;
-  justify-content: flex-end;
-  gap: 0.75rem;
-  border-top: 1px solid var(--color-line);
-  background: color-mix(in srgb, var(--color-mineral) 94%, transparent);
-  backdrop-filter: blur(12px);
+.terms-acceptance label {
+  flex: 1;
+  align-self: stretch;
+  cursor: pointer;
 }
 
-.commission-actions button,
-.commission-fields button,
-.review-card button {
-  padding: 0.65rem 1rem;
-  border: 1px solid var(--color-line);
-  color: var(--color-chalk);
-  background: transparent;
-}
-
-.commission-actions button:last-child {
-  border-color: var(--color-coral);
-  background: var(--color-coral);
-}
-
-.commission-actions button:disabled {
-  opacity: 0.5;
-}
-
+/* ---- Error summary and notices ---- */
 .error-summary {
-  margin-bottom: 2rem;
-  padding: 1rem;
-  border: 1px solid var(--color-coral);
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border-inline-start: 2px solid var(--color-danger);
+  background-color: var(--color-surface);
+  box-shadow: var(--edge-light);
 }
 
+.error-summary h3 {
+  color: var(--color-danger);
+  font-size: var(--text-h3);
+  line-height: 1.25;
+  letter-spacing: 0;
+}
+
+.error-summary ul {
+  display: grid;
+  margin: 0;
+  padding-inline-start: 1.25em;
+  gap: var(--space-2);
+  color: var(--color-text);
+  font-size: var(--text-body-s);
+}
+
+.error-summary li::marker {
+  color: var(--color-danger);
+}
+
+.commission-notice {
+  margin: 0;
+  padding: var(--space-4) var(--space-5);
+  border-inline-start: 2px solid var(--color-warning);
+  color: var(--color-warning);
+  background-color: var(--color-bg-2);
+  font-size: var(--text-body-s);
+}
+
+/* ---- Quote summary and review cards (§6.23 review summary) ---- */
+.quote-summary {
+  display: grid;
+  gap: var(--space-5);
+  padding: var(--space-6) var(--space-5);
+  background-color: var(--color-bg-2);
+}
+
+.quote-summary h2 {
+  font-size: var(--text-h3);
+  line-height: 1.25;
+  letter-spacing: 0;
+}
+
+:lang(zh) .quote-summary h2 {
+  font-size: var(--text-h3);
+  line-height: 1.3;
+}
+
+.quote-summary > p {
+  max-inline-size: 60ch;
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-body-s);
+}
+
+.review-card {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.review-card h3 {
+  font-size: var(--text-h3);
+  line-height: 1.25;
+  letter-spacing: 0;
+}
+
+.quote-summary dl,
+.review-card dl,
+.review-list {
+  margin: 0;
+}
+
+.quote-summary dl > div,
+.review-card dl > div,
+.review-list > div {
+  display: grid;
+  padding-block: var(--space-3);
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-1) var(--space-4);
+  border-block-start: 1px solid var(--color-rule);
+}
+
+.quote-summary dt,
+.review-card dt,
+.review-list dt {
+  color: var(--color-text-meta);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta);
+  font-weight: 500;
+  line-height: var(--leading-meta);
+  letter-spacing: var(--tracking-meta);
+  text-transform: uppercase;
+}
+
+:lang(zh) .quote-summary dt,
+:lang(zh) .review-card dt,
+:lang(zh) .review-list dt {
+  letter-spacing: var(--tracking-cjk-max);
+}
+
+.quote-summary dd,
+.review-card dd,
+.review-list dd {
+  min-inline-size: 0;
+  margin: 0;
+  color: var(--color-text);
+}
+
+.quote-summary dd {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+@media (min-width: 480px) {
+  .quote-summary dl > div,
+  .review-card dl > div,
+  .review-list > div {
+    grid-template-columns: minmax(8rem, 2fr) minmax(0, 5fr);
+    align-items: baseline;
+  }
+
+  .quote-summary dd {
+    text-align: end;
+  }
+}
+
+.quote-summary .quote-summary__total {
+  align-items: end;
+  padding-block-start: var(--space-4);
+  border-block-start-color: var(--color-rule-strong);
+}
+
+.quote-summary__total dd {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 1.4rem + 2vw, 3rem);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.review-card pre {
+  max-inline-size: 100%;
+  max-block-size: 24rem;
+  margin: 0;
+  padding: var(--space-4);
+  overflow: auto;
+  color: var(--color-text-secondary);
+  background-color: var(--color-bg-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta);
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.review-card__versions {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta);
+  letter-spacing: var(--tracking-meta);
+}
+
+.review-card__versions > li {
+  padding-block: var(--space-3);
+  border-block-start: 1px solid var(--color-rule);
+}
+
+/* "Edit" controls are buttons styled as text links. */
+.commission-edit {
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+/* ---- Terms step: a document, nothing boxed ---- */
+.commission-terms {
+  display: grid;
+  gap: var(--space-7);
+}
+
+.commission-terms > article {
+  display: grid;
+  gap: var(--space-5);
+  max-inline-size: var(--measure);
+}
+
+.commission-terms__version {
+  margin: 0;
+  color: var(--color-text-meta);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta);
+  font-weight: 500;
+  letter-spacing: var(--tracking-meta);
+  text-transform: uppercase;
+}
+
+.commission-terms h3 {
+  margin-block-end: var(--space-2);
+  font-size: var(--text-h3);
+  line-height: 1.25;
+  letter-spacing: 0;
+}
+
+:lang(zh) .commission-terms h3 {
+  font-size: var(--text-h3);
+  line-height: 1.3;
+}
+
+.commission-terms section > p {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+/* ---- Turnstile slot: reserve the widget's box so nothing shifts ---- */
 .turnstile-widget {
-  min-height: 65px;
-  margin-block: 2rem 1rem;
+  display: grid;
+  min-block-size: 65px;
+  max-inline-size: 100%;
+  inline-size: 300px;
+  place-items: center start;
 }
 
-.commission-submit-status {
-  padding: 1rem;
-  border-left: 2px solid var(--color-coral);
-  background: var(--color-console);
+.turnstile-widget:empty {
+  background-color: var(--color-bg-2);
 }
 
-@keyframes commission-enter {
+.turnstile-widget:empty::before {
+  padding-inline: var(--space-4);
+  color: var(--color-text-meta);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta);
+  font-weight: 500;
+  letter-spacing: var(--tracking-meta);
+  content: "VERIFICATION";
+}
+
+/* ---- Actions: back is ghost, forward inverse, the final submit accent ---- */
+.commission-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  padding-block-start: var(--space-5);
+  border-block-start: 1px solid var(--color-rule);
+}
+
+@media (max-width: 479.98px) {
+  /* Forward action on top, full width. */
+  .commission-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .commission-actions .button {
+    white-space: normal;
+  }
+}
+
+/* ---- Step change: opacity only (wizard steps never reveal on scroll) ---- */
+@media (prefers-reduced-motion: no-preference) {
+  .commission-step {
+    animation: commission-step-in var(--dur-2) var(--ease-out-quart) both;
+  }
+}
+
+@keyframes commission-step-in {
   from {
     opacity: 0;
-    transform: translateY(0.75rem) scale(0.99);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
   }
 }
 
-@media (max-width: 700px) {
-  .commission-category__choices,
-  .commission-repeatable__row {
-    grid-template-columns: 1fr;
-  }
-
-  .commission-category__choices article + article {
-    border-top: 1px solid var(--color-line);
-    border-left: 0;
-  }
-
-  .quote-summary dl > div,
-  .review-card dl > div {
-    grid-template-columns: 1fr;
-  }
-
-  .commission-actions {
-    position: static;
-    justify-content: stretch;
-  }
-
-  .commission-actions button {
-    flex: 1;
-  }
+/* ---- Success page ---- */
+.commission-success__grid {
+  row-gap: var(--space-3);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .commission-step {
-    animation: none;
+.commission-success__body {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-6);
+}
+
+.commission-success__body > h1 {
+  max-inline-size: 22ch;
+}
+
+.commission-success__lede {
+  max-inline-size: 48ch;
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-lede);
+  line-height: var(--leading-lede);
+}
+
+:lang(zh) .commission-success__lede {
+  max-inline-size: 32em;
+  line-height: var(--leading-lede-zh);
+}
+
+.commission-success__case {
+  inline-size: 100%;
+  max-inline-size: 40rem;
+  border-block-end: 1px solid var(--color-rule);
+}
+
+.commission-success__case-id {
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.commission-success__note {
+  max-inline-size: 60ch;
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-body-s);
+}
+
+@media (min-width: 1024px) {
+  .commission-success__grid > .commission-success__body {
+    grid-column: 4 / 11;
   }
 }

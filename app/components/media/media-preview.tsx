@@ -1,3 +1,4 @@
+import { useR2Hosts } from "../../lib/cms/media/media-config-context";
 import type { Locale } from "../../lib/i18n/locale";
 import type { MediaItem } from "../../lib/media/media-schema";
 import { parseMediaUrl } from "../../lib/media/parse-media-url";
@@ -6,6 +7,10 @@ import { ExternalMediaLink } from "./external-media-link";
 import { GoogleDrivePreview } from "./google-drive-preview";
 import { YouTubePreview } from "./youtube-preview";
 
+/**
+ * Stable props contract: `{ item, locale }`. `r2Hosts` is optional; by default
+ * the approved R2 hosts come from `MediaConfigProvider` (never hard-coded).
+ */
 export function MediaPreview({
   item,
   locale,
@@ -13,12 +18,13 @@ export function MediaPreview({
 }: {
   item: MediaItem;
   locale: Locale;
-  r2Hosts: ReadonlySet<string>;
+  r2Hosts?: ReadonlySet<string>;
 }) {
+  const configuredHosts = useR2Hosts();
   const parsed = parseMediaUrl(item.url, {
     startSeconds: item.startSeconds,
     endSeconds: item.endSeconds,
-    r2Hosts,
+    r2Hosts: r2Hosts ?? configuredHosts,
   });
 
   let preview: React.ReactNode;

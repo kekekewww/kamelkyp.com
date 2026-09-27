@@ -43,3 +43,37 @@ describe("PlaybackCoordinator", () => {
     expect(secondPause).toHaveBeenCalledOnce();
   });
 });
+
+describe("PlaybackCoordinator level channel", () => {
+  it("publishes level sources to subscribers and unsubscribes", () => {
+    const coordinator = new PlaybackCoordinator();
+    const listener = vi.fn();
+    const unsubscribe = coordinator.subscribeLevel(listener);
+
+    expect(listener).toHaveBeenLastCalledWith(null);
+    coordinator.setLevelSource("a", { analyser: null, playing: true });
+    expect(listener).toHaveBeenLastCalledWith({
+      analyser: null,
+      playing: true,
+    });
+    expect(coordinator.getLevelSource()).toEqual({
+      analyser: null,
+      playing: true,
+    });
+
+    unsubscribe();
+    coordinator.setLevelSource("a", { analyser: null, playing: false });
+    expect(listener).toHaveBeenCalledTimes(2);
+  });
+
+  it("only lets the owning item clear the channel and clears on stopAll", () => {
+    const coordinator = new PlaybackCoordinator();
+    coordinator.setLevelSource("a", { analyser: null, playing: true });
+    coordinator.setLevelSource("b", { analyser: null, playing: true });
+    coordinator.setLevelSource("a", null);
+    expect(coordinator.getLevelSource()).not.toBeNull();
+
+    coordinator.stopAll();
+    expect(coordinator.getLevelSource()).toBeNull();
+  });
+});

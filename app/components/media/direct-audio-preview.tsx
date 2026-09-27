@@ -1,6 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import type { Locale } from "../../lib/i18n/locale";
 import type { MediaItem } from "../../lib/media/media-schema";
+import {
+  attachAnalyser,
+  follow,
+  isCorsAudioHost,
+  readBands,
+} from "../../lib/motion/audio-level";
+import { loop } from "../../lib/motion/frame";
+import { getMotionTier } from "../../lib/motion/reduced-motion";
+import { DUR, EASE } from "../../lib/motion/tokens";
 import { ExternalMediaLink } from "./external-media-link";
 import { usePlayback } from "./playback-provider";
 
@@ -26,6 +35,9 @@ export function DirectAudioPreview({
   const coordinator = usePlayback();
   const streamAudio = useRef<HTMLAudioElement | null>(null);
   const fallbackAudio = useRef<HTMLAudioElement>(null);
+  const waveformRef = useRef<HTMLDivElement>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const stopBars = useRef<(() => void) | null>(null);
   const disposed = useRef(false);
   const [activated, setActivated] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -36,6 +48,59 @@ export function DirectAudioPreview({
   function markPaused() {
     setPlaying(false);
     coordinator.markPaused(item.id);
+    coordinator.setLevelSource(item.id, {
+      analyser: analyserRef.current,
+      playing: false,
+    });
+    settleBars();
+  }
+
+  function markLevelPlaying() {
+    coordinator.setLevelSource(item.id, {
+      analyser: analyserRef.current,
+      playing: true,
+    });
+    startBars();
+  }
+
+  /** Audio-reactive bars (motion-system §2.8): 30fps, only with an analyser. */
+  function startBars() {
+    const analyser = analyserRef.current;
+    const waveform = waveformRef.current;
+    if (!analyser || !waveform || stopBars.current) return;
+    if (getMotionTier() === "static") return;
+    const bars = Array.from(waveform.children) as HTMLElement[];
+    const bands = new Float32Array(bars.length);
+    const values = new Float32Array(bars.length).fill(1);
+    let skip = false;
+    stopBars.current = loop((_now, dt) => {
+      skip = !skip;
+      if (skip) return undefined;
+      readBands(analyser, bands);
+      bars.forEach((bar, index) => {
+        const target = 0.15 + 0.85 * bands[index];
+        values[index] = follow(values[index], target, dt * 2, 0.5, 0.12);
+        bar.style.transform = `scaleY(${(values[index] * 1.6).toFixed(3)})`;
+      });
+      return undefined;
+    });
+  }
+
+  function settleBars() {
+    stopBars.current?.();
+    stopBars.current = null;
+    const waveform = waveformRef.current;
+    if (!waveform) return;
+    for (const bar of Array.from(waveform.children) as HTMLElement[]) {
+      const from = bar.style.transform;
+      bar.style.transform = "";
+      if (from && typeof bar.animate === "function") {
+        bar.animate([{ transform: from }, { transform: "none" }], {
+          duration: DUR.d3,
+          easing: EASE.weighted,
+        });
+      }
+    }
   }
 
   function disposeStream(instance = streamAudio.current) {
@@ -50,6 +115,10 @@ export function DirectAudioPreview({
     instance.removeAttribute("src");
     instance.load();
     if (streamAudio.current === instance) streamAudio.current = null;
+    analyserRef.current = null;
+    stopBars.current?.();
+    stopBars.current = null;
+    coordinator.setLevelSource(item.id, null);
   }
 
   function pauseCurrent() {
@@ -119,6 +188,8 @@ export function DirectAudioPreview({
         streamAudio.current = null;
       }
       fallbackAudio.current?.pause();
+      stopBars.current?.();
+      stopBars.current = null;
     };
   }, [coordinator, item.id]);
 
@@ -128,15 +199,22 @@ export function DirectAudioPreview({
     setCurrentSeconds(Math.floor(item.startSeconds ?? 0));
 
     const instance = new Audio();
+    // CORS gate (motion-system §4.5): only allowlisted / same-origin hosts get
+    // crossOrigin + Web Audio routing; routing a non-CORS element would silence it.
+    const analysable = isCorsAudioHost(item.url);
+    if (analysable) instance.crossOrigin = "anonymous";
     instance.preload = "metadata";
     instance.src = item.url;
     streamAudio.current = instance;
+    // Still inside the click handler: AudioContext creation/resume is allowed.
+    analyserRef.current = analysable ? attachAnalyser(instance) : null;
     instance.onloadedmetadata = () => resetToStart(instance);
     instance.onplay = () => {
       if (disposed.current || streamAudio.current !== instance) return;
       setLoading(false);
       setPlaying(true);
       coordinator.markPlaying(item.id);
+      markLevelPlaying();
     };
     instance.onpause = () => {
       if (!disposed.current && streamAudio.current === instance) markPaused();
@@ -213,7 +291,7 @@ export function DirectAudioPreview({
       >
         <span aria-hidden="true">{playing ? "Ⅱ" : "▶"}</span>
       </button>
-      <div className="media-waveform" aria-hidden="true">
+      <div className="media-waveform" aria-hidden="true" ref={waveformRef}>
         {WAVEFORM_BARS.map((bar) => (
           <span key={bar} />
         ))}
@@ -230,6 +308,7 @@ export function DirectAudioPreview({
             onPlay={() => {
               setPlaying(true);
               coordinator.markPlaying(item.id);
+              markLevelPlaying();
             }}
             onTimeUpdate={(event) =>
               handleTimeUpdate(

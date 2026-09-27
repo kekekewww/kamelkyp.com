@@ -60,6 +60,7 @@ export function CommonFields({
         <div className="commission-repeatable__heading">
           <h3>{isZh ? "常用聯絡方式" : "Contact methods"}</h3>
           <button
+            className="button button--ghost button--compact"
             type="button"
             onClick={() =>
               updateField("contacts", [
@@ -104,6 +105,7 @@ export function CommonFields({
         <div className="commission-repeatable__heading">
           <h3>{isZh ? "工程連結" : "Project links"}</h3>
           <button
+            className="button button--ghost button--compact"
             type="button"
             onClick={() =>
               updateField("projectLinks", [...draft.projectLinks, ""])

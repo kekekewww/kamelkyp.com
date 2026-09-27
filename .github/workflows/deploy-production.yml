@@ -38,6 +38,10 @@ jobs:
           ACCESS_TEAM_DOMAIN: ${{ vars.ACCESS_TEAM_DOMAIN }}
           ADMIN_EMAIL: ${{ vars.ADMIN_EMAIL }}
           APP_ORIGIN: ${{ vars.APP_ORIGIN }}
+          R2_MEDIA_BUCKET: ${{ vars.R2_MEDIA_BUCKET }}
+          MEDIA_PUBLIC_BASE_URL: ${{ vars.MEDIA_PUBLIC_BASE_URL }}
+          MEDIA_CORS_HOSTS: ${{ vars.MEDIA_CORS_HOSTS }}
+          IMAGE_TRANSFORMATIONS: ${{ vars.IMAGE_TRANSFORMATIONS }}
         run: node scripts/render-wrangler-config.mjs production
       - name: Render ephemeral production secrets
         env:
@@ -63,6 +67,8 @@ jobs:
           ADMIN_EMAIL: ${{ vars.ADMIN_EMAIL }}
           APP_ORIGIN: ${{ vars.APP_ORIGIN }}
           LEGAL_REVIEW_CONFIRMED: ${{ vars.LEGAL_REVIEW_CONFIRMED }}
+          R2_MEDIA_BUCKET: ${{ vars.R2_MEDIA_BUCKET }}
+          MEDIA_PUBLIC_BASE_URL: ${{ vars.MEDIA_PUBLIC_BASE_URL }}
         run: npm run verify:production
       - name: Record pre-migration D1 bookmark
         shell: bash

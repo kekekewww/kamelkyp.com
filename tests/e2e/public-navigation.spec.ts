@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("landing identity and category navigation stay focused", async ({
+test("landing identity and services navigation stay focused", async ({
   page,
 }) => {
   await page.goto("/zh");
@@ -12,6 +12,12 @@ test("landing identity and category navigation stay focused", async ({
 
   const primaryNavigation = page.getByRole("navigation", { name: "主要導覽" });
   await primaryNavigation
+    .getByRole("link", { name: "服務", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/zh\/services$/);
+
+  await page
+    .getByRole("main")
     .getByRole("link", { name: "混音", exact: true })
     .click();
   await expect(page).toHaveURL(/\/zh\/mixing$/);
@@ -25,6 +31,37 @@ test("landing identity and category navigation stay focused", async ({
   await expect(mainContent.getByText("單純歌曲銜接")).toHaveCount(0);
 });
 
+test("primary navigation exposes the IA labels in both locales", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/en");
+  const english = page.getByRole("navigation", { name: "Primary navigation" });
+  for (const label of ["Work", "Services", "About", "Writing"]) {
+    await expect(
+      english.getByRole("link", { name: label, exact: true }),
+    ).toBeVisible();
+  }
+  await expect(
+    page
+      .getByRole("banner")
+      .getByRole("link", { name: "Start a project", exact: true }),
+  ).toHaveAttribute("href", "/en/commission");
+
+  await page.goto("/zh");
+  const chinese = page.getByRole("navigation", { name: "主要導覽" });
+  for (const label of ["作品", "服務", "關於", "文章"]) {
+    await expect(
+      chinese.getByRole("link", { name: label, exact: true }),
+    ).toBeVisible();
+  }
+  await expect(
+    page
+      .getByRole("banner")
+      .getByRole("link", { name: "開始合作", exact: true }),
+  ).toBeVisible();
+});
+
 test("mobile menu and footer use expandable groups", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/zh");
@@ -32,6 +69,9 @@ test("mobile menu and footer use expandable groups", async ({ page }) => {
   await expect(
     page.getByRole("navigation", { name: "主要導覽" }),
   ).toBeVisible();
+  await expect(page.getByRole("button", { name: "關閉選單" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: "開啟選單" })).toBeFocused();
   await expect(page.locator("footer details")).toHaveCount(5);
 });
 
@@ -49,19 +89,47 @@ test("fonts are bundled without third-party font requests", async ({
   expect(thirdPartyFontRequests).toEqual([]);
 });
 
+test("legacy /other routes redirect permanently to /writing", async ({
+  request,
+}) => {
+  const index = await request.get("/en/other?x=1", { maxRedirects: 0 });
+  expect(index.status()).toBe(301);
+  expect(index.headers().location).toBe("/en/writing?x=1");
+
+  const detail = await request.get("/zh/other/some-post", { maxRedirects: 0 });
+  expect(detail.status()).toBe(301);
+  expect(detail.headers().location).toBe("/zh/writing/some-post");
+});
+
 test("empty published collections and legal routes remain usable", async ({
   page,
 }) => {
+  // /works merges D1 works with the file projects (IA §8): placeholders fill
+  // the list, the filter bar is present and ?category= narrows it.
   await page.goto("/zh/works");
   await expect(
     page.getByRole("heading", { name: "作品", exact: true }),
   ).toBeVisible();
-  await expect(page.getByRole("heading", { name: "作品準備中" })).toBeVisible();
-
-  await page.goto("/en/other");
-  await expect(page.getByRole("heading", { name: "Other Work" })).toBeVisible();
+  await expect(page.getByText("PLACEHOLDER").first()).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Nothing published yet" }),
+    page.getByRole("navigation", { name: "作品分類" }),
+  ).toBeVisible();
+
+  await page.goto("/zh/works?category=research");
+  const main = page.locator("main");
+  await expect(
+    main.getByRole("heading", { name: "示意：即時音訊分析筆記" }),
+  ).toBeVisible();
+  await expect(
+    main.getByRole("heading", { name: "示意：完整歌曲混音——獨立單曲" }),
+  ).toHaveCount(0);
+
+  await page.goto("/en/writing");
+  await expect(
+    page.getByRole("heading", { name: "Writing", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("main").getByText("PLACEHOLDER").first(),
   ).toBeVisible();
 
   await page.goto("/zh/terms");

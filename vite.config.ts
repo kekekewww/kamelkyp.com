@@ -12,4 +12,9 @@ export default defineConfig(({ command }) => ({
     }),
     reactRouter(),
   ],
+  build: {
+    // CSP is `font-src 'self'`: never inline small font subsets as data: URIs.
+    assetsInlineLimit: (file: string) =>
+      /\.(woff2?|ttf|otf)$/.test(file) ? false : undefined,
+  },
 }));

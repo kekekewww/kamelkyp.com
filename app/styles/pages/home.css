@@ -1,0 +1,798 @@
+/* Page styles: Home.
+   Owned by the page agent for this route group (phase 3b). Only this agent edits this file.
+   Use tokens (tokens.css), utilities (global.css) and shared components (components.css).
+   Every selector is scoped under .home-page (all page CSS is loaded globally). */
+
+/* ==========================================================================
+   Section rhythm (design-system §4.5):
+   hero → L → work → M → capabilities → S → recognition → M → services → S →
+   pricing (zone) → M → about → S → writing → L → contact band
+   ========================================================================== */
+.home-page .home-work {
+  padding-block-start: var(--section-l);
+}
+
+.home-page .home-capabilities {
+  padding-block-start: var(--section-m);
+}
+
+.home-page .home-recognition {
+  padding-block-start: var(--section-s);
+}
+
+.home-page .home-services {
+  padding-block: var(--section-m) var(--section-s);
+}
+
+.home-page .home-pricing {
+  padding-block: var(--section-s);
+}
+
+.home-page .home-about {
+  padding-block-start: var(--section-m);
+}
+
+.home-page .home-writing {
+  padding-block: var(--section-s) var(--section-l);
+}
+
+.home-page .home-section .section-head {
+  margin-block-end: var(--space-7);
+}
+
+/* ---- Shared ruled rows (hairlines inside lists only) ---- */
+.home-page .home-rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.home-page .home-rows > li {
+  border-block-end: 1px solid var(--color-rule);
+}
+
+.home-page .home-rows > li:first-child {
+  border-block-start: 1px solid var(--color-rule);
+}
+
+@media (min-width: 1024px) {
+  /* Rows sit on the content columns 4–12 and inherit the page tracks. */
+  .home-page .grid > .home-rows {
+    display: grid;
+    grid-column: 4 / 13;
+    grid-template-columns: subgrid;
+  }
+
+  .home-page .home-rows > li {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid;
+    align-items: baseline;
+    column-gap: var(--grid-gutter);
+  }
+}
+
+/* ==========================================================================
+   1. Hero (design-system §3.5, §4.3; motion-system §2.1, §4)
+   ========================================================================== */
+.home-page .home-hero {
+  position: relative;
+  isolation: isolate;
+  padding-block: var(--space-7) var(--space-8);
+}
+
+.home-page .home-hero__inner {
+  row-gap: var(--space-6);
+}
+
+.home-page .home-hero__identity,
+.home-page .home-hero__intro,
+.home-page .home-hero__stage {
+  position: relative;
+  z-index: 1;
+}
+
+.home-page .home-hero__real-name {
+  margin-block: var(--space-5) 0;
+  color: var(--color-text-secondary);
+  font-family: var(--font-display);
+  font-size: var(--text-h2);
+  font-weight: 400;
+  font-stretch: 100%;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+}
+
+.home-page .home-hero__real-name:lang(zh) {
+  font-family: var(--font-body);
+  font-size: var(--text-h2-zh);
+  font-weight: 500;
+  letter-spacing: var(--tracking-cjk-max);
+}
+
+/* The wordmark keeps the Latin face and scale in both locales (beats :lang(zh) h1). */
+.home-page .home-hero .home-hero__wordmark {
+  margin-block: var(--space-3) 0;
+  margin-inline-start: -0.04em;
+  color: var(--color-text);
+  font-family: var(--font-display);
+  font-size: var(--text-wordmark);
+  font-weight: var(--weight-wordmark);
+  font-stretch: var(--stretch-wordmark);
+  line-height: var(--leading-wordmark);
+  letter-spacing: var(--tracking-wordmark);
+  text-transform: uppercase;
+  text-wrap: nowrap;
+}
+
+.home-page .home-hero__roles {
+  display: flex;
+  margin: 0;
+  padding: 0;
+  flex-direction: column;
+  gap: var(--space-1);
+  color: var(--color-text-secondary);
+  list-style: none;
+}
+
+.home-page .home-hero__statement {
+  max-inline-size: 18ch;
+  margin-block: var(--space-5) 0;
+  color: var(--color-text);
+}
+
+.home-page .home-hero__statement:lang(zh) {
+  max-inline-size: 14em;
+}
+
+.home-page .home-hero__actions {
+  margin-block-start: var(--space-6);
+}
+
+@media (min-width: 768px) {
+  .home-page .home-hero__roles {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-4);
+  }
+
+  /* 1px × 0.8em rules between roles, not middle dots (design-system §3.5). */
+  .home-page .home-hero__roles > li + li::before {
+    display: inline-block;
+    inline-size: 1px;
+    block-size: 0.8em;
+    margin-inline-end: var(--space-4);
+    background: var(--color-rule-strong);
+    content: "";
+    vertical-align: -0.05em;
+  }
+}
+
+@media (min-width: 1024px) {
+  .home-page .home-hero {
+    display: flex;
+    min-block-size: calc(100svh - var(--header-h));
+    flex-direction: column;
+    justify-content: flex-end;
+    padding-block: var(--space-8);
+  }
+
+  .home-page .home-hero__inner {
+    row-gap: var(--space-7);
+  }
+
+  .home-page .home-hero__identity {
+    grid-column: 1 / 11;
+    grid-row: 1;
+  }
+
+  .home-page .home-hero__intro {
+    grid-column: 1 / 7;
+    grid-row: 2;
+  }
+
+  .home-page .home-hero__stage {
+    grid-column: 8 / 13;
+    grid-row: 2;
+    align-self: end;
+  }
+}
+
+/* ---- Hero field: static SVG (SSR / no JS / reduced motion) + canvas ---- */
+.home-page .hero-field {
+  position: relative;
+  z-index: 0;
+  block-size: 9rem;
+  margin-inline: calc(-1 * var(--page-margin));
+  pointer-events: none;
+}
+
+.home-page .hero-field__svg {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  max-inline-size: none;
+  fill: none;
+  stroke: var(--color-text);
+}
+
+.home-page .hero-field__svg path {
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.home-page .hero-field__svg .hero-field__accent {
+  stroke: var(--color-accent);
+}
+
+.home-page .hero-field__svg--wide {
+  display: none;
+}
+
+/* Once the canvas has drawn its first frame it replaces the SVG. */
+.home-page .hero-field:has(.hero-canvas[data-ready]) .hero-field__svg {
+  visibility: hidden;
+}
+
+@media (min-width: 1024px) {
+  .home-page .hero-field {
+    position: absolute;
+    inset: 0;
+    block-size: auto;
+    margin: 0;
+  }
+
+  .home-page .hero-field__svg--wide {
+    display: block;
+  }
+
+  .home-page .hero-field__svg--band {
+    display: none;
+  }
+}
+
+/* ---- Showreel stage (design-system §6.22) ---- */
+.home-page .home-showreel,
+.home-page .home-hero__stage .media-preview {
+  padding: var(--space-5);
+  border: 0;
+  background: var(--color-surface);
+  box-shadow: var(--edge-light);
+}
+
+.home-page .home-showreel {
+  display: grid;
+  grid-template-columns: 3.5rem minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.home-page .home-hero__stage .media-preview h3 {
+  margin-block-end: var(--space-4);
+  font-size: var(--text-h3);
+}
+
+.home-page .home-showreel__play {
+  display: grid;
+  inline-size: 3.5rem;
+  block-size: 3.5rem;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--color-rule-strong);
+  border-radius: var(--radius-round);
+  background: transparent;
+}
+
+.home-page .home-showreel__glyph {
+  inline-size: 0;
+  block-size: 0;
+  margin-inline-start: 3px;
+  border-block: 7px solid transparent;
+  border-inline-start: 11px solid var(--color-text-meta);
+}
+
+.home-page .home-showreel__line {
+  inline-size: 100%;
+  margin-block-end: var(--space-3);
+}
+
+.home-page .home-showreel__meta {
+  display: flex;
+  margin: 0;
+  justify-content: space-between;
+  gap: var(--space-3);
+  color: var(--color-text-meta);
+}
+
+.home-page .home-showreel__meta > span:first-child:lang(zh) {
+  letter-spacing: var(--tracking-cjk-max);
+}
+
+@media (max-width: 767.98px) {
+  .home-page .home-showreel {
+    grid-template-columns: 2.75rem minmax(0, 1fr);
+  }
+
+  .home-page .home-showreel__play {
+    inline-size: 2.75rem;
+    block-size: 2.75rem;
+  }
+}
+
+/* ==========================================================================
+   2. Selected Work: feature block (§6.7) + editorial list (§6.8)
+   ========================================================================== */
+.home-page .home-feature {
+  color: inherit;
+  text-decoration: none;
+  row-gap: var(--space-5);
+}
+
+.home-page .home-feature__cover {
+  position: relative;
+  margin-block: 0;
+  margin-inline: calc(-1 * var(--page-margin));
+  aspect-ratio: 4 / 5;
+  overflow: clip;
+  background: var(--color-bg-2);
+}
+
+.home-page .home-feature__media {
+  block-size: 100%;
+  aspect-ratio: auto;
+}
+
+.home-page .home-feature__media > .project-cover__art,
+.home-page .home-feature__media > .project-cover__image {
+  filter: grayscale(0.35) brightness(0.92);
+}
+
+.home-page .home-feature__badge {
+  position: absolute;
+  inset-block-start: var(--space-3);
+  inset-inline-start: calc(var(--page-margin) + var(--space-3));
+  background: color-mix(in srgb, var(--color-bg) 80%, transparent);
+}
+
+.home-page .home-feature__text {
+  display: grid;
+  align-content: end;
+  justify-items: start;
+  gap: var(--space-4);
+}
+
+.home-page .home-feature__title {
+  margin: 0;
+  color: var(--color-text);
+}
+
+.home-page .home-feature__description {
+  max-inline-size: 36ch;
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.home-page .home-feature:active .home-feature__text {
+  opacity: 0.85;
+}
+
+.home-page .home-feature:focus-visible {
+  outline-offset: 4px;
+}
+
+@media (hover: hover) {
+  .home-page .home-feature:hover .home-feature__media > .project-cover__art,
+  .home-page .home-feature:hover .home-feature__media > .project-cover__image {
+    filter: none;
+  }
+
+  .home-page .home-feature:hover .home-feature__more {
+    text-decoration-color: var(--color-text);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .home-page .home-feature__media {
+    transition: transform var(--dur-3) var(--ease-weighted);
+  }
+
+  .home-page .home-feature__title,
+  .home-page .home-feature__more .text-link__arrow {
+    transition: transform var(--dur-2) var(--ease-out-quart);
+  }
+
+  @media (hover: hover) {
+    .home-page .home-feature:hover .home-feature__media {
+      transform: scale(1.02);
+    }
+
+    .home-page .home-feature:hover .home-feature__title {
+      transform: translateX(0.25rem);
+    }
+
+    .home-page .home-feature:hover .home-feature__more .text-link__arrow {
+      transform: translateX(4px);
+    }
+  }
+
+  .home-page .home-feature:focus-visible .home-feature__title {
+    transform: translateX(0.25rem);
+  }
+}
+
+@media (min-width: 768px) {
+  .home-page .home-feature__cover {
+    grid-column: 1 / 6;
+    aspect-ratio: 3 / 2;
+    margin-inline: calc(
+        -1 *
+        max(var(--page-margin), (100vw - var(--content-max)) / 2)
+      )
+      0;
+  }
+
+  .home-page .home-feature__text {
+    grid-column: 6 / 9;
+  }
+
+  .home-page .home-feature__badge {
+    inset-inline-start: calc(
+      max(var(--page-margin), (100vw - var(--content-max)) / 2) +
+      var(--space-3)
+    );
+  }
+}
+
+@media (min-width: 1024px) {
+  .home-page .home-feature__cover {
+    grid-column: 1 / 9;
+  }
+
+  .home-page .home-feature__text {
+    grid-column: 9 / 13;
+  }
+}
+
+/* ---- Editorial list rows: shared ProjectList (components.css) ---- */
+.home-page .home-work__feature + .grid {
+  margin-block-start: var(--section-s);
+}
+
+.home-page .home-work__list {
+  grid-column: 1 / -1;
+}
+
+/* ==========================================================================
+   3. Capabilities (§6.12)
+   ========================================================================== */
+.home-page .home-capability {
+  display: grid;
+  gap: var(--space-3);
+  padding-block: var(--space-6);
+}
+
+.home-page .home-capability__index {
+  color: var(--color-text-meta);
+}
+
+.home-page .home-capability__title {
+  margin: 0;
+}
+
+.home-page .home-capability__body p {
+  margin: 0;
+}
+
+.home-page .home-capability__items {
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  color: var(--color-text);
+  list-style: none;
+}
+
+@media (min-width: 768px) and (max-width: 1023.98px) {
+  .home-page .home-capability {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--grid-gutter);
+  }
+
+  .home-page .home-capability__index,
+  .home-page .home-capability__title {
+    grid-column: 1;
+  }
+
+  .home-page .home-capability__body {
+    grid-column: 2;
+    grid-row: 1 / 3;
+  }
+}
+
+@media (min-width: 1024px) {
+  .home-page .home-capability__index {
+    grid-column: 1;
+  }
+
+  .home-page .home-capability__title {
+    grid-column: 2 / 6;
+  }
+
+  .home-page .home-capability__body {
+    grid-column: 6 / 10;
+  }
+}
+
+/* ==========================================================================
+   4. Recognition (§6.11)
+   ========================================================================== */
+.home-page .home-recognition__row {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-1);
+  padding-block: var(--space-4);
+}
+
+.home-page .home-recognition__year {
+  color: var(--color-text-meta);
+}
+
+.home-page .home-recognition__event {
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+@media (min-width: 1024px) {
+  .home-page .home-recognition__year {
+    grid-column: 1;
+  }
+
+  .home-page .home-recognition__event {
+    grid-column: 2 / 6;
+  }
+
+  .home-page .home-recognition__result {
+    grid-column: 6 / 9;
+  }
+
+  .home-page .home-recognition__badge {
+    grid-column: 9;
+    justify-self: end;
+  }
+}
+
+/* ==========================================================================
+   5. Services (§6.13)
+   ========================================================================== */
+.home-page .home-service {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-2);
+  padding-block: var(--space-5);
+}
+
+.home-page .home-service__index {
+  color: var(--color-text-meta);
+}
+
+.home-page .home-service__name,
+.home-page .home-service__body {
+  margin: 0;
+}
+
+.home-page .home-service__link {
+  min-block-size: 3.5rem;
+}
+
+@media (hover: hover) {
+  .home-page .home-service:has(a:hover) {
+    background: var(--color-bg-2);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .home-page .home-service {
+    transition: background-color var(--dur-2) var(--ease-out-quart);
+  }
+}
+
+@media (min-width: 1024px) {
+  .home-page .home-service__index {
+    grid-column: 1;
+  }
+
+  .home-page .home-service__name {
+    grid-column: 2 / 6;
+  }
+
+  .home-page .home-service__body {
+    grid-column: 6 / 8;
+  }
+
+  .home-page .home-service__link {
+    grid-column: 8 / 10;
+    justify-self: end;
+    min-block-size: var(--target-min);
+    text-align: end;
+  }
+}
+
+/* ==========================================================================
+   6. Pricing preview strip (§6.15), bg-2 zone
+   ========================================================================== */
+.home-page .home-price {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-4);
+  padding-block: var(--space-5);
+}
+
+.home-page .home-price__name {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.home-page .home-price__label {
+  grid-column: 1;
+}
+
+.home-page .home-price__figure {
+  grid-column: 2;
+  justify-self: end;
+  font-size: var(--text-price-s);
+}
+
+.home-page .home-price__figure small {
+  display: block;
+  margin-block-start: var(--space-2);
+  color: var(--color-text-meta);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta);
+  font-weight: 500;
+  letter-spacing: var(--tracking-meta);
+  text-align: end;
+  text-transform: uppercase;
+}
+
+.home-page .home-price__quote {
+  grid-column: 1 / -1;
+}
+
+.home-page .home-pricing__note {
+  margin-block-start: var(--space-5);
+}
+
+.home-page .home-pricing__action {
+  margin-block-start: var(--space-6);
+}
+
+@media (max-width: 479.98px) {
+  .home-page .home-pricing__action .button {
+    inline-size: 100%;
+  }
+}
+
+@media (min-width: 1024px) {
+  .home-page .home-price__name {
+    grid-column: 1 / 5;
+  }
+
+  .home-page .home-price__label {
+    grid-column: 5 / 7;
+  }
+
+  .home-page .home-price__figure {
+    grid-column: 7 / 10;
+  }
+
+  .home-page .home-price__quote {
+    grid-column: 7 / 10;
+    justify-self: end;
+  }
+
+  .home-page .home-pricing__note {
+    grid-column: 4 / 9;
+  }
+
+  .home-page .home-pricing__action {
+    grid-column: 4 / 8;
+  }
+}
+
+/* ==========================================================================
+   7. About teaser (§6.17)
+   ========================================================================== */
+.home-page .home-about__title {
+  margin-block-end: var(--space-4);
+  color: var(--color-text-secondary);
+}
+
+.home-page .home-about__pull {
+  max-inline-size: 28ch;
+  margin-block-end: var(--space-5);
+  font-weight: 400;
+}
+
+.home-page .home-about__pull:lang(zh) {
+  max-inline-size: 20em;
+  font-weight: 400;
+}
+
+@media (max-width: 767.98px) {
+  .home-page .home-about__pull {
+    font-size: var(--text-h2);
+  }
+
+  .home-page .home-about__pull:lang(zh) {
+    font-size: var(--text-h2-zh);
+  }
+}
+
+@media (min-width: 1024px) {
+  .home-page .home-about__body {
+    grid-column: 5 / 12;
+  }
+}
+
+/* ==========================================================================
+   8. Writing rows (§6.16)
+   ========================================================================== */
+.home-page .home-entry {
+  display: grid;
+  gap: var(--space-2);
+  padding-block: var(--space-5);
+}
+
+.home-page .home-entry__main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.home-page .home-entry__title {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.home-page .home-entry__source {
+  margin: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .home-page .home-entry__title {
+    transition: transform var(--dur-2) var(--ease-out-quart);
+  }
+
+  @media (hover: hover) {
+    .home-page .home-entry:has(a:hover) .home-entry__title {
+      transform: translateX(0.25rem);
+    }
+  }
+}
+
+@media (min-width: 1024px) {
+  .home-page .home-writing__list > li {
+    display: block;
+  }
+
+  .home-page .home-entry {
+    grid-template-columns: repeat(9, minmax(0, 1fr));
+    align-items: baseline;
+    column-gap: var(--grid-gutter);
+  }
+
+  .home-page .home-entry__meta {
+    grid-column: 1 / 4;
+  }
+
+  .home-page .home-entry__main {
+    grid-column: 4 / 8;
+  }
+
+  .home-page .home-entry__action {
+    grid-column: 8 / 10;
+    justify-self: end;
+    text-align: end;
+  }
+}

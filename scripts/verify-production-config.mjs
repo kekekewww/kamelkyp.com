@@ -19,6 +19,8 @@ const requiredEnvironment = [
   "TURNSTILE_SITE_KEY",
   ...approvedSecretNames,
   "LEGAL_REVIEW_CONFIRMED",
+  "R2_MEDIA_BUCKET",
+  "MEDIA_PUBLIC_BASE_URL",
 ];
 const officialTurnstileTestKeys = new Set([
   "1x00000000000000000000AA",
@@ -116,6 +118,13 @@ const appsScriptUrl = requireHttpsUrl(
 if (!/^\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(appsScriptUrl.pathname)) {
   fail("invalid_apps_script_url");
 }
+if (!/^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/.test(process.env.R2_MEDIA_BUCKET)) {
+  fail("invalid_r2_media_bucket");
+}
+requireHttpsUrl(
+  process.env.MEDIA_PUBLIC_BASE_URL,
+  "invalid_media_public_base_url",
+);
 
 const configPath =
   process.env.WRANGLER_CONFIG ?? "build/server/.wrangler.generated.jsonc";
@@ -141,9 +150,28 @@ if (
   config.vars?.ACCESS_TEAM_DOMAIN !== process.env.ACCESS_TEAM_DOMAIN ||
   config.vars?.ACCESS_AUD !== process.env.ACCESS_AUD ||
   config.vars?.ADMIN_EMAIL !== process.env.ADMIN_EMAIL ||
-  config.vars?.TURNSTILE_SITE_KEY !== process.env.TURNSTILE_SITE_KEY
+  config.vars?.TURNSTILE_SITE_KEY !== process.env.TURNSTILE_SITE_KEY ||
+  config.vars?.MEDIA_PUBLIC_BASE_URL !== process.env.MEDIA_PUBLIC_BASE_URL ||
+  !["on", "off", undefined].includes(config.vars?.IMAGE_TRANSFORMATIONS)
 ) {
   fail("production_vars_mismatch");
+}
+// The Studio dev owner is a local dev-server convenience only.
+if (
+  Object.keys(config.vars ?? {}).some((name) =>
+    name.includes("STUDIO_DEV_OWNER"),
+  )
+) {
+  fail("studio_dev_owner_forbidden");
+}
+const mediaBindings = (config.r2_buckets ?? []).filter(
+  (binding) => binding.binding === "MEDIA",
+);
+if (
+  mediaBindings.length !== 1 ||
+  mediaBindings[0].bucket_name !== process.env.R2_MEDIA_BUCKET
+) {
+  fail("production_r2_media_mismatch");
 }
 if (
   !Array.isArray(config.routes) ||
@@ -202,6 +230,9 @@ for (const file of buildFiles) {
     /TEST_ADMIN_BYPASS|TEST_JWT_(?:KEY|PRIVATE_KEY)|test-jwt-key/.test(source)
   ) {
     fail("test_bypass_in_production_build");
+  }
+  if (/STUDIO_DEV_OWNER/.test(source)) {
+    fail("studio_dev_owner_in_production_build");
   }
 }
 

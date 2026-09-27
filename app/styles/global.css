@@ -1,23 +1,83 @@
-* {
+/* ==========================================================================
+   Global: reset, page field, typography levels, focus, grid utilities.
+   Spec: docs/design-system.md §2.3, §3, §4, §5.5.
+   ========================================================================== */
+
+/* ---- Reset ---- */
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
 html {
   color-scheme: dark;
-  background: var(--color-mineral);
-  scroll-behavior: smooth;
+  background-color: var(--color-bg);
+  scroll-padding-top: calc(var(--header-h) + var(--space-4));
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+html[data-menu-open] {
+  overflow: hidden;
 }
 
 body {
-  min-width: 320px;
+  position: relative;
+  min-inline-size: 320px;
+  min-block-size: 100svh;
   margin: 0;
   overflow-wrap: anywhere;
-  color: var(--color-chalk);
-  background: var(--color-mineral);
+  color: var(--color-text);
+  background-color: var(--color-bg);
+  background-image:
+    radial-gradient(
+      110% 70% at 88% -12%,
+      rgb(22 30 40 / 0.55) 0%,
+      transparent 62%
+    ),
+    radial-gradient(
+      80% 55% at -8% 108%,
+      rgb(15 21 29 / 0.7) 0%,
+      transparent 70%
+    );
+  background-attachment: fixed;
   font-family: var(--font-body);
-  font-size: 1rem;
-  line-height: 1.65;
+  font-size: var(--text-body);
+  font-weight: var(--weight-body);
+  line-height: var(--leading-body);
   text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Grain: dithers gradient banding. Never above 0.05. */
+body::before {
+  position: fixed;
+  z-index: -1;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  content: "";
+  opacity: 0.035;
+  pointer-events: none;
+}
+
+:lang(zh) body,
+body:lang(zh) {
+  line-height: var(--leading-body-zh);
+  line-break: strict;
+  text-autospace: ideograph-alpha ideograph-numeric;
+}
+
+main {
+  display: block;
+  overflow-x: clip;
 }
 
 button,
@@ -25,6 +85,7 @@ input,
 select,
 textarea {
   font: inherit;
+  color: inherit;
 }
 
 button,
@@ -42,44 +103,602 @@ a {
 
 img,
 svg,
-video {
+video,
+canvas {
   display: block;
-  max-width: 100%;
+  max-inline-size: 100%;
 }
 
 h1,
 h2,
 h3,
-p {
+h4,
+p,
+figure,
+blockquote,
+dl,
+dd {
   margin-block-start: 0;
 }
 
 h1,
 h2,
-h3 {
+h3,
+h4 {
+  margin-block-end: 0;
   font-family: var(--font-display);
-  font-weight: 600;
-  line-height: 0.98;
+  text-wrap: balance;
+}
+
+p,
+li,
+dd {
+  text-wrap: pretty;
+}
+
+/* Element defaults: page h1 = Display, section h2 = Heading · 1, h3 = Heading · 2. */
+h1 {
+  font-size: var(--text-display);
+  font-weight: var(--weight-display);
+  font-stretch: var(--stretch-display);
+  line-height: var(--leading-display);
+  letter-spacing: var(--tracking-display);
+}
+
+h2 {
+  font-size: var(--text-h1);
+  font-weight: var(--weight-heading);
+  font-stretch: var(--stretch-heading);
+  line-height: var(--leading-heading);
+  letter-spacing: var(--tracking-heading);
+}
+
+h3 {
+  font-size: var(--text-h2);
+  font-weight: var(--weight-heading);
+  line-height: var(--leading-heading-s);
+  letter-spacing: var(--tracking-heading-s);
+}
+
+/* Chinese headings break at punctuation, not inside a word (QA finding 1). */
+:lang(zh) h1,
+:lang(zh) h2,
+:lang(zh) h3,
+:lang(zh) .t-display,
+:lang(zh) .t-title-list,
+:lang(zh) .t-h1,
+:lang(zh) .t-h2 {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+:lang(zh) h1 {
+  font-size: var(--text-display-zh);
+  font-weight: var(--weight-display-zh);
+  line-height: var(--leading-display-zh);
+  letter-spacing: 0.01em;
+}
+
+:lang(zh) h2 {
+  font-size: var(--text-h1-zh);
+  font-weight: var(--weight-heading-zh);
+  line-height: var(--leading-heading-zh);
+  letter-spacing: 0.01em;
+}
+
+:lang(zh) h3 {
+  font-size: var(--text-h2-zh);
+  font-weight: var(--weight-heading-zh);
+  line-height: 1.3;
   letter-spacing: 0.01em;
 }
 
 ::selection {
-  color: var(--color-mineral);
-  background: var(--color-coral);
+  color: var(--color-on-accent);
+  background: var(--color-accent);
 }
 
+/* ---- Focus ring (design-system §5.5) ---- */
 :focus-visible {
-  outline: 2px solid var(--color-coral);
-  outline-offset: 4px;
+  outline: var(--focus-width) solid var(--focus-color);
+  outline-offset: var(--focus-offset);
+  border-radius: var(--radius-xs);
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ---- Skip link ---- */
+.skip-link {
+  position: fixed;
+  z-index: var(--z-skip);
+  inset-block-start: var(--space-3);
+  inset-inline-start: var(--space-3);
+  display: inline-flex;
+  min-block-size: var(--target-min);
+  align-items: center;
+  padding-inline: var(--space-4);
+  border-radius: var(--radius-xs);
+  color: var(--color-on-accent);
+  background: var(--color-accent);
+  font-size: var(--text-body-s);
+  font-weight: var(--weight-label);
+  text-decoration: none;
+  transform: translateY(-200%);
+}
+
+.skip-link:focus,
+.skip-link:focus-visible {
+  transform: none;
 }
 
 .visually-hidden {
   position: absolute;
-  width: 1px;
-  height: 1px;
+  inline-size: 1px;
+  block-size: 1px;
   padding: 0;
+  margin: -1px;
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* ==========================================================================
+   Typography levels (design-system §3.3). Four levels, named sub-levels.
+   ========================================================================== */
+
+.t-wordmark {
+  font-family: var(--font-display);
+  font-size: var(--text-wordmark);
+  font-weight: var(--weight-wordmark);
+  font-stretch: var(--stretch-wordmark);
+  line-height: var(--leading-wordmark);
+  letter-spacing: var(--tracking-wordmark);
+  text-transform: uppercase;
+}
+
+.t-display {
+  max-inline-size: 22ch;
+  font-family: var(--font-display);
+  font-size: var(--text-display);
+  font-weight: var(--weight-display);
+  font-stretch: var(--stretch-display);
+  line-height: var(--leading-display);
+  letter-spacing: var(--tracking-display);
+}
+
+.t-title-list {
+  font-family: var(--font-display);
+  font-size: var(--text-title-list);
+  font-weight: var(--weight-title);
+  font-stretch: var(--stretch-title);
+  line-height: var(--leading-title);
+  letter-spacing: var(--tracking-title);
+}
+
+.t-h1 {
+  font-family: var(--font-display);
+  font-size: var(--text-h1);
+  font-weight: var(--weight-heading);
+  font-stretch: var(--stretch-heading);
+  line-height: var(--leading-heading);
+  letter-spacing: var(--tracking-heading);
+}
+
+.t-h2 {
+  font-family: var(--font-display);
+  font-size: var(--text-h2);
+  font-weight: var(--weight-heading);
+  font-stretch: var(--stretch-heading);
+  line-height: var(--leading-heading-s);
+  letter-spacing: var(--tracking-heading-s);
+}
+
+.t-h3 {
+  font-family: var(--font-display);
+  font-size: var(--text-h3);
+  font-weight: var(--weight-heading);
+  font-stretch: var(--stretch-heading);
+  line-height: 1.25;
+  letter-spacing: 0;
+}
+
+.t-price {
+  font-family: var(--font-display);
+  font-size: var(--text-price);
+  font-weight: 500;
+  font-stretch: 100%;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.t-lede {
+  font-family: var(--font-body);
+  font-size: var(--text-lede);
+  font-weight: 400;
+  line-height: var(--leading-lede);
+}
+
+.t-body {
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+}
+
+.t-body-s {
+  font-family: var(--font-body);
+  font-size: var(--text-body-s);
+  line-height: var(--leading-body-s);
+  letter-spacing: 0.005em;
+}
+
+.t-meta {
+  font-family: var(--font-mono);
+  font-size: var(--text-meta);
+  font-weight: 500;
+  line-height: var(--leading-meta);
+  letter-spacing: var(--tracking-meta);
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.t-meta-xs {
+  font-family: var(--font-mono);
+  font-size: var(--text-meta-xs);
+  font-weight: 500;
+  line-height: 1.3;
+  letter-spacing: var(--tracking-meta-xs);
+  text-transform: uppercase;
+}
+
+.t-secondary {
+  color: var(--color-text-secondary);
+}
+
+.t-muted {
+  color: var(--color-text-meta);
+}
+
+.t-tabular {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.t-measure {
+  max-inline-size: var(--measure);
+}
+
+/* zh overrides for the utility levels (design-system §3.4) */
+:lang(zh) .t-display {
+  font-size: var(--text-display-zh);
+  font-weight: var(--weight-display-zh);
+  line-height: var(--leading-display-zh);
+  letter-spacing: 0.01em;
+}
+
+:lang(zh) .t-title-list {
+  font-size: var(--text-title-list-zh);
+  font-weight: var(--weight-heading-zh);
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+}
+
+:lang(zh) .t-h1 {
+  font-size: var(--text-h1-zh);
+  font-weight: var(--weight-heading-zh);
+  line-height: var(--leading-heading-zh);
+  letter-spacing: 0.01em;
+}
+
+:lang(zh) .t-h2 {
+  font-size: var(--text-h2-zh);
+  font-weight: var(--weight-heading-zh);
+  line-height: 1.3;
+  letter-spacing: 0.01em;
+}
+
+:lang(zh) .t-lede {
+  line-height: var(--leading-lede-zh);
+}
+
+:lang(zh) .t-body-s {
+  line-height: 1.75;
+}
+
+/* Localized metadata (category labels, chips, footer summaries) is never tracked beyond 0.02em in zh. */
+:lang(zh) .t-meta[data-localized],
+:lang(zh) [data-localized] {
+  letter-spacing: var(--tracking-cjk-max);
+}
+
+/* ==========================================================================
+   Grid (design-system §4). 4 / 8 / 12 columns, max 1500px.
+   Column helpers take INCLUSIVE column numbers: .col-start-4.col-end-10 spans 4–10.
+   Below the breakpoint a helper applies to, children span the full row.
+   ========================================================================== */
+
+.container {
+  inline-size: min(100% - 2 * var(--page-margin), var(--content-max));
+  margin-inline: auto;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(var(--grid-cols), minmax(0, 1fr));
+  column-gap: var(--grid-gutter);
+  inline-size: min(100% - 2 * var(--page-margin), var(--content-max));
+  margin-inline: auto;
+}
+
+.grid > * {
+  grid-column: 1 / -1;
+  min-inline-size: 0;
+}
+
+/* Nested grid that inherits the parent tracks. */
+.subgrid {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  column-gap: var(--grid-gutter);
+}
+
+.subgrid > * {
+  grid-column: 1 / -1;
+  min-inline-size: 0;
+}
+
+/* Tablet (8 columns) helpers */
+@media (min-width: 768px) {
+  .grid > .md-col-start-1,
+  .subgrid > .md-col-start-1 {
+    grid-column-start: 1;
+  }
+  .grid > .md-col-start-2,
+  .subgrid > .md-col-start-2 {
+    grid-column-start: 2;
+  }
+  .grid > .md-col-start-3,
+  .subgrid > .md-col-start-3 {
+    grid-column-start: 3;
+  }
+  .grid > .md-col-start-4,
+  .subgrid > .md-col-start-4 {
+    grid-column-start: 4;
+  }
+  .grid > .md-col-start-5,
+  .subgrid > .md-col-start-5 {
+    grid-column-start: 5;
+  }
+  .grid > .md-col-start-6,
+  .subgrid > .md-col-start-6 {
+    grid-column-start: 6;
+  }
+  .grid > .md-col-end-4,
+  .subgrid > .md-col-end-4 {
+    grid-column-end: 5;
+  }
+  .grid > .md-col-end-5,
+  .subgrid > .md-col-end-5 {
+    grid-column-end: 6;
+  }
+  .grid > .md-col-end-6,
+  .subgrid > .md-col-end-6 {
+    grid-column-end: 7;
+  }
+  .grid > .md-col-end-7,
+  .subgrid > .md-col-end-7 {
+    grid-column-end: 8;
+  }
+  .grid > .md-col-end-8,
+  .subgrid > .md-col-end-8 {
+    grid-column-end: 9;
+  }
+}
+
+/* Desktop (12 columns) helpers */
+@media (min-width: 1024px) {
+  .grid > .col-start-1,
+  .subgrid > .col-start-1 {
+    grid-column-start: 1;
+  }
+  .grid > .col-start-2,
+  .subgrid > .col-start-2 {
+    grid-column-start: 2;
+  }
+  .grid > .col-start-3,
+  .subgrid > .col-start-3 {
+    grid-column-start: 3;
+  }
+  .grid > .col-start-4,
+  .subgrid > .col-start-4 {
+    grid-column-start: 4;
+  }
+  .grid > .col-start-5,
+  .subgrid > .col-start-5 {
+    grid-column-start: 5;
+  }
+  .grid > .col-start-6,
+  .subgrid > .col-start-6 {
+    grid-column-start: 6;
+  }
+  .grid > .col-start-7,
+  .subgrid > .col-start-7 {
+    grid-column-start: 7;
+  }
+  .grid > .col-start-8,
+  .subgrid > .col-start-8 {
+    grid-column-start: 8;
+  }
+  .grid > .col-start-9,
+  .subgrid > .col-start-9 {
+    grid-column-start: 9;
+  }
+  .grid > .col-start-10,
+  .subgrid > .col-start-10 {
+    grid-column-start: 10;
+  }
+  .grid > .col-start-11,
+  .subgrid > .col-start-11 {
+    grid-column-start: 11;
+  }
+  .grid > .col-start-12,
+  .subgrid > .col-start-12 {
+    grid-column-start: 12;
+  }
+  .grid > .col-end-3,
+  .subgrid > .col-end-3 {
+    grid-column-end: 4;
+  }
+  .grid > .col-end-4,
+  .subgrid > .col-end-4 {
+    grid-column-end: 5;
+  }
+  .grid > .col-end-5,
+  .subgrid > .col-end-5 {
+    grid-column-end: 6;
+  }
+  .grid > .col-end-6,
+  .subgrid > .col-end-6 {
+    grid-column-end: 7;
+  }
+  .grid > .col-end-7,
+  .subgrid > .col-end-7 {
+    grid-column-end: 8;
+  }
+  .grid > .col-end-8,
+  .subgrid > .col-end-8 {
+    grid-column-end: 9;
+  }
+  .grid > .col-end-9,
+  .subgrid > .col-end-9 {
+    grid-column-end: 10;
+  }
+  .grid > .col-end-10,
+  .subgrid > .col-end-10 {
+    grid-column-end: 11;
+  }
+  .grid > .col-end-11,
+  .subgrid > .col-end-11 {
+    grid-column-end: 12;
+  }
+  .grid > .col-end-12,
+  .subgrid > .col-end-12 {
+    grid-column-end: 13;
+  }
+
+  /* Label rail (cols 1–3) and the two content starts (design-system §4.3). */
+  .grid > .col-rail,
+  .subgrid > .col-rail {
+    grid-column: 1 / 4;
+    align-self: start;
+    margin-block-start: 0.35em;
+  }
+  .grid > .col-content,
+  .subgrid > .col-content {
+    grid-column: 4 / 13;
+  }
+  .grid > .col-text,
+  .subgrid > .col-text {
+    grid-column: 5 / 12;
+  }
+}
+
+/* Below lg the rail is an inline eyebrow above the heading. */
+@media (max-width: 1023.98px) {
+  .grid > .col-rail,
+  .subgrid > .col-rail {
+    margin-block-end: var(--space-3);
+  }
+}
+
+/* ---- Section spacing scale (design-system §4.5); apply to <section>, never a top border ---- */
+.section-s {
+  padding-block: var(--section-s);
+}
+
+.section-m {
+  padding-block: var(--section-m);
+}
+
+.section-l {
+  padding-block: var(--section-l);
+}
+
+.section-top-s {
+  padding-block-start: var(--section-s);
+}
+
+.section-top-m {
+  padding-block-start: var(--section-m);
+}
+
+.section-top-l {
+  padding-block-start: var(--section-l);
+}
+
+.section-bottom-s {
+  padding-block-end: var(--section-s);
+}
+
+.section-bottom-m {
+  padding-block-end: var(--section-m);
+}
+
+.section-bottom-l {
+  padding-block-end: var(--section-l);
+}
+
+/* Level-1 zone (bg-2). Max two per home page. */
+.zone-2 {
+  background-color: var(--color-bg-2);
+}
+
+/* Level-2 surface */
+.surface {
+  background-color: var(--color-surface);
+  box-shadow: var(--edge-light);
+}
+
+/* ---- Full-bleed helpers (design-system §4.4) ---- */
+/* A full-bleed zone is a section-level element OUTSIDE .grid holding an inner .grid. */
+.full-bleed {
+  inline-size: 100%;
+}
+
+/* One-side bleed for a grid child (feature cover). main { overflow-x: clip } guards it. */
+.bleed-start {
+  margin-inline-start: calc(
+    -1 *
+    max(var(--page-margin), (100vw - var(--content-max)) / 2)
+  );
+}
+
+.bleed-end {
+  margin-inline-end: calc(
+    -1 *
+    max(var(--page-margin), (100vw - var(--content-max)) / 2)
+  );
+}
+
+.stack > * + * {
+  margin-block-start: var(--stack-gap, var(--space-4));
+}
+
+/* ==========================================================================
+   Reduced motion base. Transforms are declared inside no-preference blocks
+   (motion.css); this is the belt-and-braces fallback for everything else.
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: var(--dur-1) !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: var(--dur-1) !important;
+    scroll-behavior: auto !important;
+  }
 }
