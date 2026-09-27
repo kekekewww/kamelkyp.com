@@ -1,0 +1,259 @@
+/* ==========================================================================
+   KAMEL STUDIO — homepage control.
+   The running order of sections (numbered, because the page is a sequence),
+   per-block save bars, featured lists with order controls, the showreel.
+   ========================================================================== */
+
+.studio .studio-homepage__intro {
+  margin-block: 0 var(--space-5);
+}
+
+.studio .studio-homepage {
+  display: grid;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+.studio .studio-homepage-form {
+  display: grid;
+  gap: var(--space-4);
+  min-inline-size: 0;
+}
+
+.studio .studio-homepage-form + .studio-homepage-form {
+  padding-block-start: var(--space-5);
+  border-block-start: 1px solid var(--color-rule);
+}
+
+.studio .studio-homepage-form__save {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2) var(--space-3);
+  padding-block-start: var(--space-3);
+  border-block-start: 1px dashed var(--color-rule-strong);
+}
+
+.studio .studio-homepage-form__save .studio-save-state {
+  margin-inline-end: auto;
+}
+
+.studio .studio-homepage-form__save .studio-hint {
+  margin: 0;
+}
+
+.studio .studio-homepage-form__error {
+  flex-basis: 100%;
+  color: var(--color-danger);
+  font-size: 0.8125rem;
+}
+
+/* ---- Running order ---------------------------------------------------------- */
+
+.studio .studio-running-order {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-block-start: 1px solid var(--color-rule);
+  max-inline-size: 44rem;
+}
+
+.studio .studio-running-order__row {
+  display: grid;
+  grid-template-columns: 2.25rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: var(--studio-row-h);
+  padding: var(--space-2) var(--space-3);
+  border-block-end: 1px solid var(--color-rule);
+}
+
+.studio .studio-running-order__position {
+  color: var(--color-text-meta);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta-xs);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+}
+
+/* A hidden section reads as switched off along the whole row. */
+.studio
+  .studio-running-order__row:has(input[role="switch"]:not(:checked))
+  .studio-check
+  label {
+  color: var(--color-text-meta);
+  text-decoration: line-through;
+  text-decoration-color: var(--color-rule-strong);
+}
+
+.studio .studio-running-order__count {
+  grid-template-columns: auto 5rem;
+  align-items: center;
+  column-gap: var(--space-2);
+}
+
+.studio .studio-running-order__count .studio-field__head {
+  justify-content: flex-end;
+}
+
+.studio .studio-running-order__count .studio-field__label {
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 400;
+}
+
+.studio .studio-running-order__count input {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+}
+
+.studio .studio-running-order__count .studio-field__error {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 767px) {
+  .studio .studio-running-order__row {
+    grid-template-columns: 2rem minmax(0, 1fr);
+  }
+
+  .studio .studio-running-order__count {
+    grid-column: 2;
+  }
+}
+
+/* ---- Featured lists ------------------------------------------------------------ */
+
+.studio .studio-featured {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.studio .studio-featured .studio-hint {
+  margin: 0;
+}
+
+.studio .studio-featured__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-block-start: 1px solid var(--color-rule);
+}
+
+.studio .studio-featured__row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: var(--studio-row-h);
+  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-1);
+  border-block-end: 1px solid var(--color-rule);
+}
+
+.studio .studio-featured__label {
+  display: grid;
+  min-inline-size: 0;
+}
+
+.studio .studio-featured__label a {
+  overflow: hidden;
+  color: var(--color-text);
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.studio .studio-featured__label a:hover {
+  text-decoration: underline 1px;
+  text-underline-offset: 0.3em;
+}
+
+.studio .studio-featured__secondary {
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.studio .studio-featured__state {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.studio .studio-featured__note {
+  color: var(--color-warning);
+  font-size: 0.8125rem;
+}
+
+.studio .studio-featured__empty {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.studio .studio-featured__add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--space-3);
+}
+
+.studio .studio-featured__add .studio-field {
+  flex: 1 1 18rem;
+  max-inline-size: 32rem;
+}
+
+@media (max-width: 767px) {
+  .studio .studio-featured__row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .studio .studio-featured__state,
+  .studio .studio-featured__row > .studio-btn {
+    grid-column: 2;
+    justify-self: start;
+  }
+}
+
+/* ---- Showreel ---------------------------------------------------------------- */
+
+.studio .studio-showreel {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.studio .studio-showreel .studio-hint {
+  margin: 0;
+}
+
+.studio .studio-showreel__current {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+  padding: var(--space-4);
+  background: var(--color-bg-2);
+}
+
+.studio .studio-showreel__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-body);
+  font-weight: 600;
+}
+
+.studio .studio-showreel__title a {
+  color: var(--color-text);
+}
+
+/* Rows past the homepage count stay listed but read as secondary. */
+.studio .studio-featured__row[data-over] .studio-featured__label a {
+  color: var(--color-text-secondary);
+}

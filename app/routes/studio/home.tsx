@@ -1,15 +1,15 @@
-/** STUB (P4 Studio home): counts, recent changes, attention list, quick actions. */
-import { StubPanel } from "../../components/studio/shell/stub-panel";
+/** `/studio`: Studio home (admin-architecture §4.2). */
+import { useLoaderData } from "react-router";
+import { StudioHome } from "../../components/studio/home/studio-home";
+import { getStudioHome } from "../../lib/cms/repositories/studio-home.server";
 import { withOwner } from "../../lib/cms/studio/auth.server";
+import homeStyles from "../../styles/studio/home.css?url";
 
-export const loader = withOwner(() => null);
+export const links = () => [{ rel: "stylesheet", href: homeStyles }];
+
+export const loader = withOwner(({ db, now }) => getStudioHome(db, now));
 
 export default function StudioHomeRoute() {
-  return (
-    <StubPanel
-      title="Home"
-      legacyHref="/admin"
-      description="The Studio home (what needs attention, recent changes, homepage summary) is part of the Studio but still being built."
-    />
-  );
+  const model = useLoaderData<typeof loader>();
+  return <StudioHome model={model} />;
 }
