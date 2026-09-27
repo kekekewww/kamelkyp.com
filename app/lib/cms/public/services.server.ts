@@ -7,6 +7,7 @@
 import type { Env } from "../../env.server";
 import { getActivePriceRule } from "../../pricing/price-repository.server";
 import type { ServiceId } from "../../services/service-id";
+import { localize, parseLocalizedText } from "../localized";
 import type { ServiceAreaKey } from "../schemas/site-settings";
 import type { Term } from "../schemas/taxonomy";
 import type { Locale } from "../types";
@@ -119,6 +120,31 @@ export async function getCommissionServiceView(
   if (rows.length === 0) return null;
   const [item] = await buildItems(db, env, locale, rows, mode, now);
   return item ?? null;
+}
+
+/**
+ * Display names of the four commission services in one locale, for the
+ * wizard, its confirmation and the terms page. The published name wins; a
+ * row that was never published (or is unpublished) falls back to its working
+ * name, so legal and in-progress commission pages always have a label.
+ */
+export async function getCommissionServiceNames(
+  db: D1Database,
+  locale: Locale,
+): Promise<Partial<Record<ServiceId, string>>> {
+  const rows = await db
+    .prepare(
+      `SELECT commission_service_id AS id,
+              COALESCE(json_extract(published_json, '$.core.name_i18n'), name_i18n) AS name
+       FROM services WHERE commission_service_id IS NOT NULL`,
+    )
+    .all<{ id: ServiceId; name: string }>();
+  const names: Partial<Record<ServiceId, string>> = {};
+  for (const row of rows.results) {
+    const name = localize(parseLocalizedText(row.name), locale);
+    if (name) names[row.id] = name;
+  }
+  return names;
 }
 
 /**

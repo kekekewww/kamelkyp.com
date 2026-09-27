@@ -1,5 +1,5 @@
 import { useMatches } from "react-router";
-import type { FooterGroup } from "../../lib/content/footer-repository.server";
+import type { PublicSiteContext } from "../../lib/cms/public/view-models";
 import { getSiteCopy } from "../../lib/i18n/copy";
 import type { Locale } from "../../lib/i18n/locale";
 import { ContactBand, type ContactBandVariant } from "./contact-band";
@@ -33,13 +33,18 @@ function useContactBandSlot(): PublicRouteHandle["contactBand"] {
   return false;
 }
 
+/**
+ * Header, contact slot and footer around a public page. Identity, navigation,
+ * footer groups and contact lines all come from the site context (brand and
+ * site settings), which the public layout (and the Studio preview) provide.
+ */
 export function PublicShell({
   locale,
-  footerGroups,
+  site,
   children,
 }: {
   locale: Locale;
-  footerGroups: FooterGroup[];
+  site: PublicSiteContext;
   children: React.ReactNode;
 }) {
   const copy = getSiteCopy(locale);
@@ -50,17 +55,27 @@ export function PublicShell({
       <a className="skip-link" href="#main-content">
         {copy.skipToContent}
       </a>
-      <SiteHeader locale={locale} />
+      <SiteHeader
+        locale={locale}
+        brandName={site.brand.brandName}
+        navigation={site.navigation}
+      />
       {children}
       {band ? (
         <ContactBand
           locale={locale}
-          variant={band.variant}
+          heading={site.site.contactBand[band.variant ?? "default"]}
+          email={site.brand.contactEmail}
           size={band.size}
           as="aside"
         />
       ) : null}
-      <SiteFooter locale={locale} groups={footerGroups} />
+      <SiteFooter
+        locale={locale}
+        groups={site.footerGroups}
+        brand={site.brand}
+        site={site.site}
+      />
     </div>
   );
 }

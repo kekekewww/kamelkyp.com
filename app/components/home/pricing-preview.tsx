@@ -7,47 +7,36 @@ import { useMagnetic } from "../../lib/motion/use-magnetic";
 import type { FxSnapshot } from "../../lib/pricing/fx-repository.server";
 import { ServicePrice } from "../pricing/service-price";
 
-export interface HomePricing {
-  /** Lowest catalog base price per category, TWD. */
-  mixingFromTwd: number;
-  transitionFromTwd: number;
-  fxSnapshot: FxSnapshot | null;
+/**
+ * One area row: `twd` is the lowest active price rule among the area's
+ * published commission services (never invented); `null` = quoted on request.
+ */
+export interface HomePriceRow {
+  key: "mixing" | "song_transition" | "software";
+  name: string;
+  twd: number | null;
 }
 
 /**
  * Home §6: category-level "starting at" strip on a bg-2 zone
- * (design-system §6.15). Not a selection page: rows are not links.
+ * (design-system §6.15). Not a selection page: rows are not links. With no
+ * rows the section is not rendered.
  */
 export function PricingPreview({
   locale,
-  pricing,
+  rows,
+  fxSnapshot,
 }: {
   locale: Locale;
-  pricing: HomePricing;
+  rows: readonly HomePriceRow[];
+  fxSnapshot: FxSnapshot | null;
 }) {
   const copy = getSiteCopy(locale);
   const isZh = locale === "zh";
   const ctaRef = useRef<HTMLAnchorElement>(null);
   useMagnetic(ctaRef);
   const startingAt = isZh ? "起價" : "Starting at";
-
-  const rows = [
-    {
-      id: "mixing",
-      name: isZh ? "混音" : "Mixing",
-      twd: pricing.mixingFromTwd,
-    },
-    {
-      id: "transition",
-      name: isZh ? "歌曲銜接" : "Song Transition",
-      twd: pricing.transitionFromTwd,
-    },
-    {
-      id: "software",
-      name: isZh ? "軟體與互動" : "Software & Interactive",
-      twd: null,
-    },
-  ];
+  if (rows.length === 0) return null;
 
   return (
     <section
@@ -68,7 +57,7 @@ export function PricingPreview({
       <div className="grid">
         <ul className="home-rows home-pricing__list" data-reveal-group>
           {rows.map((row) => (
-            <li key={row.id} className="home-price" data-reveal-item>
+            <li key={row.key} className="home-price" data-reveal-item>
               <h3 className="home-price__name t-h2">{row.name}</h3>
               {row.twd === null ? (
                 <p className="home-price__quote price__quote">
@@ -81,7 +70,7 @@ export function PricingPreview({
                     <ServicePrice
                       locale={locale}
                       twd={row.twd}
-                      fxSnapshot={pricing.fxSnapshot}
+                      fxSnapshot={fxSnapshot}
                     />
                   </p>
                 </>

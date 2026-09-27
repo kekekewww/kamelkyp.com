@@ -1,14 +1,24 @@
 import { useEffect, useRef } from "react";
 import { Link } from "react-router";
-import type { CategoryFilter, CategoryFilterOption } from "../../content";
 import type { Locale } from "../../lib/i18n/locale";
 import { localePath } from "../../lib/i18n/path";
 import { getReducedMotionSnapshot } from "../../lib/motion/reduced-motion";
 import { formatIndex, getWorkCopy } from "./project-meta";
 
+/** `"all"` or a `project_category` term slug (`/works?category=<slug>`). */
+export type CategoryFilter = string;
+
+export interface WorkFilterOption {
+  value: CategoryFilter;
+  label: string;
+  count: number;
+}
+
 export function filterHref(locale: Locale, value: CategoryFilter): string {
   const base = localePath(locale, "/works");
-  return value === "all" ? base : `${base}?category=${value}`;
+  return value === "all"
+    ? base
+    : `${base}?category=${encodeURIComponent(value)}`;
 }
 
 /**
@@ -22,7 +32,7 @@ export function WorkFilters({
   active,
   locale,
 }: {
-  options: readonly CategoryFilterOption[];
+  options: readonly WorkFilterOption[];
   active: CategoryFilter;
   locale: Locale;
 }) {

@@ -36,34 +36,29 @@ export function ProjectFeature({
       to={href}
       viewTransition
       data-vt={vt}
-      aria-describedby={item.description ? descriptionId : undefined}
+      aria-describedby={item.shortDescription ? descriptionId : undefined}
       data-reveal="up"
     >
       <div className="project-feature__media bleed-start">
         <ProjectCover
           className="project-row__cover project-feature__cover"
           slug={item.slug}
-          category={item.categories[0] ?? "music"}
+          category={item.primaryCategory?.slug ?? item.categories[0]?.slug}
           cover={item.cover}
           index={index}
-          placeholder={item.placeholder}
+          placeholder={item.todoContent}
           showBadge
           aspect="3:2"
           locale={locale}
         />
       </div>
       <div className="project-feature__text">
-        <MetaRow
-          index={index}
-          categories={item.categories}
-          year={item.year}
-          locale={locale}
-        />
+        <MetaRow index={index} categories={item.categories} year={item.year} />
         <div className="project-feature__head">
           <Heading className="project-row__title project-feature__title">
             {item.title || copy.untitled}
           </Heading>
-          {item.placeholder ? (
+          {item.todoContent ? (
             <span className="badge-placeholder">
               {getSiteCopy(locale).badgePlaceholder}
             </span>
@@ -72,9 +67,9 @@ export function ProjectFeature({
         {item.role ? (
           <span className="project-feature__role">{item.role}</span>
         ) : null}
-        {item.description ? (
+        {item.shortDescription ? (
           <span className="project-feature__description" id={descriptionId}>
-            {item.description}
+            {item.shortDescription}
           </span>
         ) : null}
         <span className="project-feature__cta text-link">

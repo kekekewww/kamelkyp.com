@@ -1,29 +1,21 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
-import { getSiteCopy } from "../../lib/i18n/copy";
+import type { PublicBrand } from "../../lib/cms/public/view-models";
 import type { Locale } from "../../lib/i18n/locale";
-import { localePath } from "../../lib/i18n/path";
 import type { MediaItem } from "../../lib/media/media-schema";
 import { useMagnetic } from "../../lib/motion/use-magnetic";
 import { HeroCanvas } from "../hero/hero-canvas";
 import { MediaPreview } from "../media/media-preview";
 
+/** UI strings only; identity, roles, statement and CTAs come from settings. */
 const COPY = {
   zh: {
     label: "自我介紹",
-    realName: "楊子賢",
-    roles: ["音樂製作人", "軟體開發者", "創意科技"],
-    statement: "打造系統、聲音與互動體驗。",
-    viewWork: "查看作品",
     showreelEmpty: "尚無可播放的 Showreel",
     showreelPending: "作品待發布",
   },
   en: {
     label: "Introduction",
-    realName: "Kevin Yang",
-    roles: ["Music Producer", "Software Developer", "Creative Technologist"],
-    statement: "Building systems, sound, and interactive experiences.",
-    viewWork: "View work",
     showreelEmpty: "No showreel is available yet",
     showreelPending: "Showreel pending",
   },
@@ -55,18 +47,24 @@ function EmptyShowreel({ locale }: { locale: Locale }) {
   );
 }
 
-/** Home §1: wordmark, the single real-name line, roles, statement, CTAs, showreel, field. */
+/**
+ * Home §1: the brand wordmark (the only public identity), roles, statement,
+ * CTAs, showreel and field, all from brand settings. Never autoplay: the
+ * showreel is the existing click-to-play player (or its empty state).
+ */
 export function Hero({
   locale,
+  brand,
   showreel,
-  r2Hosts,
+  showreelVisible = true,
 }: {
   locale: Locale;
+  brand: PublicBrand;
   showreel: MediaItem | null;
-  r2Hosts: ReadonlySet<string>;
+  /** Site setting `homepage.sections.showreel`. */
+  showreelVisible?: boolean;
 }) {
   const copy = COPY[locale];
-  const site = getSiteCopy(locale);
   const heroRef = useRef<HTMLElement>(null);
   const ctaRef = useRef<HTMLAnchorElement>(null);
   useMagnetic(ctaRef);
@@ -80,6 +78,10 @@ export function Hero({
     return () => window.clearTimeout(timer);
   }, [intro]);
 
+  const actions = [brand.primaryCta, brand.secondaryCta].filter(
+    (cta): cta is NonNullable<typeof cta> => cta !== null,
+  );
+
   return (
     <section
       ref={heroRef}
@@ -92,66 +94,83 @@ export function Hero({
           <p className="eyebrow hero-intro__item" data-intro-step="0">
             SOUND × SOFTWARE × INTERACTION
           </p>
-          <p
-            className="home-hero__real-name hero-intro__item"
-            data-intro-step="1"
-          >
-            {copy.realName}
-          </p>
           <h1
             className="home-hero__wordmark t-wordmark hero-intro__item"
-            data-intro-step="2"
+            data-intro-step="1"
           >
-            Kamel
+            {brand.brandName}
           </h1>
         </div>
 
         <div className="home-hero__intro">
-          <ul
-            className="home-hero__roles t-lede hero-intro__item"
-            data-intro-step="3"
-          >
-            {copy.roles.map((role) => (
-              <li key={role}>{role}</li>
-            ))}
-          </ul>
-          <p
-            className="home-hero__statement t-h1 hero-intro__item"
-            data-intro-step="4"
-          >
-            {copy.statement}
-          </p>
-          <div
-            className="home-hero__actions button-row button-row--stack hero-intro__item"
-            data-intro-step="5"
-          >
-            <Link
-              ref={ctaRef}
-              className="button button--primary"
-              to={localePath(locale, "/commission")}
+          {brand.roles.length > 0 ? (
+            <ul
+              className="home-hero__roles t-lede hero-intro__item"
+              data-intro-step="2"
             >
-              <span className="button__label" data-magnetic-label>
-                {site.cta}
-              </span>
-            </Link>
-            <Link
-              className="button button--ghost"
-              to={localePath(locale, "/works")}
+              {brand.roles.map((role) => (
+                <li key={role}>{role}</li>
+              ))}
+            </ul>
+          ) : null}
+          {brand.heroStatement ? (
+            <p
+              className="home-hero__statement t-h1 hero-intro__item"
+              data-intro-step="3"
             >
-              {copy.viewWork}
-            </Link>
-          </div>
+              {brand.heroStatement}
+            </p>
+          ) : null}
+          {brand.heroSubtext ? (
+            <p
+              className="home-hero__subtext t-lede t-secondary hero-intro__item"
+              data-intro-step="4"
+            >
+              {brand.heroSubtext}
+            </p>
+          ) : null}
+          {actions.length > 0 ? (
+            <div
+              className="home-hero__actions button-row button-row--stack hero-intro__item"
+              data-intro-step="5"
+            >
+              {actions.map((cta, position) =>
+                position === 0 ? (
+                  <Link
+                    key={cta.href}
+                    ref={ctaRef}
+                    className="button button--primary"
+                    to={cta.href}
+                  >
+                    <span className="button__label" data-magnetic-label>
+                      {cta.label}
+                    </span>
+                  </Link>
+                ) : (
+                  <Link
+                    key={cta.href}
+                    className="button button--ghost"
+                    to={cta.href}
+                  >
+                    {cta.label}
+                  </Link>
+                ),
+              )}
+            </div>
+          ) : null}
         </div>
 
         <HeroCanvas heroRef={heroRef} />
 
-        <div className="home-hero__stage">
-          {showreel ? (
-            <MediaPreview item={showreel} locale={locale} r2Hosts={r2Hosts} />
-          ) : (
-            <EmptyShowreel locale={locale} />
-          )}
-        </div>
+        {showreelVisible ? (
+          <div className="home-hero__stage">
+            {showreel ? (
+              <MediaPreview item={showreel} locale={locale} />
+            ) : (
+              <EmptyShowreel locale={locale} />
+            )}
+          </div>
+        ) : null}
       </div>
     </section>
   );

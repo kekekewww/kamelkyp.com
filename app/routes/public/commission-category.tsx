@@ -1,34 +1,63 @@
-import { Link, type LoaderFunctionArgs, useLoaderData } from "react-router";
+import {
+  Link,
+  type LoaderFunctionArgs,
+  type MetaFunction,
+  useLoaderData,
+} from "react-router";
 import type { PublicRouteHandle } from "../../components/layout/public-shell";
 import { ServicePrice } from "../../components/pricing/service-price";
+import { pageMeta } from "../../lib/cms/public/meta";
+import { listPublicServices } from "../../lib/cms/public/services.server";
+import { getPublicLoaderContext } from "../../lib/content/public-loader.server";
 import { localePath } from "../../lib/i18n/path";
 import { getPublicPriceContext } from "../../lib/pricing/public-price.server";
-import {
-  getCategoryServices,
-  type ServiceDefinition,
-} from "../../lib/services/catalog";
+import { getService } from "../../lib/services/catalog";
+import { isServiceId } from "../../lib/services/service-id";
 
-const CATEGORIES = new Set(["mixing", "song-transition"]);
+const AREAS = {
+  mixing: "mixing",
+  "song-transition": "song_transition",
+} as const;
 
 // No contact band on commission pages (IA §5.1).
 export const handle: PublicRouteHandle = { contactBand: false };
 
 export async function loader(args: LoaderFunctionArgs) {
   const category = args.params.category;
-  if (!category || !CATEGORIES.has(category)) {
+  if (category !== "mixing" && category !== "song-transition") {
     throw new Response("Not Found", { status: 404 });
   }
-  return {
-    ...(await getPublicPriceContext(args)),
-    category,
-  };
+  const { locale, db, env } = getPublicLoaderContext(args);
+  const [priceContext, services] = await Promise.all([
+    getPublicPriceContext(args),
+    listPublicServices(db, env, locale, { area: AREAS[category] }),
+  ]);
+  // Only published commission services with an active price can be commissioned.
+  const commissionable = services.flatMap((service) => {
+    const id = service.commissionServiceId;
+    if (!id || !isServiceId(id) || service.price?.currency !== "TWD") return [];
+    return [
+      {
+        id,
+        slug: getService(id).slug,
+        name: service.name,
+        shortDescription: service.shortDescription,
+        baseTwd: service.price.amount,
+      },
+    ];
+  });
+  return { ...priceContext, category, services: commissionable };
 }
 
+export const meta: MetaFunction<typeof loader> = ({ loaderData, matches }) =>
+  pageMeta(matches, {
+    title: loaderData?.locale === "en" ? "Start a project" : "開始合作",
+  });
+
 export default function CommissionCategoryRoute() {
-  const { category, locale, fxSnapshot } = useLoaderData<typeof loader>();
+  const { category, locale, fxSnapshot, services } =
+    useLoaderData<typeof loader>();
   const isZh = locale === "zh";
-  const catalogCategory: ServiceDefinition["category"] =
-    category === "mixing" ? "mixing" : "song_transition";
   const title =
     category === "mixing"
       ? isZh
@@ -72,16 +101,18 @@ export default function CommissionCategoryRoute() {
       </header>
       <div className="grid">
         <section className="commission-services col-content" aria-label={title}>
-          {getCategoryServices(catalogCategory).map((service) => {
+          {services.map((service) => {
             const nameId = `commission-service-${service.slug}`;
             return (
               <article className="commission-service" key={service.id}>
                 <h2 className="commission-service__name" id={nameId}>
-                  {service.name[locale]}
+                  {service.name}
                 </h2>
-                <p className="commission-service__description">
-                  {service.shortDescription[locale]}
-                </p>
+                {service.shortDescription ? (
+                  <p className="commission-service__description">
+                    {service.shortDescription}
+                  </p>
+                ) : null}
                 <div className="price commission-service__price">
                   <p className="price__label">
                     {isZh ? "基礎價格" : "Base price"}
@@ -89,7 +120,7 @@ export default function CommissionCategoryRoute() {
                   <p className="price__figure price__figure--s commission-category__price">
                     <ServicePrice
                       locale={locale}
-                      twd={service.basePriceTwd}
+                      twd={service.baseTwd}
                       fxSnapshot={fxSnapshot}
                     />
                   </p>

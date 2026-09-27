@@ -13,6 +13,7 @@ import type { Env } from "../../env.server";
 import { localize } from "../localized";
 import { getAssets } from "../media/assets.server";
 import { readMediaConfig } from "../media/config.server";
+import { DEFAULT_MEDIA_CONFIG } from "../media/urls";
 import type { BrandSettings } from "../schemas/brand-settings";
 import { formatCopyright, type SiteSettings } from "../schemas/site-settings";
 import { settingsFromRows, settingsStatement } from "../settings.server";
@@ -241,6 +242,46 @@ function composeFooter(input: {
 
   push(fallback("legal"));
   return groups;
+}
+
+/**
+ * The site context without D1 (the settings defaults: brand "Kamel", empty
+ * text, the code footer structure). Used when the database cannot be read,
+ * so a public page never renders broken; sections that need text hide.
+ */
+export function fallbackSiteContext(
+  env: Env | null,
+  locale: Locale,
+  options: { now?: Date } = {},
+): PublicSiteContext {
+  const { brand, site } = settingsFromRows([]);
+  const context: ViewContext = {
+    mediaConfig: env ? readMediaConfig(env) : DEFAULT_MEDIA_CONFIG,
+    assets: new Map(),
+    terms: new Map(),
+    mode: "published",
+  };
+  const brandPublic = brandView(brand.value, locale, context);
+  return {
+    locale,
+    brand: brandPublic,
+    site: siteView(
+      site.value,
+      brandPublic.brandName,
+      locale,
+      context,
+      options.now ?? new Date(),
+    ),
+    navigation: site.value.navigation.items.map((item) => ({ ...item })),
+    footerGroups: composeFooter({
+      locale,
+      rows: [],
+      socialLinks: [],
+      contactEmail: brand.value.contactEmail,
+    }),
+    socialLinks: [],
+    mediaConfig: context.mediaConfig,
+  };
 }
 
 export async function getPublicSiteContext(

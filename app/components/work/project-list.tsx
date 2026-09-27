@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Link } from "react-router";
-import { categoryLabel, type WorkListItem } from "../../content";
+import type { PublicProjectCard } from "../../lib/cms/public/view-models";
 import { getSiteCopy } from "../../lib/i18n/copy";
 import type { Locale } from "../../lib/i18n/locale";
 import { localePath } from "../../lib/i18n/path";
@@ -12,7 +12,7 @@ import { ProjectCover } from "./project-cover";
 import { formatIndex, getWorkCopy } from "./project-meta";
 
 export interface IndexedWork {
-  item: WorkListItem;
+  item: PublicProjectCard;
   /** Stable 1-based position in the full, unfiltered Work order. */
   index: number;
 }
@@ -43,10 +43,11 @@ function ProjectRow({
   const vt = useVtFlag(href);
   const copy = getWorkCopy(locale);
   const Heading = headingLevel === 2 ? "h2" : "h3";
-  const primary = item.categories[0] ?? "music";
-  const sub = [item.role, showDescription ? item.description : null].filter(
-    (value): value is string => Boolean(value),
-  );
+  const primary = item.primaryCategory?.slug ?? item.categories[0]?.slug;
+  const sub = [
+    item.role,
+    showDescription ? item.shortDescription : null,
+  ].filter((value): value is string => Boolean(value));
 
   return (
     <li className="project-list__item" data-reveal-item={reveal || undefined}>
@@ -64,7 +65,7 @@ function ProjectRow({
           <Heading className="project-row__title">
             {item.title || copy.untitled}
           </Heading>
-          {item.placeholder ? (
+          {item.todoContent ? (
             <span className="badge-placeholder">
               {getSiteCopy(locale).badgePlaceholder}
             </span>
@@ -72,8 +73,8 @@ function ProjectRow({
         </div>
         <span className="project-row__cats project-row__meta meta-row">
           {item.categories.map((category) => (
-            <span key={category} data-localized>
-              {categoryLabel(category, locale)}
+            <span key={category.id} data-localized>
+              {category.label}
             </span>
           ))}
         </span>
@@ -122,10 +123,10 @@ function PreviewItem({
     >
       <ProjectCover
         slug={item.slug}
-        category={item.categories[0] ?? "music"}
+        category={item.primaryCategory?.slug ?? item.categories[0]?.slug}
         cover={item.cover}
         index={index}
-        placeholder={item.placeholder}
+        placeholder={item.todoContent}
         showBadge
         aspect="4:3"
         locale={locale}

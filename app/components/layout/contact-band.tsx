@@ -1,10 +1,11 @@
 import { type ReactNode, useId, useRef } from "react";
 import { Link } from "react-router";
-import { CONTACT_EMAIL, getSiteCopy } from "../../lib/i18n/copy";
+import { getSiteCopy } from "../../lib/i18n/copy";
 import type { Locale } from "../../lib/i18n/locale";
 import { localePath } from "../../lib/i18n/path";
 import { useMagnetic } from "../../lib/motion/use-magnetic";
 
+/** Which settings line heads the band (`site.contactBand`). */
 export type ContactBandVariant = "default" | "project" | "work";
 
 /**
@@ -12,24 +13,25 @@ export type ContactBandVariant = "default" | "project" | "work";
  * START A PROJECT instance. `large` = bg-2 zone with the measured line (home,
  * page ends); `small` = one line (writing, legal variants).
  *
- * Use either inline inside a page's <main>, or via the shell slot by exporting
- * `handle = { contactBand: { variant, size } }` from the route module.
+ * The heading and email come from site/brand settings (the shell passes the
+ * variant's line; home passes its own body). Without a heading the band is
+ * not rendered; without an email only the CTA shows.
  */
 export function ContactBand({
   locale,
-  variant = "default",
-  size = "large",
   heading,
+  size = "large",
   body,
+  email = "",
   showEmail = size === "large",
   as: Tag = "section",
 }: {
   locale: Locale;
-  variant?: ContactBandVariant;
+  heading: ReactNode;
   size?: "large" | "small";
-  /** Overrides the variant heading. */
-  heading?: ReactNode;
   body?: ReactNode;
+  /** `brand.contactEmail`; empty hides the mail link. */
+  email?: string;
   showEmail?: boolean;
   as?: "section" | "aside";
 }) {
@@ -37,14 +39,8 @@ export function ContactBand({
   const headingId = useId();
   const ctaRef = useRef<HTMLAnchorElement>(null);
   useMagnetic(ctaRef);
-
-  const title =
-    heading ??
-    (variant === "project"
-      ? copy.ctaBandProject
-      : variant === "work"
-        ? copy.ctaBandWork
-        : copy.ctaBandDefault);
+  if (!heading) return null;
+  const address = email.trim();
 
   return (
     <Tag
@@ -57,7 +53,7 @@ export function ContactBand({
           <p className="cta-band__eyebrow eyebrow">START A PROJECT</p>
         ) : null}
         <h2 className="cta-band__heading" id={headingId} data-reveal="mask">
-          {title}
+          {heading}
         </h2>
         {body ? <p className="cta-band__body">{body}</p> : null}
         <div className="cta-band__actions">
@@ -70,9 +66,9 @@ export function ContactBand({
               {copy.cta}
             </span>
           </Link>
-          {showEmail ? (
-            <a className="text-link" href={`mailto:${CONTACT_EMAIL}`}>
-              {CONTACT_EMAIL}
+          {showEmail && address ? (
+            <a className="text-link" href={`mailto:${address}`}>
+              {address}
             </a>
           ) : null}
         </div>

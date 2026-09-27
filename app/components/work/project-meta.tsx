@@ -1,45 +1,59 @@
 import type { ReactNode } from "react";
-import {
-  type CategoryFilter,
-  categoryLabel,
-  type ProjectCategory,
-  type ProjectSectionKind,
-} from "../../content";
 import type { Locale } from "../../lib/i18n/locale";
 
-/** Work copy (IA §7.3). zh and en are authored separately. */
+/** Case-study section keys in page order (story fields, then media). */
+export type CaseSectionKey =
+  | "overview"
+  | "context"
+  | "problem"
+  | "approach"
+  | "process"
+  | "architecture"
+  | "result"
+  | "media"
+  | "reflection";
+
+/** A category chip or metadata segment (a taxonomy term, already localized). */
+export interface CategoryRef {
+  slug: string;
+  label: string;
+}
+
+/** Work copy (IA §7.3): UI strings only, zh and en authored separately. */
 const WORK_COPY = {
   zh: {
     h1: "作品",
     intro: "軟體、AI、互動、音樂與混音——同一套方法，不同的媒材。",
     filterLabel: "作品分類",
+    filterAll: "全部",
     count: (n: number) => `共 ${n} 件作品`,
     emptyTitle: "此分類尚無作品",
     emptyBody: "可以先看看其他分類，或直接聊聊你的案子。",
     emptyLink: "查看全部作品",
+    noneTitle: "目前沒有公開作品",
+    noneBody: "作品發布後會顯示在這裡。",
     back: "返回作品",
     viewProject: "查看作品",
     untitled: "未命名作品",
-    metaTitle: "作品 — Kamel",
-    metaDescription: "Kamel 的作品：軟體、AI、互動、音樂與混音。",
+    metaTitle: "作品",
+    metaDescription: "作品：軟體、AI、互動、音樂與混音。",
     meta: {
       year: "年份",
       category: "類別",
       role: "角色",
       tech: "技術與工具",
-      services: "服務",
     },
     section: {
+      overview: "概要",
       context: "背景",
       problem: "問題",
       approach: "方法",
       process: "過程",
-      system: "系統與架構",
-      design: "設計",
+      architecture: "系統與架構",
       result: "成果",
       media: "媒體",
       reflection: "心得",
-    } satisfies Record<ProjectSectionKind | "media", string>,
+    } satisfies Record<CaseSectionKey, string>,
     links: "連結",
     credits: "參與人員",
     next: "下一個作品",
@@ -59,34 +73,35 @@ const WORK_COPY = {
     intro:
       "Software, AI, interaction, music and mixing — one way of working, different materials.",
     filterLabel: "Work categories",
+    filterAll: "All",
     count: (n: number) => (n === 1 ? "1 project" : `${n} projects`),
     emptyTitle: "Nothing in this category yet",
     emptyBody: "Try another category, or tell me about your project.",
     emptyLink: "View all work",
+    noneTitle: "No published work yet",
+    noneBody: "Projects appear here once they are published.",
     back: "Back to work",
     viewProject: "View project",
     untitled: "Untitled",
-    metaTitle: "Work — Kamel",
-    metaDescription:
-      "Kamel's work: software, AI, interaction, music and mixing.",
+    metaTitle: "Work",
+    metaDescription: "Work: software, AI, interaction, music and mixing.",
     meta: {
       year: "Year",
       category: "Category",
       role: "Role",
       tech: "Technology & tools",
-      services: "Services",
     },
     section: {
+      overview: "Overview",
       context: "Context",
       problem: "Problem",
       approach: "Approach",
       process: "Process",
-      system: "System & architecture",
-      design: "Design",
+      architecture: "System & architecture",
       result: "Result",
       media: "Media",
       reflection: "Lessons & reflection",
-    } satisfies Record<ProjectSectionKind | "media", string>,
+    } satisfies Record<CaseSectionKey, string>,
     links: "Links",
     credits: "Credits",
     next: "Next project",
@@ -122,15 +137,14 @@ export function MetaRow({
   title,
   categories = [],
   year,
-  locale,
   className,
   leading,
 }: {
   index?: number;
   title?: string;
-  categories?: readonly CategoryFilter[];
+  categories?: readonly CategoryRef[];
   year?: number | null;
-  locale: Locale;
+  locale?: Locale;
   className?: string;
   /** Extra Latin-code segments placed first, e.g. `WORK`. */
   leading?: readonly string[];
@@ -151,8 +165,8 @@ export function MetaRow({
   }
   for (const category of categories) {
     parts.push(
-      <span key={category} data-localized>
-        {categoryLabel(category, locale)}
+      <span key={category.slug} data-localized>
+        {category.label}
       </span>,
     );
   }
@@ -164,11 +178,8 @@ export function MetaRow({
 }
 
 /** Localized category labels joined for running text (`AI / Software`). */
-export function categoryText(
-  categories: readonly ProjectCategory[],
-  locale: Locale,
-): string {
-  return categories.map((value) => categoryLabel(value, locale)).join(" / ");
+export function categoryText(categories: readonly CategoryRef[]): string {
+  return categories.map((category) => category.label).join(" / ");
 }
 
 export interface ProjectFact {

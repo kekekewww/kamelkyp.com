@@ -1,6 +1,7 @@
 import { type LoaderFunctionArgs, useLoaderData } from "react-router";
 import { CommissionWizard } from "../../components/commission/commission-wizard";
 import type { PublicRouteHandle } from "../../components/layout/public-shell";
+import { getCommissionServiceNames } from "../../lib/cms/public/services.server";
 import { getActiveTerms } from "../../lib/commission/terms-repository.server";
 import { getPublicLoaderContext } from "../../lib/content/public-loader.server";
 import { getUsableFxSnapshot } from "../../lib/pricing/fx-repository.server";
@@ -24,9 +25,10 @@ export async function loader(args: LoaderFunctionArgs) {
 
   const { locale, db, env } = getPublicLoaderContext(args);
   const now = new Date().toISOString();
-  const [priceRule, terms] = await Promise.all([
+  const [priceRule, terms, names] = await Promise.all([
     getActivePriceRule(db, serviceId, now),
     getActiveTerms(db, serviceId, locale, now),
+    getCommissionServiceNames(db, locale),
   ]);
   const fxSnapshot =
     locale === "en" ? await getUsableFxSnapshot(db, now.slice(0, 10)) : null;
@@ -37,6 +39,7 @@ export async function loader(args: LoaderFunctionArgs) {
   return {
     locale,
     serviceId,
+    serviceName: names[serviceId] ?? serviceId,
     priceRule,
     terms,
     fxSnapshot,

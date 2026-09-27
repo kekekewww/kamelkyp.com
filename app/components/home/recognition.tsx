@@ -1,12 +1,21 @@
-import { listRecognition, localize } from "../../content";
+import type { PublicRecognitionItem } from "../../lib/cms/public/view-models";
 import { getSiteCopy } from "../../lib/i18n/copy";
 import type { Locale } from "../../lib/i18n/locale";
 
-/** Home §4: newest three, YEAR / EVENT / RESULT rows (design-system §6.11). */
-export function Recognition({ locale }: { locale: Locale }) {
+/**
+ * Home §4: featured first, then newest, as YEAR / EVENT / RESULT rows
+ * (design-system §6.11). With no published recognition the section is not
+ * rendered.
+ */
+export function Recognition({
+  items,
+  locale,
+}: {
+  items: readonly PublicRecognitionItem[];
+  locale: Locale;
+}) {
   const copy = getSiteCopy(locale);
-  const entries = listRecognition(3);
-  if (entries.length === 0) return null;
+  if (items.length === 0) return null;
 
   return (
     <section
@@ -25,14 +34,14 @@ export function Recognition({ locale }: { locale: Locale }) {
       </div>
       <div className="grid">
         <ul className="home-rows home-recognition__list" data-reveal-group>
-          {entries.map((entry) => (
+          {items.map((entry) => (
             <li
               key={entry.id}
               className="home-recognition__row"
               data-reveal-item
             >
               <span className="home-recognition__year t-meta">
-                {entry.year}
+                {entry.year ?? ""}
               </span>
               <span className="home-recognition__event">
                 {entry.url ? (
@@ -42,20 +51,20 @@ export function Recognition({ locale }: { locale: Locale }) {
                     target="_blank"
                     rel="noreferrer"
                   >
-                    {localize(entry.event, locale)}
+                    {entry.event}
                     <span className="text-link__arrow" aria-hidden="true">
                       ↗
                     </span>
                   </a>
                 ) : (
-                  localize(entry.event, locale)
+                  entry.event
                 )}
               </span>
               <span className="home-recognition__result t-secondary">
-                {localize(entry.result, locale)}
+                {entry.result}
               </span>
               <span className="home-recognition__badge">
-                {entry.placeholder ? (
+                {entry.todoContent ? (
                   <span className="badge-placeholder">
                     {copy.badgePlaceholder}
                   </span>

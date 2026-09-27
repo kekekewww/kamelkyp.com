@@ -92,27 +92,13 @@
   z-index: 1;
 }
 
-.home-page .home-hero__real-name {
-  margin-block: var(--space-5) 0;
-  color: var(--color-text-secondary);
-  font-family: var(--font-display);
-  font-size: var(--text-h2);
-  font-weight: 400;
-  font-stretch: 100%;
-  line-height: 1.2;
-  letter-spacing: 0.01em;
-}
-
-.home-page .home-hero__real-name:lang(zh) {
-  font-family: var(--font-body);
-  font-size: var(--text-h2-zh);
-  font-weight: 500;
-  letter-spacing: var(--tracking-cjk-max);
-}
-
-/* The wordmark keeps the Latin face and scale in both locales (beats :lang(zh) h1). */
+/*
+ * The wordmark keeps the Latin face and scale in both locales (beats
+ * :lang(zh) h1). It is the only identity line: the eyebrow sits one step
+ * further away than before so the pair keeps its former vertical rhythm.
+ */
 .home-page .home-hero .home-hero__wordmark {
-  margin-block: var(--space-3) 0;
+  margin-block: var(--space-5) 0;
   margin-inline-start: -0.04em;
   color: var(--color-text);
   font-family: var(--font-display);
@@ -143,6 +129,11 @@
 
 .home-page .home-hero__statement:lang(zh) {
   max-inline-size: 14em;
+}
+
+.home-page .home-hero__subtext {
+  max-inline-size: 40ch;
+  margin-block: var(--space-4) 0;
 }
 
 .home-page .home-hero__actions {

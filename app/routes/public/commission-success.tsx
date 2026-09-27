@@ -1,14 +1,16 @@
 import { Link, useLocation } from "react-router";
 import type { PublicRouteHandle } from "../../components/layout/public-shell";
-import { getService } from "../../lib/services/catalog";
 import { isServiceId, type ServiceId } from "../../lib/services/service-id";
 
 // No contact band on commission pages (IA §5.1).
 export const handle: PublicRouteHandle = { contactBand: false };
 
+/** Set by the wizard on navigation; nothing is reloaded from the URL. */
 interface ConfirmationState {
   caseId: string;
   serviceId: ServiceId;
+  /** The service's display name at submission time (from its services row). */
+  serviceName?: string;
   submittedAt: string;
 }
 
@@ -20,6 +22,9 @@ function validState(value: unknown): value is ConfirmationState {
     /^KAM-\d{8}-[0-9A-HJKMNP-TV-Z]{10}$/.test(state.caseId) &&
     typeof state.serviceId === "string" &&
     isServiceId(state.serviceId) &&
+    (state.serviceName === undefined ||
+      (typeof state.serviceName === "string" &&
+        state.serviceName.length <= 200)) &&
     typeof state.submittedAt === "string" &&
     !Number.isNaN(new Date(state.submittedAt).getTime())
   );
@@ -59,7 +64,8 @@ export default function CommissionSuccessRoute() {
     );
   }
 
-  const service = getService(location.state.serviceId);
+  const serviceName =
+    location.state.serviceName?.trim() || location.state.serviceId;
   const submittedDate = new Intl.DateTimeFormat(
     locale === "zh" ? "zh-TW" : "en-US",
     { dateStyle: "medium", timeZone: "Asia/Taipei" },
@@ -84,7 +90,7 @@ export default function CommissionSuccessRoute() {
             </div>
             <div>
               <dt>{isZh ? "服務" : "Service"}</dt>
-              <dd>{service.name[locale]}</dd>
+              <dd>{serviceName}</dd>
             </div>
             <div>
               <dt>{isZh ? "送出日期" : "Submitted"}</dt>

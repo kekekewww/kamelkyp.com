@@ -17,7 +17,6 @@ import type { Locale } from "../../lib/i18n/locale";
 import { calculateQuote } from "../../lib/pricing/calculate-quote";
 import type { FxSnapshot } from "../../lib/pricing/fx-repository.server";
 import type { PriceRule } from "../../lib/pricing/types";
-import { getService } from "../../lib/services/catalog";
 import type { ServiceId } from "../../lib/services/service-id";
 import { CommonFields } from "./common-fields";
 import { EditTransitionFields } from "./edit-transition-fields";
@@ -108,6 +107,7 @@ function errorFieldId(path: PropertyKey[]): string {
 export function CommissionWizard({
   locale,
   serviceId,
+  serviceName,
   priceRule,
   terms,
   fxSnapshot,
@@ -116,6 +116,8 @@ export function CommissionWizard({
 }: {
   locale: Locale;
   serviceId: ServiceId;
+  /** The service's display name from its `services` row (route loader). */
+  serviceName: string;
   priceRule: PriceRule;
   terms: PublishedTermDocument[];
   fxSnapshot: FxSnapshot | null;
@@ -135,7 +137,6 @@ export function CommissionWizard({
   const [submitMessage, setSubmitMessage] = useState("");
   const [retryCaseId, setRetryCaseId] = useState<string | null>(null);
   const navigate = useNavigate();
-  const service = getService(serviceId);
   const versionKey = terms.map((term) => term.versionId).join("|");
 
   useEffect(() => {
@@ -244,7 +245,7 @@ export function CommissionWizard({
       setTurnstileToken("");
       navigate(`/${locale}/commission/success`, {
         replace: true,
-        state: result.data,
+        state: { ...result.data, serviceName },
       });
     } catch (error) {
       setSubmitState("idle");
@@ -270,7 +271,7 @@ export function CommissionWizard({
     >
       <header className="commission-wizard__header">
         <p className="eyebrow col-rail">COMMISSION / {serviceId}</p>
-        <h1>{service.name[locale]}</h1>
+        <h1>{serviceName}</h1>
         {/* < md: compact "02 / 04 TERMS"; the full list stays for screen readers. */}
         <p className="stepper__compact" aria-hidden="true">
           <span className="stepper__count">

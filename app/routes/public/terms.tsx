@@ -1,6 +1,11 @@
-import { type LoaderFunctionArgs, useLoaderData } from "react-router";
+import {
+  type LoaderFunctionArgs,
+  type MetaFunction,
+  useLoaderData,
+} from "react-router";
 import { EmptyState } from "../../components/content/empty-state";
 import type { PublicRouteHandle } from "../../components/layout/public-shell";
+import { usePublicSite } from "../../components/layout/use-public-site";
 import {
   formatLegalDate,
   LegalClosing,
@@ -8,9 +13,10 @@ import {
   latestEffectiveDate,
   legalAnchorId,
 } from "../../components/legal/legal-document";
+import { pageMeta } from "../../lib/cms/public/meta";
+import { getCommissionServiceNames } from "../../lib/cms/public/services.server";
 import { listPublishedTerms } from "../../lib/content/public-content.server";
 import { getPublicLoaderContext } from "../../lib/content/public-loader.server";
-import { getService } from "../../lib/services/catalog";
 import { isServiceId } from "../../lib/services/service-id";
 
 // Legal pages close with a text link, not the contact band (IA §4.11).
@@ -18,26 +24,36 @@ export const handle: PublicRouteHandle = { contactBand: false };
 
 export async function loader(args: LoaderFunctionArgs) {
   const { locale, db } = getPublicLoaderContext(args);
-  return { locale, terms: await listPublishedTerms(db, locale, "terms") };
+  const [terms, serviceNames] = await Promise.all([
+    listPublishedTerms(db, locale, "terms"),
+    getCommissionServiceNames(db, locale),
+  ]);
+  return { locale, terms, serviceNames };
 }
 
+export const meta: MetaFunction<typeof loader> = ({ loaderData, matches }) =>
+  pageMeta(matches, {
+    title: loaderData?.locale === "en" ? "Terms of service" : "服務條款",
+  });
+
 export default function TermsRoute() {
-  const { locale, terms } = useLoaderData<typeof loader>();
+  const { locale, terms, serviceNames } = useLoaderData<typeof loader>();
+  const { brandName } = usePublicSite().brand;
   const isZh = locale === "zh";
   const effective = latestEffectiveDate(
     terms.map((document) => document.effectiveFrom),
   );
 
   const documents = terms.map((document) => {
-    const service =
+    const serviceName =
       document.serviceId && isServiceId(document.serviceId)
-        ? getService(document.serviceId)
+        ? (serviceNames[document.serviceId] ?? document.serviceId)
         : null;
     return {
       document,
       anchorId: legalAnchorId(document.documentId, "title"),
-      title: service
-        ? service.name[locale]
+      title: serviceName
+        ? serviceName
         : isZh
           ? "通用委託條款"
           : "General commission terms",
@@ -72,8 +88,8 @@ export default function TermsRoute() {
               title={isZh ? "條款尚未發布" : "Terms are not published yet"}
               description={
                 isZh
-                  ? "正式開放委託前，Kamel 會從後台發布完整條款。"
-                  : "Kamel will publish the complete terms before commissions open."
+                  ? `正式開放委託前，${brandName} 會從後台發布完整條款。`
+                  : `${brandName} will publish the complete terms before commissions open.`
               }
             />
           </div>

@@ -1,83 +1,51 @@
-import { Link, type LoaderFunctionArgs, useLoaderData } from "react-router";
+import {
+  Link,
+  type LoaderFunctionArgs,
+  type MetaFunction,
+  useLoaderData,
+} from "react-router";
+import { SERVICE_AREA_PATHS } from "../../components/home/services-overview";
 import type { PublicRouteHandle } from "../../components/layout/public-shell";
+import { usePublicSite } from "../../components/layout/use-public-site";
 import {
   PriceFigure,
   PriceQuote,
 } from "../../components/services/price-figure";
-import type { Locale } from "../../lib/i18n/locale";
+import { pageMeta } from "../../lib/cms/public/meta";
+import { getAreaStartingPrices } from "../../lib/cms/public/services.server";
+import { getPublicLoaderContext } from "../../lib/content/public-loader.server";
 import { localePath } from "../../lib/i18n/path";
 import { getPublicPriceContext } from "../../lib/pricing/public-price.server";
-import {
-  getCategoryServices,
-  type ServiceDefinition,
-} from "../../lib/services/catalog";
 
 export const handle: PublicRouteHandle = {
   contactBand: { variant: "default", size: "large" },
 };
 
 export async function loader(args: LoaderFunctionArgs) {
-  return getPublicPriceContext(args);
+  const { db } = getPublicLoaderContext(args);
+  const [price, startingPrices] = await Promise.all([
+    getPublicPriceContext(args),
+    getAreaStartingPrices(db, new Date()),
+  ]);
+  return { ...price, startingPrices };
 }
 
-/** Lowest catalog base price in a category ("starting at"); never invented. */
-function startingPriceTwd(category: ServiceDefinition["category"]): number {
-  return Math.min(
-    ...getCategoryServices(category).map((service) => service.basePriceTwd),
-  );
-}
+export const meta: MetaFunction<typeof loader> = ({ loaderData, matches }) =>
+  pageMeta(matches, {
+    title: loaderData?.locale === "en" ? "Services" : "服務",
+  });
 
-interface Group {
-  id: ServiceDefinition["category"] | "software";
-  path: string;
-  name: Record<Locale, string>;
-  body: Record<Locale, string>;
-  link: Record<Locale, string>;
-}
-
-const GROUPS: readonly Group[] = [
-  {
-    id: "mixing",
-    path: "/mixing",
-    name: { zh: "混音", en: "Mixing" },
-    body: {
-      zh: "完整歌曲或 Vocal 混音，含母帶。",
-      en: "Full-song or vocal mixing, mastering included.",
-    },
-    link: { zh: "查看混音服務", en: "View mixing" },
-  },
-  {
-    id: "song_transition",
-    path: "/song-transition",
-    name: { zh: "歌曲銜接", en: "Song Transition" },
-    body: {
-      zh: "舞蹈、活動與表演用的歌曲銜接與剪輯。",
-      en: "Transitions and edits for dance, events and performance.",
-    },
-    link: { zh: "查看歌曲銜接服務", en: "View song transition" },
-  },
-  {
-    id: "software",
-    path: "/services/software",
-    name: { zh: "軟體與互動", en: "Software & Interactive" },
-    body: {
-      zh: "網站、原型、AI 整合、互動裝置。",
-      en: "Websites, prototypes, AI integrations, interactive installations.",
-    },
-    link: { zh: "查看軟體與互動服務", en: "View software & interactive" },
-  },
-];
-
-const PROCESS: readonly { index: string; title: Record<Locale, string> }[] = [
-  { index: "01", title: { zh: "需求", en: "Brief" } },
-  { index: "02", title: { zh: "報價與確認", en: "Quote & confirm" } },
-  { index: "03", title: { zh: "製作", en: "Production" } },
-  { index: "04", title: { zh: "交付與修改", en: "Delivery & revisions" } },
-];
-
+/**
+ * Services overview (IA §4.4): the service areas from site settings, each
+ * with its "from" price (the lowest active price rule of its published
+ * commission services; never invented) or a quote note, then the process.
+ */
 export default function ServicesIndexRoute() {
-  const { locale, fxSnapshot } = useLoaderData<typeof loader>();
+  const { locale, fxSnapshot, startingPrices } = useLoaderData<typeof loader>();
+  const { site } = usePublicSite();
   const isZh = locale === "zh";
+  const areas = site.serviceAreas.filter((area) => area.name);
+  const process = site.servicesPage.process;
 
   return (
     <main className="page services-page" id="main-content">
@@ -91,67 +59,74 @@ export default function ServicesIndexRoute() {
         </p>
       </header>
 
-      <div className="grid">
-        <ul className="services-groups col-content" data-reveal-group>
-          {GROUPS.map((group) => {
-            const nameId = `services-group-${group.id}`;
-            return (
-              <li className="service-group" key={group.id} data-reveal-item>
-                <h2 className="service-group__name" id={nameId}>
-                  <Link to={localePath(locale, group.path)}>
-                    {group.name[locale]}
-                  </Link>
-                </h2>
-                <div className="service-group__detail">
-                  <p className="service-group__body">{group.body[locale]}</p>
-                  {group.id === "software" ? (
-                    <PriceQuote
-                      quote={isZh ? "依專案報價" : "Contact for quote"}
-                    />
-                  ) : (
-                    <PriceFigure
-                      locale={locale}
-                      twd={startingPriceTwd(group.id)}
-                      fxSnapshot={fxSnapshot}
-                      label={isZh ? "起價" : "Starting at"}
-                      size="s"
-                    />
-                  )}
-                  <Link
-                    className="text-link service-group__link"
-                    to={localePath(locale, group.path)}
-                    aria-describedby={nameId}
-                  >
-                    {group.link[locale]}
-                    <span className="text-link__arrow" aria-hidden="true">
-                      →
-                    </span>
-                  </Link>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
+      {areas.length > 0 ? (
+        <div className="grid">
+          <ul className="services-groups col-content" data-reveal-group>
+            {areas.map((area) => {
+              const nameId = `services-group-${area.key}`;
+              const path = SERVICE_AREA_PATHS[area.key];
+              const from =
+                area.key === "software" ? null : startingPrices[area.key];
+              return (
+                <li className="service-group" key={area.key} data-reveal-item>
+                  <h2 className="service-group__name" id={nameId}>
+                    <Link to={localePath(locale, path)}>{area.name}</Link>
+                  </h2>
+                  <div className="service-group__detail">
+                    {area.summary ? (
+                      <p className="service-group__body">{area.summary}</p>
+                    ) : null}
+                    {from === null ? (
+                      <PriceQuote
+                        quote={isZh ? "依專案報價" : "Contact for quote"}
+                      />
+                    ) : (
+                      <PriceFigure
+                        locale={locale}
+                        twd={from}
+                        fxSnapshot={fxSnapshot}
+                        label={isZh ? "起價" : "Starting at"}
+                        size="s"
+                      />
+                    )}
+                    <Link
+                      className="text-link service-group__link"
+                      to={localePath(locale, path)}
+                      aria-describedby={nameId}
+                    >
+                      {area.linkLabel || area.name}
+                      <span className="text-link__arrow" aria-hidden="true">
+                        →
+                      </span>
+                    </Link>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ) : null}
 
-      <section
-        className="services-process grid section-top-m"
-        aria-labelledby="services-process-title"
-      >
-        <h2 className="services-process__title" id="services-process-title">
-          {isZh ? "合作流程" : "How it works"}
-        </h2>
-        <ol className="step-list services-process__steps" data-reveal-group>
-          {PROCESS.map((step) => (
-            <li className="step-list__item" key={step.index} data-reveal-item>
-              <span className="step-list__index" aria-hidden="true">
-                {step.index}
-              </span>
-              <span className="step-list__title">{step.title[locale]}</span>
-            </li>
-          ))}
-        </ol>
-      </section>
+      {process.length > 0 ? (
+        <section
+          className="services-process grid section-top-m"
+          aria-labelledby="services-process-title"
+        >
+          <h2 className="services-process__title" id="services-process-title">
+            {isZh ? "合作流程" : "How it works"}
+          </h2>
+          <ol className="step-list services-process__steps" data-reveal-group>
+            {process.map((title, position) => (
+              <li className="step-list__item" key={title} data-reveal-item>
+                <span className="step-list__index" aria-hidden="true">
+                  {String(position + 1).padStart(2, "0")}
+                </span>
+                <span className="step-list__title">{title}</span>
+              </li>
+            ))}
+          </ol>
+        </section>
+      ) : null}
     </main>
   );
 }
