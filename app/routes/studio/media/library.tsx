@@ -1,9 +1,20 @@
-/** STUB (P2 Media): library, uploads, usage. */
-import { StubPanel } from "../../../components/studio/shell/stub-panel";
-import { withOwner } from "../../../lib/cms/studio/auth.server";
+/** `/studio/media`: library, uploads, URL registration, usage index. */
+import { useLoaderData } from "react-router";
+import { MediaLibraryView } from "../../../components/studio/media/library";
+import {
+  handleMediaLibraryAction,
+  loadMediaLibrary,
+} from "../../../lib/cms/repositories/media-library.server";
+import { withOwner, withOwnerMutation } from "../../../lib/cms/studio/auth.server";
+import mediaStyles from "../../../styles/studio/media.css?url";
 
-export const loader = withOwner(() => null);
+export const links = () => [{ rel: "stylesheet", href: mediaStyles }];
+
+export const loader = withOwner(loadMediaLibrary);
+
+export const action = withOwnerMutation(handleMediaLibraryAction);
 
 export default function MediaLibraryRoute() {
-  return <StubPanel title="Media" legacyHref="/admin/works" />;
+  const data = useLoaderData<typeof loader>();
+  return <MediaLibraryView data={data} />;
 }

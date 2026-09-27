@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useMediaConfig } from "../../lib/cms/media/media-config-context";
 import type { Locale } from "../../lib/i18n/locale";
 import type { MediaItem } from "../../lib/media/media-schema";
 import {
@@ -33,6 +34,8 @@ export function DirectAudioPreview({
   locale: Locale;
 }) {
   const coordinator = usePlayback();
+  // Web Audio analysis only for hosts whose CORS rule is configured.
+  const { corsHosts } = useMediaConfig();
   const streamAudio = useRef<HTMLAudioElement | null>(null);
   const fallbackAudio = useRef<HTMLAudioElement>(null);
   const waveformRef = useRef<HTMLDivElement>(null);
@@ -199,9 +202,10 @@ export function DirectAudioPreview({
     setCurrentSeconds(Math.floor(item.startSeconds ?? 0));
 
     const instance = new Audio();
-    // CORS gate (motion-system §4.5): only allowlisted / same-origin hosts get
-    // crossOrigin + Web Audio routing; routing a non-CORS element would silence it.
-    const analysable = isCorsAudioHost(item.url);
+    // CORS gate (motion-system §4.5): only configured CORS / same-origin hosts
+    // get crossOrigin + Web Audio routing; routing a non-CORS element would
+    // silence it.
+    const analysable = isCorsAudioHost(item.url, corsHosts);
     if (analysable) instance.crossOrigin = "anonymous";
     instance.preload = "metadata";
     instance.src = item.url;

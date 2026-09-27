@@ -15,17 +15,15 @@
  */
 
 /**
- * Hosts known to send `Access-Control-Allow-Origin` for audio. The R2 host
- * `media.kamelkyp.com` is NOT listed until its bucket has a CORS policy; add it
- * here once it does. Same-origin URLs are always allowed.
+ * May this audio URL be routed through Web Audio? Only same-origin URLs and
+ * the hosts in the media configuration's CORS list (`MEDIA_CORS_HOSTS`,
+ * `MediaConfig.corsHosts`) qualify: those send `Access-Control-Allow-Origin`.
+ * No host is hard-coded here; the bucket host is added to the configuration
+ * only after its CORS rule exists (content-architecture §4.6).
  */
-export const CORS_AUDIO_HOSTS: ReadonlySet<string> = new Set([
-  "raw.githubusercontent.com",
-]);
-
 export function isCorsAudioHost(
   url: string,
-  corsHosts: ReadonlySet<string> = CORS_AUDIO_HOSTS,
+  corsHosts: Iterable<string>,
   origin: string | null = typeof location === "undefined"
     ? null
     : location.origin,
@@ -33,10 +31,12 @@ export function isCorsAudioHost(
   try {
     const parsed = new URL(url, origin ?? undefined);
     if (origin && parsed.origin === origin) return true;
-    return (
-      parsed.protocol === "https:" &&
-      corsHosts.has(parsed.hostname.toLowerCase())
-    );
+    if (parsed.protocol !== "https:") return false;
+    const host = parsed.hostname.toLowerCase();
+    for (const allowed of corsHosts) {
+      if (allowed.toLowerCase() === host) return true;
+    }
+    return false;
   } catch {
     return false;
   }

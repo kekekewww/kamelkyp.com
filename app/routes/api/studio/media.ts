@@ -1,17 +1,9 @@
 /**
- * `POST /api/studio/media` — declare an upload → `{ assetId, uploadUrl }`.
- *
- * STUB owned by the foundation, handed to P2 (uploads). Guarded now; answers
- * 503 `uploads_not_configured` without the R2 binding and base URL, and 501
- * until the upload pipeline lands.
+ * `POST /api/studio/media` (JSON, `X-Studio-CSRF`) — declare an upload →
+ * 201 `{ assetId, uploadUrl }`. 503 `uploads_not_configured` without the R2
+ * binding and base URL; 413 / 415 / 422 for refused declarations.
  */
-import { readMediaConfig } from "../../../lib/cms/media/config.server";
+import { handleDeclareUpload } from "../../../lib/cms/media/upload.server";
 import { withOwnerMutation } from "../../../lib/cms/studio/auth.server";
-import { jsonError } from "../../../lib/cms/studio/responses";
 
-export const action = withOwnerMutation(async ({ env }) => {
-  if (!readMediaConfig(env).uploadsEnabled) {
-    return jsonError("uploads_not_configured", 503);
-  }
-  return jsonError("not_built", 501);
-});
+export const action = withOwnerMutation(handleDeclareUpload);

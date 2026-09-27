@@ -52,26 +52,49 @@ describe("motion tokens", () => {
 });
 
 describe("audio analyser CORS gate", () => {
-  it("allows same-origin and allowlisted hosts only", () => {
-    const origin = "https://kamelkyp.com";
-    expect(isCorsAudioHost("/audio/reel.mp3", undefined, origin)).toBe(true);
+  const origin = "https://kamelkyp.com";
+  const configured = ["raw.githubusercontent.com"];
+
+  it("allows same-origin and the configured CORS hosts only", () => {
+    expect(isCorsAudioHost("/audio/reel.mp3", configured, origin)).toBe(true);
     expect(
       isCorsAudioHost(
         "https://raw.githubusercontent.com/a/b/main/reel.mp3",
-        undefined,
+        configured,
         origin,
       ),
     ).toBe(true);
     expect(
-      isCorsAudioHost("https://media.kamelkyp.com/reel.mp3", undefined, origin),
+      isCorsAudioHost("https://media.kamelkyp.com/reel.mp3", configured, origin),
     ).toBe(false);
     expect(
       isCorsAudioHost(
         "http://raw.githubusercontent.com/x.mp3",
-        undefined,
+        configured,
         origin,
       ),
     ).toBe(false);
-    expect(isCorsAudioHost("not a url", undefined, null)).toBe(false);
+    expect(isCorsAudioHost("not a url", configured, null)).toBe(false);
+  });
+
+  it("follows the media configuration: adding a host enables analysis there", () => {
+    const withBucket = new Set(["cdn.example.test", "raw.githubusercontent.com"]);
+    expect(
+      isCorsAudioHost("https://CDN.example.test/a.mp3", withBucket, origin),
+    ).toBe(true);
+    expect(
+      isCorsAudioHost("https://cdn.example.test/a.mp3", [], origin),
+    ).toBe(false);
+  });
+
+  it("hard-codes no host in the audio plumbing or the players", () => {
+    for (const file of [
+      "../../app/lib/motion/audio-level.ts",
+      "../../app/components/media/direct-audio-preview.tsx",
+      "../../app/components/media/media-preview.tsx",
+    ]) {
+      const source = readFileSync(new URL(file, import.meta.url), "utf8");
+      expect(source, file).not.toMatch(/githubusercontent|kamelkyp\.com/);
+    }
   });
 });
