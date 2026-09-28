@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  type UploadXhr,
   preflightUpload,
   UploadFailure,
+  type UploadXhr,
   uploadFile,
 } from "../../app/components/studio/media/upload-client";
 

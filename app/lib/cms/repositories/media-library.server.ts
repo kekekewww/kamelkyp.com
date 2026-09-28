@@ -471,7 +471,9 @@ export function readLibraryFilters(url: URL) {
     kind: (MEDIA_KINDS as readonly string[]).includes(kind ?? "")
       ? (kind as MediaKind)
       : null,
-    usage: usage === "used" || usage === "unused" ? usage : null,
+    usage: (usage === "used" || usage === "unused"
+      ? usage
+      : null) as UsageFilter | null,
     missingAlt: url.searchParams.get("missingAlt") === "1",
     archived: url.searchParams.get("archived") === "1",
     cursor: url.searchParams.get("cursor") ?? null,

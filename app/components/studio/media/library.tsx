@@ -144,8 +144,8 @@ function StatusStrip({ data }: { data: MediaLibraryData }) {
       </p>
       {data.pendingCount > 0 ? (
         <p className="studio-media-status__item studio-media-status__item--warn">
-          {data.pendingCount}{" "}
-          {data.pendingCount === 1 ? "upload" : "uploads"} pending or failed
+          {data.pendingCount} {data.pendingCount === 1 ? "upload" : "uploads"}{" "}
+          pending or failed
           <span className="studio-media-status__note">
             Unfinished uploads are removed after 24 hours.
           </span>
@@ -441,10 +441,7 @@ function Row({ item }: { item: LibraryItemView }) {
   );
 }
 
-function pageHref(
-  params: URLSearchParams,
-  cursor: string | null,
-): string {
+function pageHref(params: URLSearchParams, cursor: string | null): string {
   const next = new URLSearchParams(params);
   if (cursor) next.set("cursor", cursor);
   else next.delete("cursor");

@@ -8,10 +8,7 @@
  */
 import { useEffect, useId, useRef, useState } from "react";
 import { Link, useFetcher } from "react-router";
-import {
-  formatBytes,
-  formatDuration,
-} from "../../../lib/cms/media/summary";
+import { formatBytes, formatDuration } from "../../../lib/cms/media/summary";
 import { focalClasses } from "../../../lib/cms/media/urls";
 import type { MediaDetailData } from "../../../lib/cms/repositories/media-library.server";
 import type { ActionResult } from "../../../lib/cms/studio/responses";
@@ -459,7 +456,8 @@ export function MediaDetailView({ data }: { data: MediaDetailData }) {
   const errorFor = (field: string, locale?: "zh" | "en") =>
     issues.find(
       (issue) =>
-        issue.field === field && (!locale || !issue.locale || issue.locale === locale),
+        issue.field === field &&
+        (!locale || !issue.locale || issue.locale === locale),
     )?.message;
   const localeErrors = (field: string) => ({
     ...(errorFor(field, "zh") ? { zh: errorFor(field, "zh") } : {}),

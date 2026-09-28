@@ -76,12 +76,7 @@ describe("client-side metadata extraction", () => {
       extractMediaMetadata(file("a.avif", "image/avif"), "image", failing),
     ).resolves.toEqual({});
     await expect(
-      extractMediaMetadata(
-        file("a.flac", "audio/flac"),
-        "audio",
-        failing,
-        20,
-      ),
+      extractMediaMetadata(file("a.flac", "audio/flac"), "audio", failing, 20),
     ).resolves.toEqual({});
   });
 

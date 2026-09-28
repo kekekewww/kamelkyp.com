@@ -6,7 +6,7 @@
  * (homepage feature, the single homepage showreel) in their own small form so
  * they never touch the unsaved edits.
  */
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useFetcher, useNavigate, useRevalidator } from "react-router";
 import { studioLabel } from "../../../lib/cms/localized";
 import {
@@ -200,8 +200,7 @@ export function MusicEditorView({ data }: { data: MusicEditorData }) {
               ? { message: "Published" }
               : {
                   tone: "info",
-                  message:
-                    "Saved as a draft. Fix the checklist, then publish.",
+                  message: "Saved as a draft. Fix the checklist, then publish.",
                 },
           );
         } else if (intent === "unpublish") {
@@ -249,7 +248,7 @@ export function MusicEditorView({ data }: { data: MusicEditorData }) {
     fetcher.data && !fetcher.data.ok ? (fetcher.data.issues ?? []) : [];
   const allIssues = [...structural, ...issues];
 
-  const sections = useMemo(() => {
+  const sections = (() => {
     const count = (id: string) =>
       allIssues.filter(
         (issue) => issue.severity === "error" && sectionOf(issue.field) === id,
@@ -262,7 +261,7 @@ export function MusicEditorView({ data }: { data: MusicEditorData }) {
       { id: "relations", label: "RELATIONS" },
       { id: "publication", label: "PUBLICATION" },
     ].map((section) => ({ ...section, issues: count(section.id) }));
-  }, [allIssues]);
+  })();
 
   const [audio, setAudio] = useState<{
     preview: MediaSummary | null;
@@ -305,8 +304,7 @@ export function MusicEditorView({ data }: { data: MusicEditorData }) {
             intent="save"
             compact
             pending={
-              editor.state.kind === "saving" &&
-              pendingIntent.current === "save"
+              editor.state.kind === "saving" && pendingIntent.current === "save"
             }
             pendingLabel="Saving…"
           >

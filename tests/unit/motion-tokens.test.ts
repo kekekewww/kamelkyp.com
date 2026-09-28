@@ -65,7 +65,11 @@ describe("audio analyser CORS gate", () => {
       ),
     ).toBe(true);
     expect(
-      isCorsAudioHost("https://media.kamelkyp.com/reel.mp3", configured, origin),
+      isCorsAudioHost(
+        "https://media.kamelkyp.com/reel.mp3",
+        configured,
+        origin,
+      ),
     ).toBe(false);
     expect(
       isCorsAudioHost(
@@ -78,13 +82,16 @@ describe("audio analyser CORS gate", () => {
   });
 
   it("follows the media configuration: adding a host enables analysis there", () => {
-    const withBucket = new Set(["cdn.example.test", "raw.githubusercontent.com"]);
+    const withBucket = new Set([
+      "cdn.example.test",
+      "raw.githubusercontent.com",
+    ]);
     expect(
       isCorsAudioHost("https://CDN.example.test/a.mp3", withBucket, origin),
     ).toBe(true);
-    expect(
-      isCorsAudioHost("https://cdn.example.test/a.mp3", [], origin),
-    ).toBe(false);
+    expect(isCorsAudioHost("https://cdn.example.test/a.mp3", [], origin)).toBe(
+      false,
+    );
   });
 
   it("hard-codes no host in the audio plumbing or the players", () => {

@@ -5,7 +5,10 @@ import {
   handleMediaLibraryAction,
   loadMediaLibrary,
 } from "../../../lib/cms/repositories/media-library.server";
-import { withOwner, withOwnerMutation } from "../../../lib/cms/studio/auth.server";
+import {
+  withOwner,
+  withOwnerMutation,
+} from "../../../lib/cms/studio/auth.server";
 import mediaStyles from "../../../styles/studio/media.css?url";
 
 export const links = () => [{ rel: "stylesheet", href: mediaStyles }];

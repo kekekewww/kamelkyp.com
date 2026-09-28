@@ -586,7 +586,9 @@ describe("music list view", () => {
       />,
     );
     expect(html).toContain("Not live until this track is published");
-    const none = renderRoute(<MusicListView data={listData({ showreel: null })} />);
+    const none = renderRoute(
+      <MusicListView data={listData({ showreel: null })} />,
+    );
     expect(none).toContain("No homepage showreel");
   });
 
@@ -689,7 +691,12 @@ describe("music editor view", () => {
       <MusicEditorView
         data={editorData({
           meta: { ...meta, isShowreel: true, featured: true },
-          showreel: { id: "m1", title: "訊號花園", status: "draft", ready: true },
+          showreel: {
+            id: "m1",
+            title: "訊號花園",
+            status: "draft",
+            ready: true,
+          },
         })}
       />,
     );

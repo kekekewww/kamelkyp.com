@@ -186,7 +186,8 @@ function put(
     xhr.setRequestHeader("Accept", "application/json");
     xhr.setRequestHeader(STUDIO_CSRF_HEADER, token);
     xhr.upload.onprogress = (event) => {
-      if (event.lengthComputable) options.onProgress?.(event.loaded, event.total);
+      if (event.lengthComputable)
+        options.onProgress?.(event.loaded, event.total);
     };
     xhr.onload = () => {
       settle();

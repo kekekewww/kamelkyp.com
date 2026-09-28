@@ -7,7 +7,10 @@ import {
   StudioForm,
 } from "../../../components/studio/ui";
 import { handleMusicCreate } from "../../../lib/cms/repositories/music.server";
-import { withOwner, withOwnerMutation } from "../../../lib/cms/studio/auth.server";
+import {
+  withOwner,
+  withOwnerMutation,
+} from "../../../lib/cms/studio/auth.server";
 import musicStyles from "../../../styles/studio/music.css?url";
 
 export const links = () => [{ rel: "stylesheet", href: musicStyles }];

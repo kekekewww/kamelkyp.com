@@ -5,7 +5,10 @@ import {
   handleMusicEditorAction,
   loadMusicEditor,
 } from "../../../lib/cms/repositories/music.server";
-import { withOwner, withOwnerMutation } from "../../../lib/cms/studio/auth.server";
+import {
+  withOwner,
+  withOwnerMutation,
+} from "../../../lib/cms/studio/auth.server";
 import mediaStyles from "../../../styles/studio/media.css?url";
 import musicStyles from "../../../styles/studio/music.css?url";
 

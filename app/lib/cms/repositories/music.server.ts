@@ -724,7 +724,10 @@ export async function handleMusicEditorAction(args: MusicActionArgs) {
           id,
           readString(formOf(args), "confirm") ?? "",
         );
-        return actionOk({ deleted: true, redirectTo: "/studio/music?deleted=1" });
+        return actionOk({
+          deleted: true,
+          redirectTo: "/studio/music?deleted=1",
+        });
       });
     case "feature":
     case "unfeature":

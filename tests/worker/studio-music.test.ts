@@ -508,7 +508,10 @@ describe("music editor", () => {
       intent: "restore",
       now,
     })) as unknown as Result;
-    expect(restored.data).toMatchObject({ ok: true, meta: { status: "draft" } });
+    expect(restored.data).toMatchObject({
+      ok: true,
+      meta: { status: "draft" },
+    });
 
     const duplicated = (await handleMusicEditorAction({
       db: env.DB,

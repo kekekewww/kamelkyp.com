@@ -180,7 +180,10 @@ function RowMenu({ row, submit }: { row: StudioMusicRow; submit: Submit }) {
           </Link>
         </li>
         {row.status !== "archived"
-          ? item(row.featured ? "unfeature" : "feature", row.featured ? "Remove from homepage" : "Feature on homepage")
+          ? item(
+              row.featured ? "unfeature" : "feature",
+              row.featured ? "Remove from homepage" : "Feature on homepage",
+            )
           : null}
         {row.status !== "archived" && !row.isShowreel && row.showreelReady
           ? item("set-showreel", "Set as showreel")

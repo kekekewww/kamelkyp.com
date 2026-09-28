@@ -61,7 +61,7 @@ const MP3 = new Uint8Array([
 
 function putRequest(
   assetId: string,
-  body: Uint8Array | ReadableStream<Uint8Array> | null,
+  body: BodyInit | null,
   headers: Record<string, string>,
 ) {
   return new Request(

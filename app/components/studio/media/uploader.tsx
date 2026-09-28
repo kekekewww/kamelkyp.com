@@ -421,8 +421,7 @@ export function MediaUploader({
           />
           <p className="studio-uploader__status" aria-live="polite">
             Uploading {percent(phase.loaded, phase.total)}% ·{" "}
-            {formatBytes(phase.loaded) ?? "0 B"} of{" "}
-            {formatBytes(phase.total)}
+            {formatBytes(phase.loaded) ?? "0 B"} of {formatBytes(phase.total)}
           </p>
           <button
             type="button"
