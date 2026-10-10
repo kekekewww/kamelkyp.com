@@ -48,11 +48,15 @@ test.describe("projects", () => {
     const checklist = page.locator(".studio-checklist");
     await expect(checklist).toContainText("Year is required.");
     await expect(checklist).toContainText("Choose a primary category.");
-    await expect(checklist).toContainText("Short description is required in ZH.");
-    await expect(checklist).toContainText("Short description is required in EN.");
-    await expect(page.locator(".studio-topbar .studio-badge").first()).toHaveText(
-      "Draft",
+    await expect(checklist).toContainText(
+      "Short description is required in ZH.",
     );
+    await expect(checklist).toContainText(
+      "Short description is required in EN.",
+    );
+    await expect(
+      page.locator(".studio-topbar .studio-badge").first(),
+    ).toHaveText("Draft");
 
     // Complete the required fields; the checklist follows the typing.
     await page.locator('input[name="year:number"]').fill("2026");
@@ -71,9 +75,9 @@ test.describe("projects", () => {
     await expect(await saveState(page)).toHaveText(/SAVED \d\d:\d\d/);
 
     await publish.click();
-    await expect(page.locator(".studio-topbar .studio-badge").first()).toHaveText(
-      "Published",
-    );
+    await expect(
+      page.locator(".studio-topbar .studio-badge").first(),
+    ).toHaveText("Published");
     await expect(page.locator(".studio-publication__links")).toContainText(
       "View live",
     );
@@ -102,14 +106,20 @@ test.describe("projects", () => {
     await createProject(page, `P1 Guard ${token}`);
     await page.locator('input[name="role.en"]').fill("Sound");
     await expect(await saveState(page)).toHaveText("UNSAVED CHANGES");
-    await page.locator("header").getByRole("link", { name: "Projects" }).click();
+    await page
+      .locator("header")
+      .getByRole("link", { name: "Projects" })
+      .click();
     const dialog = page.getByRole("dialog", { name: "Leave without saving?" });
     await expect(dialog).toBeVisible();
     await dialog.getByRole("button", { name: "Stay" }).click();
     await expect(page).toHaveURL(/\/studio\/projects\/[0-9a-f-]{36}$/);
     await expect(page.locator('input[name="role.en"]')).toHaveValue("Sound");
 
-    await page.locator("header").getByRole("link", { name: "Projects" }).click();
+    await page
+      .locator("header")
+      .getByRole("link", { name: "Projects" })
+      .click();
     await dialog.getByRole("button", { name: "Save and leave" }).click();
     await expect(page).toHaveURL(/\/studio\/projects$/);
   });
@@ -134,7 +144,8 @@ test.describe("projects", () => {
     }
 
     const home = page.locator(".projects-home__item");
-    const titles = () => home.locator(".projects-home__title").allTextContents();
+    const titles = () =>
+      home.locator(".projects-home__title").allTextContents();
     const before = await titles();
     const b = before.indexOf(`首頁乙${token}`);
     expect(b).toBeGreaterThan(0);

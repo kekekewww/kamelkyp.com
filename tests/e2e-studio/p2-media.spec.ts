@@ -21,7 +21,9 @@ test("a music entry goes from quick create to published homepage showreel", asyn
 
   // Publishing without a playable source saves, then lists what is missing.
   await page.getByRole("button", { name: "Publish" }).first().click();
-  await expect(page.getByText("Saved as a draft. Fix the checklist")).toBeVisible();
+  await expect(
+    page.getByText("Saved as a draft. Fix the checklist"),
+  ).toBeVisible();
   await expect(
     page.getByText(
       "Add preview audio, full audio or a Spotify, YouTube or SoundCloud link.",
@@ -34,10 +36,14 @@ test("a music entry goes from quick create to published homepage showreel", asyn
     .fill("https://www.youtube.com/watch?v=e2eReel01");
   await expect(page.getByRole("status").first()).toHaveText("UNSAVED CHANGES");
   await page.keyboard.press("ControlOrMeta+s");
-  await expect(page.getByRole("status").first()).toHaveText(/^SAVED \d{2}:\d{2}$/);
+  await expect(page.getByRole("status").first()).toHaveText(
+    /^SAVED \d{2}:\d{2}$/,
+  );
 
   await page.getByRole("button", { name: "Publish" }).first().click();
-  await expect(page.getByText("Published", { exact: true }).first()).toBeVisible();
+  await expect(
+    page.getByText("Published", { exact: true }).first(),
+  ).toBeVisible();
 
   await page.getByRole("button", { name: "Make homepage showreel" }).click();
   await expect(
@@ -68,7 +74,9 @@ test("the media library registers a URL, edits alt text and deletes an unused as
   await expect(page.getByText(`Registered ${file}`)).toBeVisible();
 
   await page.getByRole("link", { name: file }).click();
-  await expect(page.getByRole("heading", { level: 1, name: file })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 1, name: file }),
+  ).toBeVisible();
   await page.getByRole("textbox", { name: /ZH/ }).nth(1).fill("測試圖片");
   await page.getByRole("textbox", { name: /EN/ }).nth(1).fill("Test image");
   await page.getByRole("button", { name: "Save" }).first().click();
