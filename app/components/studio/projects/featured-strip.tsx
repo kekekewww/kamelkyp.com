@@ -89,7 +89,7 @@ export function FeaturedStrip({
       {ordered.length === 0 ? (
         <p className="projects-home__empty">
           No featured projects. The homepage hides Selected work until you
-          feature one from a project’s ⋯ menu.
+          feature one from the row menu of a project below.
         </p>
       ) : (
         <ol className="projects-home__list" aria-busy={busy || undefined}>

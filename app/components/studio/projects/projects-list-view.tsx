@@ -89,19 +89,19 @@ function useRowFeedback(
       switch (sent.intent) {
         case "feature":
           toast.show({
-            message: `Featured “${name}” on the homepage`,
+            message: `Featured "${name}" on the homepage`,
             action: undo({ intent: "unfeature", id: sent.id ?? "" }),
           });
           break;
         case "unfeature":
           toast.show({
-            message: `Removed “${name}” from the homepage`,
+            message: `Removed "${name}" from the homepage`,
             action: undo({ intent: "feature", id: sent.id ?? "" }),
           });
           break;
         case "archive":
           toast.show({
-            message: `Archived “${name}”`,
+            message: `Archived "${name}"`,
             action: undo({
               intent: "restore",
               id: sent.id ?? "",
@@ -113,15 +113,15 @@ function useRowFeedback(
           toast.show({
             message:
               data.status === "published"
-                ? `Restored and published “${name}”`
+                ? `Restored and published "${name}"`
                 : data.republished === false
-                  ? `Restored “${name}” as a draft; publishing needs fixes`
-                  : `Restored “${name}” to draft`,
+                  ? `Restored "${name}" as a draft; publishing needs fixes`
+                  : `Restored "${name}" to draft`,
           });
           break;
         case "duplicate":
           toast.show({
-            message: `Duplicated “${name}” as a draft`,
+            message: `Duplicated "${name}" as a draft`,
             action: {
               label: "Open copy",
               onAction: () => navigate(`/studio/projects/${data.id}`),
@@ -185,8 +185,6 @@ export function ProjectsListView({ data }: { data: ProjectsListData }) {
   }, [navigate]);
 
   const count = data.rows.length;
-  const submitOnChange = (event: React.ChangeEvent<HTMLSelectElement>) =>
-    event.currentTarget.form?.requestSubmit();
 
   return (
     <StudioPage
@@ -228,52 +226,7 @@ export function ProjectsListView({ data }: { data: ProjectsListData }) {
         status={data.query.status}
         label="Filter projects"
       >
-        <Select
-          name="category"
-          label="Category"
-          placeholder="All"
-          defaultValue={data.query.categoryId ?? ""}
-          options={data.facets.categories.map((term) => ({
-            value: term.id,
-            label: term.label.en,
-          }))}
-          onChange={submitOnChange}
-        />
-        <Select
-          name="year"
-          label="Year"
-          placeholder="All"
-          defaultValue={data.query.year ? String(data.query.year) : ""}
-          options={data.facets.years.map((year) => ({
-            value: String(year),
-            label: String(year),
-          }))}
-          onChange={submitOnChange}
-        />
-        <Select
-          name="featured"
-          label="Homepage"
-          placeholder="Any"
-          defaultValue={
-            data.query.featured === null ? "" : data.query.featured ? "1" : "0"
-          }
-          options={[
-            { value: "1", label: "Featured" },
-            { value: "0", label: "Not featured" },
-          ]}
-          onChange={submitOnChange}
-        />
-        <Select
-          name="sort"
-          label="Sort"
-          defaultValue={data.query.sort}
-          options={[
-            { value: "order", label: "Manual order" },
-            { value: "updated", label: "Last updated" },
-            { value: "year", label: "Year" },
-          ]}
-          onChange={submitOnChange}
-        />
+        <TypeFilters data={data} />
       </FilterBar>
 
       {!data.manualOrder && data.rows.length > 1 ? (
@@ -350,7 +303,7 @@ function ProjectRows({
     <EmptyState
       title={
         data.query.q
-          ? `No results for “${data.query.q}”`
+          ? `No results for "${data.query.q}"`
           : "No projects match these filters"
       }
       body="Try another search, or show every active project."
@@ -379,7 +332,7 @@ function ProjectRows({
   );
 
   return (
-    <>
+    <div className="projects-list">
       <RowList
         label="Projects"
         rows={rows}
@@ -500,7 +453,96 @@ function ProjectRows({
       <p className="visually-hidden" aria-live="assertive">
         {reorder.announcement}
       </p>
-    </>
+    </div>
+  );
+}
+
+const PHONE = "(max-width: 767px)";
+
+/**
+ * Category, year, homepage and sort. Always visible on wider screens; on
+ * phones they fold into a "Filters" disclosure (admin-architecture §4.14)
+ * that names how many are active.
+ */
+function TypeFilters({ data }: { data: ProjectsListData }) {
+  const ref = useRef<HTMLDetailsElement>(null);
+  const { query } = data;
+  const active = [
+    query.categoryId,
+    query.year,
+    query.featured,
+    query.sort === "order" ? null : query.sort,
+  ].filter((value) => value !== null).length;
+
+  useEffect(() => {
+    const details = ref.current;
+    if (!details) return;
+    const media = window.matchMedia(PHONE);
+    const apply = () => {
+      details.open = !media.matches;
+    };
+    apply();
+    media.addEventListener("change", apply);
+    return () => media.removeEventListener("change", apply);
+  }, []);
+
+  const submitOnChange = (event: React.ChangeEvent<HTMLSelectElement>) =>
+    event.currentTarget.form?.requestSubmit();
+
+  return (
+    <details className="projects-filters" ref={ref} open>
+      <summary className="projects-filters__toggle">
+        {active ? `Filters · ${active}` : "Filters"}
+      </summary>
+      <div className="projects-filters__body">
+        <Select
+          name="category"
+          label="Category"
+          placeholder="All"
+          defaultValue={query.categoryId ?? ""}
+          options={data.facets.categories.map((term) => ({
+            value: term.id,
+            label: term.label.en,
+          }))}
+          onChange={submitOnChange}
+        />
+        <Select
+          name="year"
+          label="Year"
+          placeholder="All"
+          defaultValue={query.year ? String(query.year) : ""}
+          options={data.facets.years.map((year) => ({
+            value: String(year),
+            label: String(year),
+          }))}
+          onChange={submitOnChange}
+        />
+        <Select
+          name="featured"
+          label="Homepage"
+          placeholder="Any"
+          defaultValue={
+            query.featured === null ? "" : query.featured ? "1" : "0"
+          }
+          options={[
+            { value: "1", label: "Featured" },
+            { value: "0", label: "Not featured" },
+          ]}
+          onChange={submitOnChange}
+        />
+        <Select
+          name="sort"
+          label="Sort"
+          defaultValue={query.sort}
+          options={[
+            { value: "order", label: "Manual order" },
+            { value: "updated", label: "Last updated" },
+            { value: "year", label: "Year" },
+          ]}
+          onChange={submitOnChange}
+        />
+      </div>
+    </details>
   );
 }
 

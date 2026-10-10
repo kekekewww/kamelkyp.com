@@ -1,11 +1,18 @@
 /**
- * Watches the editor form for every kind of change. `useEditorForm` hears
- * `input` events only; tags, category chips, list rows, media pickers and
- * the legacy-blocks toggle change hidden inputs from React state, which fires
- * no event. A MutationObserver catches those, so the save state, the live
- * checklist and the per-section "unsaved" dots never miss an edit.
+ * Watches the editor form for every kind of change. Typed input arrives
+ * through React's `onInput` (pass the returned `onInput` to the form); tags,
+ * category chips, list rows, media pickers and the legacy-blocks toggle
+ * change hidden inputs from React state, which fires no event, so a
+ * MutationObserver catches those. The save state, the live checklist and the
+ * per-section "unsaved" dots never miss an edit.
  */
-import { type RefObject, useEffect, useRef, useState } from "react";
+import {
+  type RefObject,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { serializeForm } from "../ui";
 import type { ProjectSectionId } from "./project-form";
 
@@ -80,32 +87,43 @@ export function useFormWatch({
     setDirtySections(new Set());
   }, [dirty, resetKey, formRef]);
 
+  const last = useRef<string | null>(null);
+  const timer = useRef(0);
+
+  /** Compares the form with the last seen state; derived work is debounced. */
+  const check = useCallback(() => {
+    const form = formRef.current;
+    if (!form) return;
+    const current = serializeForm(new FormData(form));
+    if (current === last.current) return;
+    last.current = current;
+    handlers.current.onChange();
+    window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => {
+      const sections = sectionSnapshot(form);
+      const changed = new Set<ProjectSectionId>();
+      for (const [id, value] of sections) {
+        if (baseline.current.get(id) !== value) {
+          changed.add(id as ProjectSectionId);
+        }
+      }
+      for (const id of baseline.current.keys()) {
+        if (!sections.has(id)) changed.add(id as ProjectSectionId);
+      }
+      setDirtySections(changed);
+      handlers.current.onSettled(form);
+    }, settleMs);
+  }, [formRef, settleMs]);
+
+  // Programmatic changes (hidden inputs driven by React state) are seen after
+  // React commits them. Typed input must NOT be observed with a native
+  // listener: it would set state before React's own handler runs and React
+  // would restore controlled inputs (the slug) to their old value. Typing is
+  // passed through React's `onInput` instead (returned below).
   useEffect(() => {
     const form = formRef.current;
     if (!form) return;
-    let last = serializeForm(new FormData(form));
-    let timer = 0;
-    const check = () => {
-      const current = serializeForm(new FormData(form));
-      if (current === last) return;
-      last = current;
-      handlers.current.onChange();
-      window.clearTimeout(timer);
-      timer = window.setTimeout(() => {
-        const sections = sectionSnapshot(form);
-        const changed = new Set<ProjectSectionId>();
-        for (const [id, value] of sections) {
-          if (baseline.current.get(id) !== value) {
-            changed.add(id as ProjectSectionId);
-          }
-        }
-        for (const id of baseline.current.keys()) {
-          if (!sections.has(id)) changed.add(id as ProjectSectionId);
-        }
-        setDirtySections(changed);
-        handlers.current.onSettled(form);
-      }, settleMs);
-    };
+    last.current = serializeForm(new FormData(form));
     const observer = new MutationObserver(check);
     observer.observe(form, {
       subtree: true,
@@ -113,15 +131,11 @@ export function useFormWatch({
       attributes: true,
       attributeFilter: ["value", "checked"],
     });
-    form.addEventListener("input", check);
-    form.addEventListener("change", check);
     return () => {
       observer.disconnect();
-      form.removeEventListener("input", check);
-      form.removeEventListener("change", check);
-      window.clearTimeout(timer);
+      window.clearTimeout(timer.current);
     };
-  }, [formRef, settleMs]);
+  }, [formRef, check]);
 
-  return { dirtySections };
+  return { dirtySections, onInput: check };
 }
