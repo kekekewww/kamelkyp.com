@@ -359,7 +359,11 @@ export function ProjectPage({
             {music.map((track) => (
               <TrackSheet
                 key={track.id}
-                label={track.title || copy.track.label}
+                label={
+                  track.title
+                    ? `${copy.track.label}${locale === "zh" ? "：" : ": "}${track.title}`
+                    : copy.track.label
+                }
                 pending={copy.track.pending}
                 rows={trackRows(track, locale)}
                 player={

@@ -143,7 +143,7 @@ function ShowreelSlot({
           : ""}
         {showreel
           ? "Never autoplays: visitors press play."
-          : "Choose a track with “Set as showreel” in its row menu. Never autoplays: visitors press play."}
+          : "Pick a track: open its ⋯ menu and choose Set as showreel. Never autoplays: visitors press play."}
       </p>
     </section>
   );
@@ -356,9 +356,7 @@ export function MusicListView({ data }: { data: MusicListData }) {
           empty={
             filtered ? (
               <EmptyState
-                title={
-                  filters.q ? `No results for “${filters.q}”` : "No results"
-                }
+                title={filters.q ? `No results for ${filters.q}` : "No results"}
                 action={
                   <Link className="studio-link" to="/studio/music">
                     Clear filters

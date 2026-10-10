@@ -1,14 +1,32 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
+import { expectNoPersonalName } from "./helpers/brand";
+
+/**
+ * Opens the phone menu. The disclosure is client state: a tap that lands
+ * before hydration does nothing, so tap again until the button reports
+ * `aria-expanded="true"` (a tap never repeats once the menu is open).
+ */
+async function openMenu(page: Page) {
+  const button = page.locator(".site-header__menu-button");
+  await expect(async () => {
+    if ((await button.getAttribute("aria-expanded")) !== "true") {
+      await button.click();
+    }
+    await expect(button).toHaveAttribute("aria-expanded", "true", {
+      timeout: 1_000,
+    });
+  }).toPass();
+}
 
 test("landing identity and services navigation stay focused", async ({
   page,
 }) => {
   await page.goto("/zh");
   await expect(page.getByRole("heading", { name: "Kamel" })).toBeVisible();
-  await expect(page.getByText("楊子賢", { exact: true })).toHaveCount(1);
+  await expectNoPersonalName(page);
 
   const menuButton = page.getByRole("button", { name: "開啟選單" });
-  if (await menuButton.isVisible()) await menuButton.click();
+  if (await menuButton.isVisible()) await openMenu(page);
 
   const primaryNavigation = page.getByRole("navigation", { name: "主要導覽" });
   await primaryNavigation
@@ -65,14 +83,38 @@ test("primary navigation exposes the IA labels in both locales", async ({
 test("mobile menu and footer use expandable groups", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/zh");
-  await page.getByRole("button", { name: "開啟選單" }).click();
+  await openMenu(page);
   await expect(
     page.getByRole("navigation", { name: "主要導覽" }),
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "關閉選單" })).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("button", { name: "開啟選單" })).toBeFocused();
-  await expect(page.locator("footer details")).toHaveCount(5);
+  // Navigate, Services, Work & Resources, Find me (one enabled social link),
+  // Contact (brand email), Legal.
+  await expect(page.locator("footer details")).toHaveCount(6);
+});
+
+test("the footer reads social links, contact and copyright from settings", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/en");
+  const footer = page.getByRole("contentinfo");
+  const findMe = footer
+    .locator(".site-footer__desktop-groups .footer-group")
+    .filter({ has: page.getByRole("heading", { name: "Find Me" }) });
+  await expect(findMe.getByRole("link", { name: /Instagram/ })).toHaveAttribute(
+    "href",
+    "https://www.instagram.com/kamel.fixture",
+  );
+  // Disabled social links never render.
+  await expect(
+    footer.locator('a[href="https://github.com/kamel-fixture"]'),
+  ).toHaveCount(0);
+  await expect(footer.locator('a[href^="mailto:"]').first()).toBeVisible();
+  await expect(footer.getByText(/^© \d{4} Kamel$/)).toBeVisible();
+  await expect(footer.getByText("Taiwan / Remote")).toBeVisible();
 });
 
 test("fonts are bundled without third-party font requests", async ({
@@ -101,16 +143,14 @@ test("legacy /other routes redirect permanently to /writing", async ({
   expect(detail.headers().location).toBe("/zh/writing/some-post");
 });
 
-test("empty published collections and legal routes remain usable", async ({
+test("published collections, filters and legal routes remain usable", async ({
   page,
 }) => {
-  // /works merges D1 works with the file projects (IA §8): placeholders fill
-  // the list, the filter bar is present and ?category= narrows it.
   await page.goto("/zh/works");
   await expect(
     page.getByRole("heading", { name: "作品", exact: true }),
   ).toBeVisible();
-  await expect(page.getByText("PLACEHOLDER").first()).toBeVisible();
+  await expect(page.getByText("PLACEHOLDER")).toHaveCount(0);
   await expect(
     page.getByRole("navigation", { name: "作品分類" }),
   ).toBeVisible();
@@ -118,19 +158,17 @@ test("empty published collections and legal routes remain usable", async ({
   await page.goto("/zh/works?category=research");
   const main = page.locator("main");
   await expect(
-    main.getByRole("heading", { name: "示意：即時音訊分析筆記" }),
+    main.getByRole("heading", { name: "示範：分析筆記" }),
   ).toBeVisible();
   await expect(
-    main.getByRole("heading", { name: "示意：完整歌曲混音——獨立單曲" }),
+    main.getByRole("heading", { name: "示範：單曲混音" }),
   ).toHaveCount(0);
 
   await page.goto("/en/writing");
   await expect(
     page.getByRole("heading", { name: "Writing", exact: true }),
   ).toBeVisible();
-  await expect(
-    page.getByRole("main").getByText("PLACEHOLDER").first(),
-  ).toBeVisible();
+  await expect(page.getByRole("main").getByText("PLACEHOLDER")).toHaveCount(0);
 
   await page.goto("/zh/terms");
   await expect(page.getByRole("heading", { name: "服務條款" })).toBeVisible();

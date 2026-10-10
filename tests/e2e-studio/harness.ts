@@ -89,10 +89,23 @@ export default async function globalSetup(): Promise<void> {
   }
 }
 
-/** Opens a Studio page and waits for the shell (the dev owner is signed in). */
+/**
+ * Opens a Studio page and waits for the shell (the dev owner is signed in)
+ * and for hydration: the server HTML is visible before React attaches its
+ * handlers, so an early click on a client-only control (a dialog trigger, a
+ * fetcher button) would do nothing. React marks hydrated nodes with a
+ * `__reactFiber$…` key.
+ */
 export async function openStudio(page: Page, path = "/studio"): Promise<void> {
   await page.goto(path);
   await expect(page.locator("#studio-main")).toBeVisible();
+  await page.waitForFunction(() => {
+    const main = document.querySelector("#studio-main");
+    return (
+      main !== null &&
+      Object.keys(main).some((key) => key.startsWith("__reactFiber$"))
+    );
+  });
 }
 
 export { expect, test };

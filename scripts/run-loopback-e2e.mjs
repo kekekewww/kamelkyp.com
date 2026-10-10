@@ -29,12 +29,16 @@ function run(command, args, env = testEnvironment) {
 }
 
 const databaseArgs = [wranglerCli, "d1"];
+// Content Studio rows (migrations 0005–0008 run with `migrations apply`);
+// the fixtures publish through the snapshot views, like the engine.
 const fixtureFiles = [
   "tests/fixtures/media-e2e.sql",
+  "tests/fixtures/cms-e2e.sql",
   "tests/fixtures/fx-e2e.sql",
   "tests/fixtures/terms-e2e.sql",
 ];
 const cleanupFiles = [
+  "tests/fixtures/cms-e2e-cleanup.sql",
   "tests/fixtures/media-e2e-cleanup.sql",
   "tests/fixtures/fx-e2e-cleanup.sql",
   "tests/fixtures/terms-e2e-cleanup.sql",

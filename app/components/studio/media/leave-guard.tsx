@@ -6,6 +6,7 @@
 import { useEffect, useState } from "react";
 import type { Blocker } from "react-router";
 import { ConfirmDialog } from "../ui/confirm-dialog";
+import { findIntentButton } from "../ui/use-editor-form";
 
 export function LeaveGuard({
   blocker,
@@ -54,12 +55,9 @@ export function LeaveGuard({
             aria-busy={saving || undefined}
             onClick={() => {
               const form = formRef.current;
-              const button = form?.querySelector<HTMLButtonElement>(
-                `button[name="intent"][value="${saveIntent}"]`,
-              );
               if (!form) return;
               setSaving(true);
-              form.requestSubmit(button ?? undefined);
+              form.requestSubmit(findIntentButton(form, saveIntent));
             }}
           >
             {saving ? "Saving…" : "Save and leave"}

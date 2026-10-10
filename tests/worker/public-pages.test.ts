@@ -7,8 +7,10 @@ import {
   setFeatured,
 } from "../../app/lib/cms/db/lifecycle.server";
 import { loadHome } from "../../app/lib/cms/public/home.server";
+import { getPublicProject } from "../../app/lib/cms/public/projects.server";
 import { getCommissionServiceNames } from "../../app/lib/cms/public/services.server";
 import { ProjectDraftSchema } from "../../app/lib/cms/schemas/project";
+import { insertExternalAsset } from "../helpers/cms";
 import { createTestEnv } from "../helpers/test-env";
 
 const now = new Date("2026-09-24T10:00:00Z");
@@ -102,6 +104,49 @@ describe("home data (public read layer)", () => {
     expect(preview.projects.map((item) => item.title)).toContain(
       "Draft featured",
     );
+  });
+});
+
+describe("project body media", () => {
+  it("keeps link-only media blocks (imported external links) as outbound links", async () => {
+    const dropbox = await insertExternalAsset(env.DB, {
+      kind: "link",
+      url: "https://www.dropbox.com/s/example/demo.wav?dl=0",
+    });
+    const drive = await insertExternalAsset(env.DB, {
+      kind: "embed",
+      url: "https://drive.google.com/file/d/1AbCdEfGhIjKlMnOp/view",
+    });
+    const meta = await createEntity(env.DB, "project", {
+      title: text("媒體", "Body media"),
+    });
+    const content = ProjectDraftSchema.parse({
+      slug: meta.slug,
+      year: 2026,
+      primaryCategoryId: "term-project_category-music",
+      title: text("媒體", "Body media"),
+      shortDescription: text("摘要", "Summary"),
+      body: {
+        zh: [],
+        en: [
+          { type: "media", mediaId: drive },
+          { type: "media", mediaId: dropbox },
+        ],
+      },
+    });
+    await saveEntity(env.DB, "project", meta.id, 0, content, now);
+    const outcome = await publishEntity(env.DB, "project", meta.id, 1, now);
+    expect(outcome.ok).toBe(true);
+
+    const result = await getPublicProject(env.DB, testEnv, "en", content.slug);
+    const media =
+      result.kind === "found"
+        ? result.project.bodyMedia.map((item) => [item.id, item.kind])
+        : [];
+    expect(media).toEqual([
+      [drive, "google_drive"],
+      [dropbox, "external_link"],
+    ]);
   });
 });
 

@@ -26,6 +26,23 @@ type ActionLike = { ok?: boolean; message?: string } | null | undefined;
 
 const BACKUP_INTERVAL_MS = 2000;
 
+/**
+ * The form's intent button, including one rendered outside the <form> and
+ * tied to it with the `form` attribute (e.g. Save in the page header).
+ * `form.elements` covers both; `querySelector` only sees descendants.
+ */
+export function findIntentButton(
+  form: HTMLFormElement,
+  intent: string,
+): HTMLButtonElement | undefined {
+  return Array.from(form.elements).find(
+    (element): element is HTMLButtonElement =>
+      element instanceof HTMLButtonElement &&
+      element.name === "intent" &&
+      element.value === intent,
+  );
+}
+
 function readBackup(key: string): FormBackup | null {
   try {
     const raw = sessionStorage.getItem(key);
@@ -170,10 +187,7 @@ export function useEditorForm({
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
         event.preventDefault();
         const form = formRef.current;
-        const button = form?.querySelector<HTMLButtonElement>(
-          `button[name="intent"][value="${saveIntent}"]`,
-        );
-        if (form) form.requestSubmit(button ?? undefined);
+        if (form) form.requestSubmit(findIntentButton(form, saveIntent));
       }
     };
     window.addEventListener("keydown", onKeyDown);

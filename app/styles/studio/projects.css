@@ -99,6 +99,14 @@
   }
 }
 
+/* Same reveal as list rows (base.css hides the steps on fine pointers). */
+@media (hover: hover) and (pointer: fine) {
+  .projects-home__item:hover .studio-order__step,
+  .projects-home__item:focus-within .studio-order__step {
+    opacity: 1;
+  }
+}
+
 .projects-home__item[data-highlight] {
   background: color-mix(in srgb, var(--color-accent) 10%, transparent);
   transition: background-color var(--dur-3) var(--ease-out-quart);
@@ -147,8 +155,9 @@
 }
 
 .projects-home__remove {
-  grid-column: 3;
+  grid-column: 2 / -1;
   justify-self: start;
+  white-space: normal;
 }
 
 @media (min-width: 768px) {
@@ -201,6 +210,68 @@
 }
 
 /* ---- List ------------------------------------------------------------------- */
+
+.projects-filters__toggle {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--studio-control-h);
+  padding-inline: var(--space-4);
+  border: 1px solid var(--color-control-border);
+  border-radius: var(--radius-xs);
+  font-family: var(--font-display);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  list-style: none;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.projects-filters__toggle::-webkit-details-marker {
+  display: none;
+}
+
+.projects-filters__body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.projects-filters[open] > .projects-filters__body {
+  margin-block-start: var(--space-3);
+}
+
+@media (min-width: 768px) {
+  .projects-filters__toggle {
+    display: none;
+  }
+
+  .projects-filters[open] > .projects-filters__body {
+    margin-block-start: 0;
+  }
+}
+
+/* Filter selects sit on one line: no stacked-field spacing inside the bar. */
+.projects-filters__body .studio-field + .studio-field {
+  margin-block-start: 0;
+}
+
+.projects-filters__body .studio-field__head {
+  margin: 0;
+}
+
+/* Below desktop, rows stack: title, then status, then meta and time. */
+@media (max-width: 1023px) {
+  .projects-list .studio-row__link {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .projects-list .studio-row__title,
+  .projects-list .studio-row__badges {
+    grid-column: 1 / -1;
+  }
+}
 
 .projects-order-hint {
   margin: 0 0 var(--space-3);
@@ -325,9 +396,20 @@
 
 /* ---- Quick create ----------------------------------------------------------- */
 
-.projects-create {
+/* Stacked fields get their rhythm from one sibling margin (base.css uses the
+   same step between fields), never from a grid gap on top of it. */
+.projects-create,
+.projects-fields {
   display: grid;
-  gap: var(--space-5);
+  min-inline-size: 0;
+}
+
+.projects-create > * + *,
+.projects-fields > * + * {
+  margin-block-start: var(--space-5);
+}
+
+.projects-create {
   max-inline-size: 44rem;
 }
 
@@ -364,11 +446,6 @@
   .projects-editor-form .studio-localized__locale:first-child {
     padding-inline-end: 0;
   }
-}
-
-.projects-fields {
-  display: grid;
-  gap: var(--space-5);
 }
 
 .projects-fields__intro {

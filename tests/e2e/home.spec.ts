@@ -1,8 +1,10 @@
 import { expect, test } from "@playwright/test";
+import { expectNoPersonalName } from "./helpers/brand";
 
 /*
- * Home page (docs/information-architecture.md §4.1, §7.2):
- * section order, identity rules, pricing preview, CTA placement, CSP safety.
+ * Home page (docs/information-architecture.md §4.1, §7.2): section order,
+ * identity rules, Studio-driven content (tests/fixtures/cms-e2e.sql),
+ * pricing preview, CTA placement, CSP safety.
  */
 
 const ZH_SECTIONS = [
@@ -47,18 +49,19 @@ for (const [locale, sections] of [
   });
 }
 
-test("the real name appears exactly once per locale", async ({ page }) => {
+test("the hero is the brand only: no personal-name variant in either locale", async ({
+  page,
+}) => {
   await page.goto("/zh");
-  await expect(page.getByText("楊子賢", { exact: true })).toHaveCount(1);
-  await expect(page.getByText(/Kevin Yang/)).toHaveCount(0);
+  await expectNoPersonalName(page);
   const hero = page
     .getByRole("main")
     .getByRole("region", { name: "自我介紹", exact: true });
   await expect(hero.getByText("創意科技")).toBeVisible();
+  await expect(hero.locator(".home-hero__real-name")).toHaveCount(0);
 
   await page.goto("/en");
-  await expect(page.getByText("Kevin Yang", { exact: true })).toHaveCount(1);
-  await expect(page.getByText("楊子賢")).toHaveCount(0);
+  await expectNoPersonalName(page);
   await expect(
     page.getByText("Building systems, sound, and interactive experiences."),
   ).toBeVisible();
@@ -79,17 +82,27 @@ test("home offers exactly three in-page start-a-project CTAs and View work", asy
   ).toHaveAttribute("href", "/zh/works");
 });
 
-test("selected work mixes categories and badges placeholders", async ({
+test("selected work shows the featured projects in Studio order, never drafts or samples", async ({
   page,
 }) => {
   await page.goto("/en");
   const work = page
     .getByRole("main")
     .getByRole("region", { name: "Selected Work", exact: true });
-  const links = work.locator('a[href^="/en/works/"]');
-  expect(await links.count()).toBeGreaterThanOrEqual(4);
-  await expect(work.getByText("PLACEHOLDER").first()).toBeVisible();
-  for (const category of ["AI", "Mixing", "Interactive", "Research"]) {
+  const hrefs = await work
+    .locator('a[href^="/en/works/"]')
+    .evaluateAll((links) =>
+      links.map((link) => link.getAttribute("href") ?? ""),
+    );
+  expect([...new Set(hrefs)]).toEqual([
+    "/en/works/fixture-signal-map",
+    "/en/works/fixture-booking-console",
+    "/en/works/fixture-listening-room",
+  ]);
+  await expect(work.getByText("Fixture Draft Project")).toHaveCount(0);
+  await expect(work.getByText("PLACEHOLDER")).toHaveCount(0);
+  await expect(work.getByText(/^Sample:/)).toHaveCount(0);
+  for (const category of ["AI", "Software", "Interactive"]) {
     await expect(
       work.getByText(category, { exact: true }).first(),
     ).toBeAttached();
@@ -98,6 +111,51 @@ test("selected work mixes categories and badges placeholders", async ({
     "href",
     "/en/works",
   );
+});
+
+test("recognition and writing rows come from the Studio", async ({ page }) => {
+  await page.goto("/en");
+  const main = page.getByRole("main");
+  const recognition = main.getByRole("region", {
+    name: "Recognition",
+    exact: true,
+  });
+  await expect(
+    recognition.getByRole("link", {
+      name: /Fixture Festival — Best Interactive Work/,
+    }),
+  ).toHaveAttribute("href", "https://example.com/fixture-festival");
+  await expect(recognition.getByText("Fixture Conference Talk")).toBeVisible();
+
+  const writing = main.getByRole("region", { name: "Writing", exact: true });
+  await expect(
+    writing.getByRole("link", { name: "Read", exact: true }),
+  ).toHaveAttribute("href", "/en/writing/fixture-building-notes");
+  const outbound = writing.getByRole("link", { name: /Read on Threads/ });
+  await expect(outbound).toHaveAttribute(
+    "href",
+    "https://www.threads.net/@kamel.fixture/post/e2e",
+  );
+  await expect(outbound).toHaveAttribute("target", "_blank");
+  await expect(writing.getByText("Fixture Draft Note")).toHaveCount(0);
+});
+
+test("the showreel is the published Studio track and never loads before a click", async ({
+  page,
+}) => {
+  const audioRequests: string[] = [];
+  page.on("request", (request) => {
+    if (new URL(request.url()).pathname.startsWith("/e2e/showreel")) {
+      audioRequests.push(request.url());
+    }
+  });
+  await page.goto("/en");
+  const stage = page.locator(".home-hero__stage");
+  await expect(
+    stage.getByRole("button", { name: "Play Fixture Showreel" }),
+  ).toBeVisible();
+  await expect(page.locator("audio")).toHaveCount(0);
+  expect(audioRequests).toEqual([]);
 });
 
 test("pricing preview shows real starting prices and a quote row", async ({
