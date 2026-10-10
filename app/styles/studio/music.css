@@ -56,6 +56,21 @@
   margin: 0;
 }
 
+/* Filter selects sit inline with the search, sized to their content. */
+.studio .studio-filterbar__extra {
+  align-items: center;
+}
+
+.studio .studio-filterbar__extra .studio-select {
+  inline-size: auto;
+  min-inline-size: 9rem;
+}
+
+.studio .studio-filterbar__extra .studio-check {
+  align-items: center;
+  min-block-size: var(--studio-control-h);
+}
+
 /* Row menu (⋯): a disclosure of real buttons. */
 .studio .studio-menu {
   position: relative;
