@@ -72,9 +72,14 @@ function useRowFeedback(
 ) {
   const toast = useToast();
   const navigate = useNavigate();
+  // The result arrives after revalidation, when an archived row has already
+  // left the default (active) list; remember every name the list has shown.
+  const knownNames = useRef(new Map<string, string>());
+  for (const [id, row] of rowsById) knownNames.current.set(id, label(row));
   return useCallback(
     (data: ProjectActionData, sent: SentFields) => {
-      const name = label(rowsById.get(sent.id ?? "") ?? { label: "" });
+      const name =
+        knownNames.current.get(sent.id ?? "") ?? label({ label: "" });
       if (!data.ok) {
         toast.show({
           tone: "error",
@@ -132,7 +137,7 @@ function useRowFeedback(
           break;
       }
     },
-    [toast, navigate, rowsById, submitRef],
+    [toast, navigate, submitRef],
   );
 }
 
