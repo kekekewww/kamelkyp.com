@@ -81,7 +81,12 @@ test("the media library registers a URL, edits alt text and deletes an unused as
   await page.getByRole("textbox", { name: /EN/ }).nth(1).fill("Test image");
   await page.getByRole("button", { name: "Save" }).first().click();
   await expect(page.getByRole("status").first()).toHaveText(/^SAVED/);
-  await expect(page.getByText("Not used anywhere")).toBeVisible();
+  // Scoped: the closed delete dialog also says "It is not used anywhere."
+  await expect(
+    page
+      .getByRole("region", { name: "Used in" })
+      .getByText("Not used anywhere"),
+  ).toBeVisible();
 
   await page.getByRole("button", { name: "Delete…" }).click();
   await page.getByRole("button", { name: "Delete permanently" }).click();

@@ -138,8 +138,9 @@ test.describe("projects", () => {
           hasText: "Feature on homepage",
         })
         .click();
+      // Name the project: the previous iteration's toast also says "on the homepage".
       await expect(page.locator(".studio-toast").last()).toContainText(
-        "on the homepage",
+        `Featured "${name}" on the homepage`,
       );
     }
 
