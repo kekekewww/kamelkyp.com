@@ -20,11 +20,18 @@ export function useProjectSubmit(
   const handler = useRef(onResult);
   handler.current = onResult;
   const previous = useRef(fetcher.state);
+  const handledData = useRef(fetcher.data);
 
   useEffect(() => {
-    const finished = previous.current !== "idle" && fetcher.state === "idle";
+    // Router state updates are transitions: when rendering is slow, React can
+    // skip the "submitting"/"loading" renders and go straight from idle to
+    // idle with new data. Fresh data therefore also counts as finished.
+    const finished =
+      fetcher.state === "idle" &&
+      (previous.current !== "idle" || fetcher.data !== handledData.current);
     previous.current = fetcher.state;
     if (!finished || !sent.current) return;
+    handledData.current = fetcher.data;
     const fields = sent.current;
     sent.current = null;
     handler.current(
