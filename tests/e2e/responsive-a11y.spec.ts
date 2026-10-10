@@ -57,15 +57,23 @@ test("mobile controls meet the minimum touch target", async ({ page }) => {
   expect(ctaBox?.width).toBeGreaterThanOrEqual(44);
   expect(ctaBox?.height).toBeGreaterThanOrEqual(44);
 
+  // Six groups with the e2e fixture's enabled social link ("Find me").
   const summaries = page.locator("footer summary");
-  await expect(summaries).toHaveCount(5);
+  await expect(summaries).toHaveCount(6);
   for (const summary of await summaries.all()) {
     const box = await summary.boundingBox();
     expect(box?.height).toBeGreaterThanOrEqual(44);
   }
 });
 
-for (const path of ["/en", "/en/works", "/en/services/software", "/en/about"]) {
+for (const path of [
+  "/en",
+  "/en/works",
+  "/en/works/fixture-signal-map",
+  "/en/services/software",
+  "/en/about",
+  "/en/writing",
+]) {
   test(`${path} has no serious axe violations`, async ({ page }) => {
     // The hero intro fades controls in; axe must see their final colours.
     await page.emulateMedia({ reducedMotion: "reduce" });

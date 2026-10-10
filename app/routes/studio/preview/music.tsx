@@ -65,7 +65,7 @@ export default function PreviewMusicRoute() {
       <div className="project-summary grid">
         <div className="project-summary__audio col-content">
           <TrackSheet
-            label={track.title || copy.label}
+            label={copy.label}
             pending={copy.pending}
             rows={[
               { term: copy.track, value: track.title },
