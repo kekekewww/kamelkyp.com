@@ -215,6 +215,16 @@ test.describe("footer settings", () => {
     await openStudio(page, FOOTER);
     const recorded = await names(page).allTextContents();
 
+    // An unsaved edit in an open editor of another group.
+    const legal = row(page, "Legal");
+    await openEditor(legal);
+    const legalLabel = legal.locator('input[name="label.en"]');
+    const storedLabel = await legalLabel.inputValue();
+    const draft = `Legal draft ${token}`;
+    await legalLabel.fill(draft);
+    const legalState = legal.locator(".studio-footer__state");
+    await expect(legalState).toHaveText("Unsaved changes");
+
     // Another tab adds a group, so this tab's list is stale.
     const other = await context.newPage();
     await other.setViewportSize({ width: 1440, height: 900 });
@@ -236,6 +246,15 @@ test.describe("footer settings", () => {
         (await names(page).allTextContents()).filter((name) => name !== STALE),
       )
       .toEqual(recorded);
+
+    // Restoring the order keeps the open editor and its unsaved edit.
+    await expect(
+      legal.locator("details.studio-footer__details"),
+    ).toHaveAttribute("open", "");
+    await expect(legalLabel).toHaveValue(draft);
+    await expect(legalState).toHaveText("Unsaved changes");
+    await legalLabel.fill(storedLabel);
+    await expect(legalState).toHaveText("Saved");
 
     // Clean up through the UI.
     await openStudio(page, FOOTER);

@@ -3,7 +3,14 @@
  * orders every footer group, shows or hides it, edits its labels, and keeps
  * the links of custom groups; the preview shows the saved public footer.
  */
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useBlocker, useFetcher, useRevalidator } from "react-router";
 import type {
   FooterScreenSources,
@@ -25,14 +32,41 @@ import { FooterGroupRow, type FooterResult } from "./footer-group-row";
 import { footerGroupName } from "./footer-model";
 import { FooterPreview } from "./footer-preview";
 
+type Reorder = ReturnType<typeof useKeyboardReorder>;
+
 /**
- * The ordered list. It owns the reorder hook and is keyed by `resetKey`, so
- * a failed reorder remounts it in the server order (the hook's reducer
- * resets only when the server id list changes, which a failure does not do).
+ * Owns only the reorder state and hands it to the list. The list keys it by
+ * the failed-reorder count, so a failed reorder restarts it from the server
+ * order (the hook's reducer resets only when the server id list changes,
+ * which a failure does not do) while the rows stay mounted: open editors
+ * keep their unsaved edits and a save in flight still gets its answer.
  */
+function ReorderState({
+  ids,
+  labelOf,
+  onCommit,
+  onChange,
+}: {
+  ids: string[];
+  labelOf: (id: string) => string;
+  onCommit: (ids: string[]) => void;
+  onChange: (reorder: Reorder) => void;
+}) {
+  const { order, picked, move, handleProps, announcement } = useKeyboardReorder(
+    { ids, labelOf, onCommit },
+  );
+  // Before paint, so the list never shows an order the hook has left.
+  useLayoutEffect(() => {
+    onChange({ order, picked, move, handleProps, announcement });
+  }, [order, picked, move, handleProps, announcement, onChange]);
+  return null;
+}
+
+/** The ordered list; `resetKey` restarts only the reorder state. */
 function FooterGroupList({
   groups,
   sources,
+  resetKey,
   onCommit,
   openIds,
   onOpenChange,
@@ -42,6 +76,7 @@ function FooterGroupList({
 }: {
   groups: readonly StudioFooterGroup[];
   sources: FooterScreenSources;
+  resetKey: number;
   onCommit: (ids: string[]) => void;
   openIds: ReadonlySet<string>;
   onOpenChange: (id: string, open: boolean) => void;
@@ -49,21 +84,32 @@ function FooterGroupList({
   onDelete: (group: StudioFooterGroup) => void;
   deletingId: string | null;
 }) {
-  const byId = new Map(groups.map((group) => [group.id, group]));
-  const labelOf = (id: string) => {
-    const group = byId.get(id);
-    return group ? footerGroupName(group) : id;
-  };
-  const reorder = useKeyboardReorder({
-    ids: groups.map((group) => group.id),
-    labelOf,
-    onCommit,
-  });
-  const ordered = reorder.order
+  const ids = useMemo(() => groups.map((group) => group.id), [groups]);
+  const byId = useMemo(
+    () => new Map(groups.map((group) => [group.id, group])),
+    [groups],
+  );
+  const labelOf = useCallback(
+    (id: string) => {
+      const group = byId.get(id);
+      return group ? footerGroupName(group) : id;
+    },
+    [byId],
+  );
+  // Null until the reorder state has rendered once (server render, hydration).
+  const [reorder, setReorder] = useState<Reorder | null>(null);
+  const ordered = (reorder?.order ?? ids)
     .map((id) => byId.get(id))
     .filter((group): group is StudioFooterGroup => Boolean(group));
   return (
     <>
+      <ReorderState
+        key={resetKey}
+        ids={ids}
+        labelOf={labelOf}
+        onCommit={onCommit}
+        onChange={setReorder}
+      />
       <ol className="studio-footer__list" aria-label="Footer groups">
         {ordered.map((group, index) => (
           <FooterGroupRow
@@ -73,9 +119,9 @@ function FooterGroupList({
             order={{
               index,
               total: ordered.length,
-              picked: reorder.picked === group.id,
-              onMove: (delta) => reorder.move(group.id, delta),
-              handleProps: reorder.handleProps(group.id),
+              picked: reorder?.picked === group.id,
+              onMove: (delta) => reorder?.move(group.id, delta),
+              handleProps: reorder?.handleProps(group.id) ?? {},
             }}
             open={openIds.has(group.id)}
             onOpenChange={onOpenChange}
@@ -86,7 +132,7 @@ function FooterGroupList({
         ))}
       </ol>
       <p className="visually-hidden" aria-live="assertive">
-        {reorder.announcement}
+        {reorder?.announcement ?? ""}
       </p>
     </>
   );
@@ -333,7 +379,10 @@ export function FooterSettings({
     remover.state !== "idle"
       ? String(remover.formData?.get("id") ?? "") || null
       : null;
-  const visible = groups.filter((group) => group.id !== deletingId);
+  const visible = useMemo(
+    () => groups.filter((group) => group.id !== deletingId),
+    [groups, deletingId],
+  );
   const customCount = groups.filter((group) => group.kind === "custom").length;
 
   return (
@@ -345,7 +394,7 @@ export function FooterSettings({
       <div className="studio-footer">
         <div className="studio-footer__main">
           <FooterGroupList
-            key={resetKey}
+            resetKey={resetKey}
             groups={visible}
             sources={sources}
             onCommit={commit}
