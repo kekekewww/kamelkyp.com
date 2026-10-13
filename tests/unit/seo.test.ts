@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { createCloudflareContextProvider } from "../../app/lib/cloudflare/context";
 import {
   deploymentMode,
   isIndexableRequest,
@@ -18,6 +19,8 @@ import {
   localeAlternates,
   X_DEFAULT_LOCALE,
 } from "../../app/lib/seo/urls";
+import { loader as publicLayoutLoader } from "../../app/routes/public/layout";
+import { createTestEnv } from "../helpers/test-env";
 
 const PROD = "https://kamelkyp.com";
 const PREVIEW = "https://kamelkyp-com-pr-7.example.workers.dev";
@@ -193,5 +196,49 @@ describe("origin and deployment mode", () => {
         "http://127.0.0.1:5173/en",
       ),
     ).toBe("http://127.0.0.1:5173");
+  });
+});
+
+describe("public layout loader seo context", () => {
+  function context(overrides: Parameters<typeof createTestEnv>[0]) {
+    const throwing = {
+      prepare() {
+        throw new Error("d1_down");
+      },
+    } as unknown as D1Database;
+    return createCloudflareContextProvider(
+      createTestEnv({ DB: throwing, ...overrides }),
+      {} as ExecutionContext,
+      { nonce: "n", requestId: "r" },
+    );
+  }
+
+  it("computes the origin before the D1 read, so the fallback keeps canonicals", async () => {
+    const result = await publicLayoutLoader({
+      params: { lang: "en" },
+      context: context({}),
+      request: new Request(`${PROD}/en`),
+    } as never);
+    expect(result.site.brand.brandName).toBe("Kamel");
+    expect(result.seo).toEqual({ origin: PROD });
+  });
+
+  it("uses the request origin when APP_ORIGIN is unusable", async () => {
+    const result = await publicLayoutLoader({
+      params: { lang: "en" },
+      context: context({ APP_ORIGIN: "invalid" }),
+      request: new Request("https://kamelkyp-com.x.workers.dev/en"),
+    } as never);
+    expect(result.seo).toEqual({
+      origin: "https://kamelkyp-com.x.workers.dev",
+    });
+  });
+
+  it("returns no seo context without a Cloudflare context (unit renders)", async () => {
+    const result = await publicLayoutLoader({
+      params: { lang: "zh" },
+    } as never);
+    expect(result.seo).toBeNull();
+    expect(result.site.brand.brandName).toBe("Kamel");
   });
 });

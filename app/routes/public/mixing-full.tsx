@@ -11,11 +11,18 @@ export async function loader(args: LoaderFunctionArgs) {
   return loadServiceDetail(args, "full_mix");
 }
 
-export const meta: MetaFunction<typeof loader> = ({ loaderData, matches }) =>
-  pageMeta(matches, {
-    title: loaderData?.service.name,
-    description: loaderData?.service.shortDescription,
-  });
+export const meta: MetaFunction<typeof loader> = ({
+  loaderData,
+  matches,
+  location,
+}) =>
+  pageMeta(
+    { matches, location },
+    {
+      title: loaderData?.service.name,
+      description: loaderData?.service.shortDescription,
+    },
+  );
 
 export default function FullMixRoute() {
   const data = useLoaderData<typeof loader>();

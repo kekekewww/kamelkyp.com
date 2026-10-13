@@ -12,10 +12,17 @@ export async function loader(args: LoaderFunctionArgs) {
   return loadServiceArea(args, "song_transition");
 }
 
-export const meta: MetaFunction<typeof loader> = ({ loaderData, matches }) =>
-  pageMeta(matches, {
-    title: loaderData?.locale === "en" ? "Song Transition" : "歌曲銜接",
-  });
+export const meta: MetaFunction<typeof loader> = ({
+  loaderData,
+  matches,
+  location,
+}) =>
+  pageMeta(
+    { matches, location },
+    {
+      title: loaderData?.locale === "en" ? "Song Transition" : "歌曲銜接",
+    },
+  );
 
 export default function TransitionIndexRoute() {
   const { locale, fxSnapshot, services } = useLoaderData<typeof loader>();

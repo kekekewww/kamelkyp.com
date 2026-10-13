@@ -30,10 +30,17 @@ export async function loader(args: LoaderFunctionArgs) {
   return { ...price, startingPrices };
 }
 
-export const meta: MetaFunction<typeof loader> = ({ loaderData, matches }) =>
-  pageMeta(matches, {
-    title: loaderData?.locale === "en" ? "Services" : "服務",
-  });
+export const meta: MetaFunction<typeof loader> = ({
+  loaderData,
+  matches,
+  location,
+}) =>
+  pageMeta(
+    { matches, location },
+    {
+      title: loaderData?.locale === "en" ? "Services" : "服務",
+    },
+  );
 
 /**
  * Services overview (IA §4.4): the service areas from site settings, each

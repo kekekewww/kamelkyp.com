@@ -52,11 +52,20 @@ export async function loader(args: LoaderFunctionArgs) {
   return { locale, offerings, related };
 }
 
-export const meta: MetaFunction<typeof loader> = ({ loaderData, matches }) =>
-  pageMeta(matches, {
-    title:
-      loaderData?.locale === "en" ? "Software & Interactive" : "軟體與互動開發",
-  });
+export const meta: MetaFunction<typeof loader> = ({
+  loaderData,
+  matches,
+  location,
+}) =>
+  pageMeta(
+    { matches, location },
+    {
+      title:
+        loaderData?.locale === "en"
+          ? "Software & Interactive"
+          : "軟體與互動開發",
+    },
+  );
 
 function Offering({ offering }: { offering: PublicServiceItem }) {
   const body = offering.shortDescription

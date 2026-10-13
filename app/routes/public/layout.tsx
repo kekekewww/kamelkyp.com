@@ -14,14 +14,23 @@ import {
 } from "../../lib/cms/public/site.server";
 import type { PublicSiteContext } from "../../lib/cms/public/view-models";
 import { isLocale, type Locale } from "../../lib/i18n/locale";
+import { siteOrigin } from "../../lib/seo/origin.server";
+import type { PublicSeoContext } from "../../lib/seo/urls";
 
 export interface PublicOutletContext {
   locale: Locale;
 }
 
 /** Default head for pages without their own meta (home uses `siteTitle`). */
-export const meta: MetaFunction<typeof loader> = ({ loaderData }) =>
-  loaderData?.site ? publicMeta({ site: loaderData.site }) : [];
+export const meta: MetaFunction<typeof loader> = ({ loaderData, location }) =>
+  loaderData?.site
+    ? publicMeta({
+        site: loaderData.site,
+        seo: loaderData.seo
+          ? { ...loaderData.seo, pathname: location.pathname }
+          : null,
+      })
+    : [];
 
 /**
  * Site context for every public page (content-architecture §3.6): brand, site
@@ -34,21 +43,34 @@ export const meta: MetaFunction<typeof loader> = ({ loaderData }) =>
 export async function loader({
   params,
   context,
-}: LoaderFunctionArgs): Promise<{ locale: Locale; site: PublicSiteContext }> {
+  request,
+}: LoaderFunctionArgs): Promise<{
+  locale: Locale;
+  site: PublicSiteContext;
+  seo: PublicSeoContext | null;
+}> {
   if (!params.lang || !isLocale(params.lang)) {
     throw new Response("Not Found", { status: 404 });
   }
 
   const locale = params.lang;
   const provider = context as typeof context | undefined;
-  if (!provider) return { locale, site: fallbackSiteContext(null, locale) };
+  if (!provider) {
+    return { locale, site: fallbackSiteContext(null, locale), seo: null };
+  }
 
   const { env } = provider.get(cloudflareContext);
+  // From env and the request only, so a failed D1 read keeps canonicals.
+  const seo = { origin: siteOrigin(env, request.url) };
   try {
-    return { locale, site: await getPublicSiteContext(env.DB, env, locale) };
+    return {
+      locale,
+      site: await getPublicSiteContext(env.DB, env, locale),
+      seo,
+    };
   } catch {
     console.warn("public_site_context_unavailable");
-    return { locale, site: fallbackSiteContext(env, locale) };
+    return { locale, site: fallbackSiteContext(env, locale), seo };
   }
 }
 
