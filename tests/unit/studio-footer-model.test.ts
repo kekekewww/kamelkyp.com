@@ -243,12 +243,18 @@ describe("pairFooterLinkRows", () => {
       ["a-zh", { zh: "第一", en: "First" }, []],
       ["b-zh", { zh: "第二", en: "Second" }, []],
     ]);
+    // The public footer's link ids are the per-locale row ids.
+    expect(links.map((item) => item.rowIds)).toEqual([
+      { zh: "a-zh", en: "a-en" },
+      { zh: "b-zh", en: "b-en" },
+    ]);
   });
 
   it("keeps a one-locale row as its own link with a note", () => {
     const [only] = pairFooterLinkRows([row("x-zh", "zh", "只有中文", 0)]);
     expect(only?.label).toEqual({ zh: "只有中文", en: "" });
     expect(only?.notes).toEqual(["EN label missing; add it before saving."]);
+    expect(only?.rowIds).toEqual({ zh: "x-zh" });
   });
 
   it("keeps the ZH address and flag when the pair disagrees", () => {

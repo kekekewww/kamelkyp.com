@@ -17,6 +17,7 @@ import {
 } from "../public/footer";
 import type { Locale, LocalizedText, ValidationIssue } from "../types";
 import { localizedText } from "./common";
+import type { NavKey, ServiceAreaKey } from "./site-settings";
 
 export const FOOTER_LIMITS = {
   groupLabel: 60,
@@ -38,6 +39,8 @@ export type FooterGroupKind = FooterSystemKey | "custom";
 export type StudioFooterLink = {
   /** First row id of the pair (client key only). */
   key: string;
+  /** The stored row id per locale (the public footer's link ids). */
+  rowIds: Partial<Record<Locale, string>>;
   label: LocalizedText;
   url: string;
   enabled: boolean;
@@ -61,6 +64,21 @@ export type StudioFooterGroup = {
   links: StudioFooterLink[];
   /** SHA-256 hex of the stored labels and link rows (not enabled/order). */
   fingerprint: string;
+};
+
+/** What the built-in groups derive their links from (Studio footer screen). */
+export type FooterScreenSources = {
+  navigation: ReadonlyArray<{ key: NavKey; visible: boolean }>;
+  serviceAreas: ReadonlyArray<{ key: ServiceAreaKey; name: LocalizedText }>;
+  /** Enabled social links with a safe address. */
+  socialLinks: ReadonlyArray<{ id: string; label: LocalizedText; url: string }>;
+  contactEmail: string;
+};
+
+export type FooterScreenData = {
+  /** Footer order (built-in groups without a row at their default place). */
+  groups: StudioFooterGroup[];
+  sources: FooterScreenSources;
 };
 
 export type FooterLinkRow = {
@@ -304,6 +322,10 @@ export function pairFooterLinkRows(
       }
       links.push({
         key: first.id,
+        rowIds: {
+          ...(zhRow ? { zh: zhRow.id } : {}),
+          ...(enRow ? { en: enRow.id } : {}),
+        },
         label: { zh: zhRow?.label ?? "", en: enRow?.label ?? "" },
         url: first.url,
         enabled: first.enabled,
