@@ -3,10 +3,9 @@
  * settings, homepage control): the "Leave without saving?" dialog, toast
  * feedback for action results, inline issue lookup and the backup banner.
  */
-import { useEffect, useRef } from "react";
 import type { Blocker, FetcherWithComponents } from "react-router";
 import type { ValidationIssue } from "../../../lib/cms/types";
-import { ConfirmDialog, useToast } from "../ui";
+import { ConfirmDialog, useFetcherSettled, useToast } from "../ui";
 
 export type ActionData = {
   ok?: boolean;
@@ -50,20 +49,18 @@ export function useActionToasts(
   options: { errorsOnly?: boolean } = {},
 ) {
   const toast = useToast();
-  const previous = useRef(fetcher.state);
   const { errorsOnly = false } = options;
-  useEffect(() => {
-    const settled = previous.current !== "idle" && fetcher.state === "idle";
-    previous.current = fetcher.state;
-    if (!settled) return;
-    const data = fetcher.data as ActionData;
-    if (!data?.message) return;
-    if (data.ok === false) {
-      toast.show({ message: data.message, tone: "error" });
-    } else if (!errorsOnly) {
-      toast.show({ message: data.message, tone: "success" });
-    }
-  }, [fetcher.state, fetcher.data, toast, errorsOnly]);
+  useFetcherSettled(fetcher, {
+    onSettled: (result) => {
+      const data = result as ActionData;
+      if (!data?.message) return;
+      if (data.ok === false) {
+        toast.show({ message: data.message, tone: "error" });
+      } else if (!errorsOnly) {
+        toast.show({ message: data.message, tone: "success" });
+      }
+    },
+  });
 }
 
 /**

@@ -33,6 +33,7 @@ import {
   saveStateLabel,
   serializeForm,
   useEditorForm,
+  useFetcherSettled,
   useToast,
 } from "../ui";
 import {
@@ -303,14 +304,16 @@ export function ProjectEditor({
     }
   });
 
-  const previousState = useRef(fetcher.state);
-  useEffect(() => {
-    const finished =
-      previousState.current !== "idle" && fetcher.state === "idle";
-    previousState.current = fetcher.state;
-    const result = fetcher.data;
-    if (!finished || !result) return;
+  // Runs once per finished submission, also when React skipped the busy
+  // renders; the handler always sees the latest state (leaveAfterSave, …).
+  useFetcherSettled(fetcher, {
+    onSettled: (result) => {
+      if (!result) return;
+      handleResult(result);
+    },
+  });
 
+  function handleResult(result: ProjectActionData) {
     if (!result.ok) {
       setFailure(result);
       if (leaveAfterSave) {
@@ -389,15 +392,7 @@ export function ProjectEditor({
       default:
         break;
     }
-  }, [
-    fetcher.state,
-    fetcher.data,
-    leaveAfterSave,
-    toast,
-    onReload,
-    openChecklist,
-    undo,
-  ]);
+  }
 
   // Navigate once the guard knows the form is clean.
   useEffect(() => {

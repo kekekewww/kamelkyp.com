@@ -6,9 +6,13 @@
  * every usage with a link, audio analysis status with "Test CORS", archive,
  * and delete with the safety rules (refused while live; drafts listed).
  */
-import { useEffect, useId, useRef, useState } from "react";
+import { useId, useState } from "react";
 import { Link, useFetcher } from "react-router";
-import { formatBytes, formatDuration } from "../../../lib/cms/media/summary";
+import {
+  formatBytes,
+  formatDuration,
+  type MediaSummary,
+} from "../../../lib/cms/media/summary";
 import { focalClasses } from "../../../lib/cms/media/urls";
 import type { MediaDetailData } from "../../../lib/cms/repositories/media-library.server";
 import type { ActionResult } from "../../../lib/cms/studio/responses";
@@ -21,6 +25,7 @@ import { LocalizedTextArea, LocalizedTextField } from "../ui/localized-field";
 import { IntentButton, StudioForm } from "../ui/studio-form";
 import { useToast } from "../ui/toast";
 import { useEditorForm } from "../ui/use-editor-form";
+import { useFetcherSettled } from "../ui/use-fetcher-settled";
 import { CopyUrlButton } from "./copy-url";
 import { CorsTest } from "./cors-test";
 import { LeaveGuard } from "./leave-guard";
@@ -295,29 +300,35 @@ function Usages({ data }: { data: MediaDetailData }) {
   );
 }
 
+/** Archive and restore echo their intent (`media-library.server.ts`). */
+type ArchiveResult = ActionResult<{
+  intent?: "archive" | "restore";
+  asset?: MediaSummary;
+}>;
+
 function DangerZone({ data }: { data: MediaDetailData }) {
   const deleteFetcher = useFetcher<ActionResult>();
-  const archiveFetcher = useFetcher<ActionResult>();
+  const archiveFetcher = useFetcher<ArchiveResult>();
   const toast = useToast();
   const [confirming, setConfirming] = useState(false);
   const groups = groupUsages(data.usages);
   const live = groups.filter((group) => group.live);
   const drafts = groups.filter((group) => !group.live);
   const { asset } = data;
-  const previous = useRef(archiveFetcher.state);
-  useEffect(() => {
-    if (previous.current !== "idle" && archiveFetcher.state === "idle") {
-      const result = archiveFetcher.data;
+  // The message follows the echoed intent, never `asset.archivedAt`: the
+  // loader data is already revalidated when the fetcher settles.
+  useFetcherSettled(archiveFetcher, {
+    onSettled: (result) => {
       if (result?.ok) {
-        toast.show({
-          message: asset.archivedAt ? "Restored" : "Archived",
-        });
-      } else if (result && !result.ok) {
+        if (result.intent === "archive") toast.show({ message: "Archived" });
+        else if (result.intent === "restore") {
+          toast.show({ message: "Restored" });
+        }
+      } else if (result) {
         toast.show({ tone: "error", message: result.message });
       }
-    }
-    previous.current = archiveFetcher.state;
-  }, [archiveFetcher.state, archiveFetcher.data, toast, asset.archivedAt]);
+    },
+  });
 
   const deleteError =
     deleteFetcher.data && !deleteFetcher.data.ok
@@ -443,13 +454,11 @@ export function MediaDetailView({ data }: { data: MediaDetailData }) {
     saveIntent: "update",
   });
   const toast = useToast();
-  const previous = useRef(fetcher.state);
-  useEffect(() => {
-    if (previous.current !== "idle" && fetcher.state === "idle") {
-      if (fetcher.data?.ok) toast.show({ message: "Saved" });
-    }
-    previous.current = fetcher.state;
-  }, [fetcher.state, fetcher.data, toast]);
+  useFetcherSettled(fetcher, {
+    onSettled: (result) => {
+      if (result?.ok) toast.show({ message: "Saved" });
+    },
+  });
 
   const issues =
     fetcher.data && !fetcher.data.ok ? (fetcher.data.issues ?? []) : [];

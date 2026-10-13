@@ -27,6 +27,7 @@ import { EmptyState } from "../ui/list";
 import { MediaThumb } from "../ui/media-field";
 import { StudioForm } from "../ui/studio-form";
 import { useToast } from "../ui/toast";
+import { useFetcherSettled } from "../ui/use-fetcher-settled";
 import { CopyUrlButton } from "./copy-url";
 import { MediaUploader } from "./uploader";
 
@@ -80,10 +81,8 @@ export function assetMeta(summary: MediaSummary): string {
 function StatusStrip({ data }: { data: MediaLibraryData }) {
   const fetcher = useFetcher<ActionData>();
   const toast = useToast();
-  const previous = useRef(fetcher.state);
-  useEffect(() => {
-    if (previous.current !== "idle" && fetcher.state === "idle") {
-      const result = fetcher.data;
+  useFetcherSettled(fetcher, {
+    onSettled: (result) => {
       if (result?.ok) {
         toast.show({
           message: `Usage index rebuilt: ${result.usages ?? 0} usages across ${result.assets ?? 0} assets`,
@@ -94,9 +93,8 @@ function StatusStrip({ data }: { data: MediaLibraryData }) {
           message: result.message ?? "The usage index could not be rebuilt.",
         });
       }
-    }
-    previous.current = fetcher.state;
-  }, [fetcher.state, fetcher.data, toast]);
+    },
+  });
 
   const { uploads, analysis } = data;
   return (
@@ -171,17 +169,15 @@ function RegisterUrlPanel({ onDone }: { onDone: () => void }) {
   const toast = useToast();
   const id = useId();
   const formRef = useRef<HTMLFormElement>(null);
-  const previous = useRef(fetcher.state);
-  useEffect(() => {
-    if (previous.current !== "idle" && fetcher.state === "idle") {
-      if (fetcher.data?.ok && fetcher.data.asset) {
-        toast.show({ message: `Registered ${fetcher.data.asset.filename}` });
+  useFetcherSettled(fetcher, {
+    onSettled: (result) => {
+      if (result?.ok && result.asset) {
+        toast.show({ message: `Registered ${result.asset.filename}` });
         formRef.current?.reset();
         onDone();
       }
-    }
-    previous.current = fetcher.state;
-  }, [fetcher.state, fetcher.data, toast, onDone]);
+    },
+  });
 
   const error = fetcher.data && !fetcher.data.ok ? fetcher.data.message : null;
   return (

@@ -78,3 +78,4 @@ export {
 export { TermMultiSelect, TermSelect } from "./term-select";
 export { type ToastInput, ToastProvider, useToast } from "./toast";
 export { useEditorForm } from "./use-editor-form";
+export { type FetcherLike, useFetcherSettled } from "./use-fetcher-settled";

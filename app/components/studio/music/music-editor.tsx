@@ -34,12 +34,15 @@ import { PublicationPanel } from "../ui/publication-panel";
 import { CsrfField, IntentButton, StudioForm } from "../ui/studio-form";
 import { useToast } from "../ui/toast";
 import { useEditorForm } from "../ui/use-editor-form";
+import { useFetcherSettled } from "../ui/use-fetcher-settled";
 
 const FORM_ID = "music-form";
 const PLACEMENT_ID = "music-placement";
 const STORAGE_KEY = "studio:sections:music";
 
 type EditorResult = ActionResult<{
+  /** Echoed by the server for every successful editor submission. */
+  intent?: string;
   meta?: EntityMeta;
   issues?: ValidationIssue[];
   published?: boolean;
@@ -183,39 +186,39 @@ export function MusicEditorView({ data }: { data: MusicEditorData }) {
     }
   }, [meta.id, meta.updatedAt]);
 
-  // Feedback for the editor's own submissions.
-  const previous = useRef(fetcher.state);
+  // The submitted intent, for the busy labels only: those exist only during
+  // busy renders, where `fetcher.formData` is set.
   const pendingIntent = useRef<string | null>(null);
   if (fetcher.formData) {
     pendingIntent.current = String(fetcher.formData.get("intent") ?? "");
   }
-  useEffect(() => {
-    if (previous.current !== "idle" && fetcher.state === "idle") {
-      const result = fetcher.data;
-      const intent = pendingIntent.current;
-      if (result?.ok) {
-        if (intent === "publish") {
-          toast.show(
-            result.published
-              ? { message: "Published" }
-              : {
-                  tone: "info",
-                  message: "Saved as a draft. Fix the checklist, then publish.",
-                },
-          );
-        } else if (intent === "unpublish") {
-          toast.show({ message: "Unpublished" });
-        } else if (intent === "archive") {
-          toast.show({ message: "Archived" });
-        } else if (intent === "restore") {
-          toast.show({ message: "Restored to draft" });
-        } else if (intent === "revert") {
-          toast.show({ message: "Reverted to the published version" });
-        }
+  // Feedback for the editor's own submissions. The toast follows the intent
+  // the server echoes, never `pendingIntent`: when React skips the submitting
+  // render, that ref still holds the previous submission's intent.
+  useFetcherSettled(fetcher, {
+    onSettled: (result) => {
+      if (!result?.ok) return;
+      const intent = result.intent;
+      if (intent === "publish") {
+        toast.show(
+          result.published
+            ? { message: "Published" }
+            : {
+                tone: "info",
+                message: "Saved as a draft. Fix the checklist, then publish.",
+              },
+        );
+      } else if (intent === "unpublish") {
+        toast.show({ message: "Unpublished" });
+      } else if (intent === "archive") {
+        toast.show({ message: "Archived" });
+      } else if (intent === "restore") {
+        toast.show({ message: "Restored to draft" });
+      } else if (intent === "revert") {
+        toast.show({ message: "Reverted to the published version" });
       }
-    }
-    previous.current = fetcher.state;
-  }, [fetcher.state, fetcher.data, toast]);
+    },
+  });
 
   // Duplicate / delete leave once the save state has settled (no prompt).
   const redirectTo =
@@ -227,18 +230,15 @@ export function MusicEditorView({ data }: { data: MusicEditorData }) {
   }, [redirectTo, editor.dirty, navigate]);
 
   // Placement feedback.
-  const placementPrevious = useRef(placement.state);
-  useEffect(() => {
-    if (placementPrevious.current !== "idle" && placement.state === "idle") {
-      const result = placement.data;
+  useFetcherSettled(placement, {
+    onSettled: (result) => {
       if (result && !result.ok) {
         toast.show({ tone: "error", message: result.message });
       } else if (result?.ok) {
         toast.show({ message: "Homepage updated" });
       }
-    }
-    placementPrevious.current = placement.state;
-  }, [placement.state, placement.data, toast]);
+    },
+  });
 
   const issues: readonly ValidationIssue[] =
     fetcher.state === "idle" && fetcher.data?.ok && fetcher.data.issues

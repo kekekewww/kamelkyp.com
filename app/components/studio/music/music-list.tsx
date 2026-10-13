@@ -26,6 +26,7 @@ import {
 } from "../ui/list";
 import { useStudioSession } from "../ui/studio-session";
 import { useToast } from "../ui/toast";
+import { useFetcherSettled } from "../ui/use-fetcher-settled";
 
 function label(text: LocalizedText): string {
   return text.en.trim() || text.zh.trim();
@@ -71,10 +72,10 @@ function useListActions() {
     },
     [fetcher, csrfToken],
   );
-  const previous = useRef(fetcher.state);
-  useEffect(() => {
-    if (previous.current !== "idle" && fetcher.state === "idle") {
-      const result = fetcher.data;
+  // The intent is captured at submit (`pending`), so it is right even when
+  // React skipped the busy renders.
+  useFetcherSettled(fetcher, {
+    onSettled: (result) => {
       if (result && !result.ok) {
         toast.show({ tone: "error", message: result.message });
       } else if (result?.ok) {
@@ -91,9 +92,8 @@ function useListActions() {
         const message = messages[pending.current ?? ""];
         if (message) toast.show({ message });
       }
-    }
-    previous.current = fetcher.state;
-  }, [fetcher.state, fetcher.data, toast]);
+    },
+  });
   return { submit, busy: fetcher.state !== "idle" };
 }
 

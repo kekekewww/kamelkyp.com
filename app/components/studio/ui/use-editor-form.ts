@@ -21,6 +21,7 @@ import {
   saveStateReducer,
   serializeForm,
 } from "./editor-state";
+import { type FetcherLike, useFetcherSettled } from "./use-fetcher-settled";
 
 type ActionLike = { ok?: boolean; message?: string } | null | undefined;
 
@@ -157,14 +158,11 @@ export function useEditorForm({
     }
   }, [key, snapshot]);
 
-  // Track the submission lifecycle through the fetcher.
-  const previous = useRef(fetcher.state);
-  useEffect(() => {
-    if (previous.current === "idle" && fetcher.state === "submitting") {
-      dispatch({ type: "submit" });
-    }
-    if (previous.current !== "idle" && fetcher.state === "idle") {
-      const result = fetcher.data as ActionLike;
+  // Track the submission lifecycle through the fetcher. A finished save
+  // counts even when React skipped the busy renders (`useFetcherSettled`).
+  useFetcherSettled(fetcher as FetcherLike<ActionLike>, {
+    onStart: () => dispatch({ type: "submit" }),
+    onSettled: (result) => {
       if (result && result.ok === false) {
         dispatch({
           type: "failure",
@@ -177,9 +175,8 @@ export function useEditorForm({
         setBackup(null);
         dispatch({ type: "success", at: new Date().toISOString() });
       }
-    }
-    previous.current = fetcher.state;
-  }, [fetcher.state, fetcher.data, key, snapshot]);
+    },
+  });
 
   // Mod+S saves (and never opens the browser's save dialog).
   useEffect(() => {
