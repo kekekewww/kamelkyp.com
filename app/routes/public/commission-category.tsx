@@ -4,10 +4,12 @@ import {
   type MetaFunction,
   useLoaderData,
 } from "react-router";
+import { EmptyState } from "../../components/content/empty-state";
 import type { PublicRouteHandle } from "../../components/layout/public-shell";
 import { ServicePrice } from "../../components/pricing/service-price";
 import { pageMeta } from "../../lib/cms/public/meta";
 import { listPublicServices } from "../../lib/cms/public/services.server";
+import { getCommissionReadiness } from "../../lib/commission/availability.server";
 import { getPublicLoaderContext } from "../../lib/content/public-loader.server";
 import { localePath } from "../../lib/i18n/path";
 import { getPublicPriceContext } from "../../lib/pricing/public-price.server";
@@ -28,14 +30,21 @@ export async function loader(args: LoaderFunctionArgs) {
     throw new Response("Not Found", { status: 404 });
   }
   const { locale, db, env } = getPublicLoaderContext(args);
-  const [priceContext, services] = await Promise.all([
+  const now = new Date();
+  const [priceContext, services, readiness] = await Promise.all([
     getPublicPriceContext(args),
-    listPublicServices(db, env, locale, { area: AREAS[category] }),
+    listPublicServices(db, env, locale, { area: AREAS[category], now }),
+    getCommissionReadiness(db, now),
   ]);
-  // Only published commission services with an active price can be commissioned.
+  const open = new Set(
+    readiness.filter((item) => item.open[locale]).map((item) => item.serviceId),
+  );
+  // Only published commission services that are open in this locale (an
+  // active price and effective terms) can be commissioned.
   const commissionable = services.flatMap((service) => {
     const id = service.commissionServiceId;
     if (!id || !isServiceId(id) || service.price?.currency !== "TWD") return [];
+    if (!open.has(id)) return [];
     return [
       {
         id,
@@ -100,48 +109,69 @@ export default function CommissionCategoryRoute() {
         </p>
       </header>
       <div className="grid">
-        <section className="commission-services col-content" aria-label={title}>
-          {services.map((service) => {
-            const nameId = `commission-service-${service.slug}`;
-            return (
-              <article className="commission-service" key={service.id}>
-                <h2 className="commission-service__name" id={nameId}>
-                  {service.name}
-                </h2>
-                {service.shortDescription ? (
-                  <p className="commission-service__description">
-                    {service.shortDescription}
-                  </p>
-                ) : null}
-                <div className="price commission-service__price">
-                  <p className="price__label">
-                    {isZh ? "基礎價格" : "Base price"}
-                  </p>
-                  <p className="price__figure price__figure--s commission-category__price">
-                    <ServicePrice
-                      locale={locale}
-                      twd={service.baseTwd}
-                      fxSnapshot={fxSnapshot}
-                    />
-                  </p>
-                </div>
-                <Link
-                  className="text-link commission-service__link"
-                  to={localePath(
-                    locale,
-                    `/commission/${category}/${service.slug}`,
-                  )}
-                  aria-describedby={nameId}
-                >
-                  {isZh ? "選擇此服務" : "Choose this service"}
-                  <span className="text-link__arrow" aria-hidden="true">
-                    →
-                  </span>
-                </Link>
-              </article>
-            );
-          })}
-        </section>
+        {services.length === 0 ? (
+          <div className="col-content">
+            <EmptyState
+              locale={locale}
+              title={
+                isZh
+                  ? "目前沒有開放線上委託的服務"
+                  : "No services are open for online commissions right now"
+              }
+              description={
+                isZh
+                  ? "請稍後再回來，或透過頁尾的聯絡方式詢問。"
+                  : "Please check back later, or get in touch using the contact details in the footer."
+              }
+            />
+          </div>
+        ) : (
+          <section
+            className="commission-services col-content"
+            aria-label={title}
+          >
+            {services.map((service) => {
+              const nameId = `commission-service-${service.slug}`;
+              return (
+                <article className="commission-service" key={service.id}>
+                  <h2 className="commission-service__name" id={nameId}>
+                    {service.name}
+                  </h2>
+                  {service.shortDescription ? (
+                    <p className="commission-service__description">
+                      {service.shortDescription}
+                    </p>
+                  ) : null}
+                  <div className="price commission-service__price">
+                    <p className="price__label">
+                      {isZh ? "基礎價格" : "Base price"}
+                    </p>
+                    <p className="price__figure price__figure--s commission-category__price">
+                      <ServicePrice
+                        locale={locale}
+                        twd={service.baseTwd}
+                        fxSnapshot={fxSnapshot}
+                      />
+                    </p>
+                  </div>
+                  <Link
+                    className="text-link commission-service__link"
+                    to={localePath(
+                      locale,
+                      `/commission/${category}/${service.slug}`,
+                    )}
+                    aria-describedby={nameId}
+                  >
+                    {isZh ? "選擇此服務" : "Choose this service"}
+                    <span className="text-link__arrow" aria-hidden="true">
+                      →
+                    </span>
+                  </Link>
+                </article>
+              );
+            })}
+          </section>
+        )}
       </div>
     </main>
   );

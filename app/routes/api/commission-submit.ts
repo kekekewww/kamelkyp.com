@@ -25,7 +25,8 @@ const SAFE_CODES = new Set([
   "submission_rate_limited",
   "terms_not_accepted",
   "term_version_mismatch",
-  "price_rule_not_found",
+  "active_price_rule_not_found",
+  "active_terms_unavailable",
   "fx_rate_missing",
   "fx_rate_stale",
   "turnstile_missing",
@@ -36,6 +37,13 @@ const SAFE_CODES = new Set([
   "turnstile_action_mismatch",
   "case_not_found",
   "case_payload_mismatch",
+]);
+
+// A closed service (no active price or terms) is not the visitor's mistake:
+// the public code stays `service_unavailable` while the log names the cause.
+const UNAVAILABLE_CODES = new Set([
+  "active_price_rule_not_found",
+  "active_terms_unavailable",
 ]);
 
 function safeCode(error: unknown): string {
@@ -135,7 +143,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
     const code = safeCode(error);
     console.error(JSON.stringify({ code, serviceId, rayId }));
     const publicCode =
-      code === "service_unavailable"
+      code === "service_unavailable" || UNAVAILABLE_CODES.has(code)
         ? "service_unavailable"
         : "validation_failed";
     return Response.json(
