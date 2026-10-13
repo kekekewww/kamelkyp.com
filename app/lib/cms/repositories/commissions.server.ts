@@ -309,6 +309,14 @@ const ERRORS = new Map<string, { status: number; message: string }>([
         "Temporary records were removed, but the case record is missing. Check the database before anything else.",
     },
   ],
+  [
+    "cleanup_unverified",
+    {
+      status: 503,
+      message:
+        "The Studio could not check whether the cleanup finished. Reload the page: if the case is still in Cleanup due, confirm it again.",
+    },
+  ],
 ]);
 
 function errorCode(error: unknown): string | null {
@@ -527,13 +535,52 @@ export async function handleCommissionCleanup({
           now,
         });
       } catch (error) {
-        // Any failed step is retryable (the ledger write is idempotent) and
-        // nothing is reported as done.
-        return errorResult(errorCode(error) ?? "cleanup_failed");
+        const code = errorCode(error);
+        if (code) return errorResult(code);
+        // An uncoded (D1) error can come before the delete batch or after it
+        // committed: what is left decides what the owner is told.
+        return cleanupAfterFailure(db, intent, caseId);
       }
       return actionOk({ intent, caseId });
     }
     default:
       return unknownIntent(intent);
   }
+}
+
+/**
+ * The cleanup failed without a coded error. The delete batch is atomic, so a
+ * remaining runtime or attempt row means nothing was removed (a retry is
+ * safe: the ledger write is idempotent), and none left means the cleanup
+ * went through and only a later read failed. If even this read fails, the
+ * outcome is unknown and the answer says so.
+ */
+async function cleanupAfterFailure(
+  db: D1Database,
+  intent: string,
+  caseId: string,
+) {
+  let left: {
+    has_case: number;
+    has_runtime: number;
+    has_attempt: number;
+  } | null;
+  try {
+    left = await db
+      .prepare(
+        `SELECT EXISTS (SELECT 1 FROM cases WHERE case_id = ?1) AS has_case,
+                EXISTS (SELECT 1 FROM case_runtime WHERE case_id = ?1) AS has_runtime,
+                EXISTS (SELECT 1 FROM submission_attempts WHERE case_id = ?1) AS has_attempt`,
+      )
+      .bind(caseId)
+      .first();
+  } catch {
+    return errorResult("cleanup_unverified");
+  }
+  if (!left) return errorResult("cleanup_unverified");
+  if (left.has_runtime || left.has_attempt) {
+    return errorResult("cleanup_failed");
+  }
+  if (!left.has_case) return errorResult("case_record_missing");
+  return actionOk({ intent, caseId });
 }

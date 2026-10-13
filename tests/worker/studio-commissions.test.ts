@@ -716,6 +716,67 @@ describe("handleCommissionCleanup", () => {
     expect(await runtimeOf(caseId)).toBeNull();
   });
 
+  /** `env.DB` whose matching reads fail once the delete batch has committed. */
+  function failingAfterCommit(fails: (query: string) => boolean): D1Database {
+    let committed = false;
+    const broken = {
+      bind: () => broken,
+      first: async () => {
+        throw new Error("d1_unavailable");
+      },
+      all: async () => {
+        throw new Error("d1_unavailable");
+      },
+    };
+    return {
+      prepare: (query: string) =>
+        committed && fails(query) ? broken : env.DB.prepare(query),
+      batch: async (statements: D1PreparedStatement[]) => {
+        const results = await env.DB.batch(statements);
+        committed = true;
+        return results;
+      },
+    } as unknown as D1Database;
+  }
+
+  it("reports the cleanup as done when only the read after the committed delete fails", async () => {
+    const caseId = await dueCase("2026-02-01T07:00:00.000Z");
+    const { gateway, cleanupLedger } = okGateway();
+    const result = await cleanup(
+      { intent: "confirm-cleanup", caseId, ...CHECKLIST },
+      gateway,
+      failingAfterCommit(
+        (query) => query === "SELECT case_id FROM cases WHERE case_id = ?",
+      ),
+    );
+    expect(result.status).toBe(200);
+    expect(result.body).toEqual({
+      ok: true,
+      intent: "confirm-cleanup",
+      caseId,
+    });
+    expect(cleanupLedger).toHaveBeenCalledTimes(1);
+    expect(await runtimeOf(caseId)).toBeNull();
+    expect(await attemptOf(caseId)).toBeNull();
+    expect((await caseOf(caseId))?.status).toBe("delivered");
+  });
+
+  it("never says nothing was done when D1 cannot be read after the delete", async () => {
+    const caseId = await dueCase("2026-02-01T08:00:00.000Z");
+    const { gateway } = okGateway();
+    const result = await cleanup(
+      { intent: "confirm-cleanup", caseId, ...CHECKLIST },
+      gateway,
+      failingAfterCommit(() => true),
+    );
+    expect(result.status).toBe(503);
+    expect(result.body.code).toBe("cleanup_unverified");
+    expect(String(result.body.message)).not.toMatch(/nothing was/i);
+    // The delete did commit.
+    expect(await runtimeOf(caseId)).toBeNull();
+    expect(await attemptOf(caseId)).toBeNull();
+  });
+
   it("removes the temporary records after the ledger confirms and keeps the case", async () => {
     const caseId = await dueCase("2026-02-01T06:00:00.000Z");
     const { gateway, cleanupLedger } = okGateway();
