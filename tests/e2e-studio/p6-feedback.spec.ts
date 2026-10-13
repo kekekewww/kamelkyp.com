@@ -40,7 +40,9 @@ async function quickCreateMusic(page: Page, title: string) {
 }
 
 test.describe("studio feedback on a slow CPU", () => {
-  test.setTimeout(120_000);
+  // Every step runs at a sixth of the CPU against the dev server, which
+  // serves unbundled modules: a flow takes one to two minutes.
+  test.setTimeout(240_000);
 
   test("music editor: publish, save and placement report their result", async ({
     page,
@@ -152,7 +154,10 @@ test.describe("studio feedback on a slow CPU", () => {
       .click();
     const dialog = page.getByRole("dialog", { name: "Leave without saving?" });
     await dialog.getByRole("button", { name: "Save and leave" }).click();
-    await expect(page).toHaveURL(/\/studio\/projects$/);
+    // The guard proceeds once the save settles; the list route's modules
+    // then load at a sixth of the CPU, which can take longer than 20 s.
+    await expect(dialog).toBeHidden();
+    await expect(page).toHaveURL(/\/studio\/projects$/, { timeout: 90_000 });
 
     await openStudio(page, new URL(editorUrl).pathname);
     await expect(page.locator('input[name="role.en"]')).toHaveValue(role);
