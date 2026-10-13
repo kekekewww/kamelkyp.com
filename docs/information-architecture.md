@@ -12,9 +12,10 @@ Sources, in order of precedence:
 
 Fixed decisions this document builds on (spec section 1):
 
-- Public name is **Kamel**. The real name appears **exactly once, on the
-  landing page only**: `楊子賢` on `/zh`, `Kevin Yang` on `/en`. It never
-  appears in the header, footer, About page, meta tags or any other route.
+- Public name is **Kamel**, the only public identity (Studio brief, Brand). No
+  personal-name variant appears on any public surface (pages, header, footer,
+  About, meta tags, OpenGraph, JSON-LD, accessibility labels). The deny list is
+  in `app/lib/cms/brand-guard.server.ts`.
 - The commission wizard (details → terms → review → verify), D1 pricing,
   Turnstile, the Google submission gateway and the admin CMS are kept and
   reskinned.
@@ -183,7 +184,7 @@ Section order is fixed by the spec. Headings are `h2` unless noted.
 
 | # | Section | Eyebrow (both locales) | Heading zh / en | Data | CTA | Share |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | Hero | `SOUND × SOFTWARE × INTERACTION` | `h1` **Kamel** (both). Above it the real-name line: `楊子賢` / `Kevin Yang` (a `<p>`, not a heading). Roles line: 音樂製作人 · 軟體開發者 · 創意科技 / Music Producer · Software Developer · Creative Technologist. Statement: 打造系統、聲音與互動體驗。/ Building systems, sound, and interactive experiences. | D1 `page/home` media → first item is the showreel (existing `listMediaForVersion`); canvas hero visual reads its amplitude | **CTA #1**: 開始合作 / Start a project (primary) + 查看作品 / View work (secondary, → `/works`) | 15 % (≈ 100 vh) |
+| 1 | Hero | `SOUND × SOFTWARE × INTERACTION` | `h1` **Kamel** (both). Roles line: 音樂製作人 · 軟體開發者 · 創意科技 / Music Producer · Software Developer · Creative Technologist. Statement: 打造系統、聲音與互動體驗。/ Building systems, sound, and interactive experiences. | D1 `page/home` media → first item is the showreel (existing `listMediaForVersion`); canvas hero visual reads its amplitude | **CTA #1**: 開始合作 / Start a project (primary) + 查看作品 / View work (secondary, → `/works`) | 15 % (≈ 100 vh) |
 | 2 | Selected Work | `SELECTED WORK / 2024—2026` | 精選作品 / Selected Work | Merged list (see 4.2), first 4 items where file `featured: true`, plus the most recent D1 work first if one exists; must span ≥ 3 categories | Text link 所有作品 → / All work → (`/works`) | 25 % |
 | 3 | Capabilities | `CAPABILITIES / 04` | 能力範圍 / Capabilities | `capabilities.ts` (4 groups) | none | 10 % |
 | 4 | Recognition | `RECOGNITION` | 獲獎與肯定 / Recognition | `recognition.ts`, newest 3, metadata rows `YEAR / EVENT / RESULT` | none | 6 % |
@@ -364,7 +365,7 @@ structure, prices and targets**:
 
 ### 4.7 About `/:lang/about`
 
-Not an autobiography; no real name (it appears only on the landing page).
+Not an autobiography; no personal name (Kamel is the only identity).
 
 1. Header: eyebrow `ABOUT`, `h1` 關於 / About, lede from `about.ts`
    (`lede`): e.g. zh 我做系統，也做聲音。兩者對我來說是同一件事：把複雜的東西
@@ -668,8 +669,9 @@ sections: { id: "what" | "think" | "connect" | "work"; heading: LocalizedText;
             body: LocalizedText[]; items?: LocalizedText[] }[]
 ```
 
-Schema refinement: no string may contain `楊子賢` or `Kevin Yang`, and no
-heading may contain `Kamel` (protects the landing-page identity tests).
+Schema refinement: no string may contain a personal-name variant (the deny list in
+`brand-guard.server.ts`), and no heading may contain `Kamel` (protects the
+landing-page identity tests).
 
 ---
 
@@ -708,7 +710,6 @@ labels, legal headings, showreel empty states, language switcher labels).
 | Key | zh | en |
 | --- | --- | --- |
 | `home.hero.eyebrow` | SOUND × SOFTWARE × INTERACTION | SOUND × SOFTWARE × INTERACTION |
-| `home.hero.realName` | 楊子賢 | Kevin Yang |
 | `home.hero.roles` | 音樂製作人 · 軟體開發者 · 創意科技 | Music Producer · Software Developer · Creative Technologist |
 | `home.hero.statement` | 打造系統、聲音與互動體驗。 | Building systems, sound, and interactive experiences. |
 | `home.hero.viewWork` | 查看作品 | View work |
@@ -825,14 +826,14 @@ labels, legal headings, showreel empty states, language switcher labels).
 | Spec / test | Current assertion | Breaks? | Replacement |
 | --- | --- | --- | --- |
 | `public-navigation` › landing identity | primary nav link `混音` → `/zh/mixing` | **yes** | nav link `服務` → expect `/zh/services`; then `main` link `混音` (exact) → `/zh/mixing`; keep the heading checks (完整歌曲混音, Vocal 混音) and 單純歌曲銜接 count 0 |
-| same | heading `Kamel`; `楊子賢` count 1 | no | keep; add `/en`: `Kevin Yang` count 1 |
+| same | heading `Kamel`; no personal-name variant (`expectNoPersonalName`) | no | keep (both locales) |
 | `public-navigation` › mobile menu/footer | `footer details` count 5 | no | keep 5 |
 | `public-navigation` › empty collections | `/zh/works` heading `作品` | no | keep |
 | same | `/zh/works` heading `作品準備中` | **yes** (placeholders fill the list) | assert `getByText("PLACEHOLDER").first()` visible and `navigation` "作品分類" present; `/zh/works?category=research` shows 示意：即時音訊分析筆記 and not 示意：完整歌曲混音——獨立單曲; empty state covered by a unit test of the filter helper |
 | same | `/en/other` heading `Other Work` + `Nothing published yet` | **yes** | `request.get("/en/other", { maxRedirects: 0 })` → 301, `location` `/en/writing`; `/en/writing` heading `Writing` and a `PLACEHOLDER` badge |
 | same | terms / privacy headings | no | keep |
 | `final-acceptance` › identity | `.landing-console__identity` / `.landing-console__content` boxes | **yes** (classes renamed) | `.home-hero__identity` / `.home-hero__stage`, same geometry assertions (≥ 340 px at 1440; stacked and left-aligned at 390) |
-| same | heading `Kamel` count 1, `楊子賢` count 1 | no, **if** no other home heading contains "Kamel" | keep |
+| same | heading `Kamel` count 1; no personal-name variant (`expectNoPersonalName`) | no | keep |
 | `final-acceptance` › service entry pages | mixing/transition headings, NT$ strict matches, US$260.00 | no | keep (reskin must not add "starting at" figures or cross-category names in `<main>`) |
 | `final-acceptance` › commission form | wizard labels and totals | no | keep |
 | `final-acceptance` › safety | `footer summary` count 5 | no | keep |

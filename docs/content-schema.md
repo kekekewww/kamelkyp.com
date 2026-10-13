@@ -1631,7 +1631,7 @@ Status legend: **Pub** = published by the migration, **Draft/TODO** = `status='d
 | | engagementModels, process | `site.softwarePage` | Settings | "Contact for quote" notes, never a number |
 | | contact.subject / include | `services.inquiry_subject_i18n`, `site.softwarePage.inquiry` | Pub / Settings | `contact.email` → `brand.contactEmail` |
 | `app/lib/services/catalog.ts` | full_mix, vocal_mix, simple_transition, edit_transition | `services` `svc-<id>` | Pub | name, shortDescription, standardDays → turnaround, deliverables; `basePriceTwd` **not** copied (price = `price_versions`) |
-| `app/components/home/hero.tsx` | roles, statement | `brand.roles`, `brand.heroStatement` | Settings | `realName` (楊子賢 / Kevin Yang) **dropped** |
+| `app/components/home/hero.tsx` | roles, statement | `brand.roles`, `brand.heroStatement` | Settings | `realName` (the personal-name line) **dropped** |
 | | label, viewWork, showreel empty strings | UI copy (stays in code) | | |
 | `app/lib/i18n/copy.ts` | metaTitleHome | `site.siteTitle` | Settings | |
 | | metaDescription | `site.seoDescription`, `site.siteDescription` | Settings | |

@@ -154,7 +154,7 @@ if JS never runs: every transform-based rule lives inside
 | Aspect | Spec |
 | --- | --- |
 | Purpose | Establish hierarchy on entry: the display line arrives first, metadata follows. |
-| Allowed | Home hero: eyebrow, `h1` Kamel, real-name line, roles line, statement (CSS intro, on first load only). Section opener `h2`s on Home (Selected Work, Capabilities, Recognition, Services, Pricing, About, Writing, Contact CTA heading). `h1` of Work index, Project detail, Services, Software & Interactive, About, Writing. Contact band heading on every page. |
+| Allowed | Home hero: eyebrow, `h1` Kamel, roles line, statement, subtext, CTAs (CSS intro, on first load only, `data-intro-step` 0–5). Section opener `h2`s on Home (Selected Work, Capabilities, Recognition, Services, Pricing, About, Writing, Contact CTA heading). `h1` of Work index, Project detail, Services, Software & Interactive, About, Writing. Contact band heading on every page. |
 | Forbidden | Body paragraphs, metadata rows, prices (`ServicePrice`, `ServiceOverview` figures), wizard/commission pages (all `/commission/**`), Terms/Privacy, error page, admin, nav/footer, buttons and links. No letter-by-letter or glyph animation anywhere; no automatic line splitting (CJK and en wrap differently). |
 | Tier | Hero intro: **CSS** `@keyframes` (runs without JS). All others: **WAAPI + IO**. |
 | Trigger | Hero: page load (CSS). Others: element's top crosses 90% of viewport height (`rootMargin: "0px 0px -10% 0px"`, `threshold: 0`), only if armed (below fold at hydration or rendered after a client navigation). |
