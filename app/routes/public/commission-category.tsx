@@ -58,10 +58,19 @@ export async function loader(args: LoaderFunctionArgs) {
   return { ...priceContext, category, services: commissionable };
 }
 
-export const meta: MetaFunction<typeof loader> = ({ loaderData, matches }) =>
-  pageMeta(matches, {
-    title: loaderData?.locale === "en" ? "Start a project" : "開始合作",
-  });
+export const meta: MetaFunction<typeof loader> = ({
+  loaderData,
+  matches,
+  location,
+}) =>
+  pageMeta(
+    { matches, location },
+    {
+      title: loaderData?.locale === "en" ? "Start a project" : "開始合作",
+      // A workflow step: crawlable (to read this), never indexed.
+      noindex: true,
+    },
+  );
 
 export default function CommissionCategoryRoute() {
   const { category, locale, fxSnapshot, services } =

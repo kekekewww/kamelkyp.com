@@ -23,10 +23,17 @@ export async function loader(args: LoaderFunctionArgs) {
   return { locale, terms, serviceNames };
 }
 
-export const meta: MetaFunction<typeof loader> = ({ loaderData, matches }) =>
-  pageMeta(matches, {
-    title: loaderData?.locale === "en" ? "Terms of service" : "服務條款",
-  });
+export const meta: MetaFunction<typeof loader> = ({
+  loaderData,
+  matches,
+  location,
+}) =>
+  pageMeta(
+    { matches, location },
+    {
+      title: loaderData?.locale === "en" ? "Terms of service" : "服務條款",
+    },
+  );
 
 export default function TermsRoute() {
   const { locale, terms, serviceNames } = useLoaderData<typeof loader>();
