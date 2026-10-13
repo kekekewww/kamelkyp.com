@@ -7,6 +7,8 @@ import {
 
 export default [
   route("health", "routes/health.ts"),
+  route("robots.txt", "routes/robots.ts"),
+  route("sitemap.xml", "routes/sitemap.ts"),
   route("api/commission/prepare", "routes/api/commission-prepare.ts"),
   route("api/commission/submit", "routes/api/commission-submit.ts"),
   route("language/:locale", "routes/language-preference.ts"),
