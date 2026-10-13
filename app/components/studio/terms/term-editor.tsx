@@ -53,6 +53,7 @@ import {
   previewSrc,
   SaveStateIndicator,
   StudioForm,
+  serializeForm,
   useEditorForm,
   useStudioSession,
   ValidationChecklist,
@@ -91,7 +92,13 @@ function clausesFromBackup(fields: string): TermDraftClause[] | null {
   }
 }
 
-/** Calls `onChange` when list rows are added, removed, moved or renamed. */
+/**
+ * Calls `onChange` when list rows are added, removed or moved (React state
+ * that fires no input event). Only child-list changes are observed: React
+ * rewrites an input's `name` on every update, so watching attributes would
+ * loop. The handler runs after the current event, and only when the form's
+ * content actually changed.
+ */
 function useListWatch(
   ref: React.RefObject<HTMLDivElement | null>,
   onChange: () => void,
@@ -102,15 +109,24 @@ function useListWatch(
   // biome-ignore lint/correctness/useExhaustiveDependencies: re-attach after a remount
   useEffect(() => {
     const node = ref.current;
-    if (!node) return;
-    const observer = new MutationObserver(() => handler.current());
-    observer.observe(node, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["name"],
+    const form = node?.closest("form");
+    if (!node || !form) return;
+    let last = serializeForm(new FormData(form));
+    let timer = 0;
+    const observer = new MutationObserver(() => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        const current = serializeForm(new FormData(form));
+        if (current === last) return;
+        last = current;
+        handler.current();
+      }, 0);
     });
-    return () => observer.disconnect();
+    observer.observe(node, { childList: true, subtree: true });
+    return () => {
+      observer.disconnect();
+      window.clearTimeout(timer);
+    };
   }, [ref, resetKey]);
 }
 
