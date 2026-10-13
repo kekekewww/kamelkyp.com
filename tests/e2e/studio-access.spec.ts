@@ -4,6 +4,8 @@ import { expect, test } from "@playwright/test";
 // Studio surface must refuse the request before any data is read.
 const STUDIO_PATHS = [
   "/studio",
+  "/studio/commissions",
+  "/studio/commissions?status=pending_review&service=full_mix",
   "/studio/projects",
   "/studio/projects/seed-p-001",
   "/studio/settings/brand",
@@ -47,6 +49,25 @@ test("Studio mutations are refused without an owner identity", async ({
     form: { caseId: "x", status: "accepted" },
   });
   expect(status.status()).toBe(403);
+  expect(status.headers()["cache-control"]).toContain("no-store");
+
+  const student = await request.post("/studio/commissions/student-discount", {
+    form: { intent: "accept-student-price", caseId: "KAM-20261001-E2E0000003" },
+  });
+  expect(student.status()).toBe(403);
+  expect(student.headers()["cache-control"]).toContain("no-store");
+
+  const cleanup = await request.post("/studio/commissions/cleanup", {
+    form: {
+      intent: "confirm-cleanup",
+      caseId: "KAM-20261001-E2E0000004",
+      googleRecordsDeleted: "on",
+      gmailDeleted: "on",
+      otherSensitiveCopiesDeleted: "on",
+    },
+  });
+  expect(cleanup.status()).toBe(403);
+  expect(cleanup.headers()["cache-control"]).toContain("no-store");
 });
 
 test("the public site does not link to the Studio", async ({ request }) => {
