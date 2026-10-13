@@ -35,12 +35,13 @@ import {
 import type { ServiceId } from "../../services/service-id";
 import { findBrandViolations } from "../brand-guard.server";
 import { CmsError, isCmsError } from "../db/errors";
-import { formDataToObject, readExpectedRevision, readString } from "../forms";
+import { readExpectedRevision, readString } from "../forms";
 import { parseLocalizedText } from "../localized";
 import {
   type ClauseDiff,
   diffClauses,
   parseDraftClauses,
+  readDraftClauseRows,
   sameClauses,
   type TermDraftClause,
   validateTermClausesForPublish,
@@ -504,11 +505,6 @@ export async function loadTermEditor(
 
 // ---- Form ----------------------------------------------------------------------
 
-function textField(row: Record<string, unknown>, field: string): string {
-  const value = row[field];
-  return typeof value === "string" ? value : "";
-}
-
 /**
  * The posted editor form: `clauses.<i>.{key,title,text}` (lenient: rows with
  * three empty fields are dropped, structural problems are issues),
@@ -519,22 +515,8 @@ export function parseTermDraftForm(formData: FormData): {
   expectedRevision: number | null;
   legalReviewConfirmed: boolean;
 } {
-  const raw = formDataToObject(formData).clauses;
-  const rows = Array.isArray(raw)
-    ? raw.map((row) => {
-        const record =
-          row && typeof row === "object"
-            ? (row as Record<string, unknown>)
-            : {};
-        return {
-          key: textField(record, "key"),
-          title: textField(record, "title"),
-          text: textField(record, "text"),
-        };
-      })
-    : [];
   return {
-    parsed: parseDraftClauses(rows),
+    parsed: parseDraftClauses(readDraftClauseRows(formData)),
     expectedRevision: readExpectedRevision(formData),
     legalReviewConfirmed: readString(formData, "legalReviewConfirmed") === "on",
   };

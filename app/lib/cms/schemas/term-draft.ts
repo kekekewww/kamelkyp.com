@@ -16,6 +16,7 @@ import {
   extractTwdAmounts,
   formatTwd,
 } from "../../pricing/sample-quotes";
+import { formDataToObject } from "../forms";
 import type { ValidationIssue } from "../types";
 
 export const TERM_KEY_PATTERN = /^[a-z0-9]+(?:[_-][a-z0-9]+)*$/;
@@ -52,6 +53,30 @@ export type TermDraftClause = z.infer<typeof TermDraftClauseSchema>;
 export const TermDraftSchema = z
   .array(TermDraftClauseSchema)
   .max(TERM_LIMITS.clauses, `At most ${TERM_LIMITS.clauses} clauses.`);
+
+function textOf(row: Record<string, unknown>, field: string): string {
+  const value = row[field];
+  return typeof value === "string" ? value : "";
+}
+
+/**
+ * The clause rows of an editor form (`clauses.<i>.{key,title,text}`, or the
+ * empty list's `clauses:json`), in order, every field a string. Empty rows
+ * are kept here; `parseDraftClauses` drops them.
+ */
+export function readDraftClauseRows(formData: FormData): TermDraftClause[] {
+  const raw = formDataToObject(formData).clauses;
+  if (!Array.isArray(raw)) return [];
+  return raw.map((row) => {
+    const record =
+      row && typeof row === "object" ? (row as Record<string, unknown>) : {};
+    return {
+      key: textOf(record, "key"),
+      title: textOf(record, "title"),
+      text: textOf(record, "text"),
+    };
+  });
+}
 
 /** UTF-8 size of the stored body. */
 export function serializedBytes(clauses: readonly TermDraftClause[]): number {
