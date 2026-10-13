@@ -45,8 +45,7 @@ function QueueHeading({
       tabIndex={-1}
       ref={headingRef}
     >
-      {children}
-      <span className="commissions-heading__count">{count}</span>
+      {children} <span className="commissions-heading__count">{count}</span>
     </h2>
   );
 }
