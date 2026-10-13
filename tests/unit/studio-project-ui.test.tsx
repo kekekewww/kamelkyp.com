@@ -210,8 +210,27 @@ describe("projects list", () => {
       />,
       "/studio/projects",
     );
-    expect(none).toContain("No results for “nothing”");
+    // ASCII quotes: curly ones render full-width in the CJK body font.
+    expect(none).toContain("No results for &quot;nothing&quot;");
     expect(none).toContain('href="/studio/projects"');
+  });
+
+  it("groups the type filters in a disclosure that counts active ones", () => {
+    const html = render(
+      <ProjectsListView
+        data={listData({
+          manualOrder: false,
+          query: {
+            ...listData().query,
+            year: 2025,
+            categoryId: "term-project_category-ai",
+          },
+        })}
+      />,
+      "/studio/projects",
+    );
+    expect(html).toMatch(/<details class="projects-filters"[^>]*open/);
+    expect(html).toContain("Filters · 2");
   });
 
   it("puts row actions in a menu: preview, duplicate, feature, archive", () => {

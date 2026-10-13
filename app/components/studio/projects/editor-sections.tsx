@@ -41,7 +41,7 @@ import type { ProjectEditorData } from "./types";
 export const SECTION_STORAGE_KEY = "studio:sections:project";
 
 const FORMAT_HINT =
-  "Plain text. A blank line starts a new paragraph; lines that start with “- ” become a list. Links belong in Links.";
+  "Plain text. A blank line starts a new paragraph; lines that start with a hyphen and a space become a list. Links belong in Links.";
 
 const STORY: Record<StoryKey, { label: string; hint: string }> = {
   context: {
@@ -164,7 +164,7 @@ export function BasicSection({
           label="Role"
           maxLength={200}
           defaultValue={content.role}
-          hint="Your part in the project, e.g. “Design and development”."
+          hint="Your part in the project, for example Design and development."
           errors={localeErrors(errors, "role")}
         />
         <LocalizedTextArea

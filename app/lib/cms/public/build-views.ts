@@ -79,16 +79,26 @@ export function termRef(
   return { id: term.id, slug: term.slug, label: localize(term.label, locale) };
 }
 
+const PLAYABLE_KINDS = ["audio", "video", "embed"];
+/**
+ * Body media blocks also accept `link` assets: the legacy import stores
+ * external-link media (Dropbox, MediaFire…) as kind `link`, and the existing
+ * player renders them as an outbound "Open external media" link, never an
+ * embed.
+ */
+const BLOCK_MEDIA_KINDS = [...PLAYABLE_KINDS, "link"];
+
 function playableAsset(
   assetId: string | null | undefined,
   context: ViewContext,
   locale: Locale,
   override: Parameters<typeof toPlayableMedia>[3] = {},
+  kinds: readonly string[] = PLAYABLE_KINDS,
 ): MediaItem | null {
   if (!assetId) return null;
   const asset = context.assets.get(assetId);
   if (!asset || asset.state !== "ready") return null;
-  if (!["audio", "video", "embed"].includes(asset.kind)) return null;
+  if (!kinds.includes(asset.kind)) return null;
   return toPlayableMedia(asset, context.mediaConfig, locale, override);
 }
 
@@ -100,7 +110,13 @@ function blockMedia(
   const items: MediaItem[] = [];
   for (const block of blocks) {
     if (block.type !== "media" || !block.mediaId) continue;
-    const item = playableAsset(block.mediaId, context, locale);
+    const item = playableAsset(
+      block.mediaId,
+      context,
+      locale,
+      {},
+      BLOCK_MEDIA_KINDS,
+    );
     if (item && !items.some((existing) => existing.id === item.id)) {
       items.push(item);
     }

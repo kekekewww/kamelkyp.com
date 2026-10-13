@@ -213,7 +213,7 @@ export function ProjectEditor({
     postPreview(previewOpen && previewWide() ? PREVIEW_FRAME_NAME : "_blank");
   }, [postPreview, previewOpen]);
 
-  const { dirtySections } = useFormWatch({
+  const { dirtySections, onInput: onFormInput } = useFormWatch({
     formRef: editor.formRef,
     dirty: editor.dirty,
     resetKey: meta.revision,
@@ -608,6 +608,7 @@ export function ProjectEditor({
           id={FORM_ID}
           fetcher={fetcher as FetcherWithComponents<unknown>}
           ref={editor.formRef}
+          onInput={onFormInput}
           onSubmit={guardPublish}
           noValidate
           className="projects-editor-form"
@@ -727,7 +728,7 @@ export function ProjectEditor({
           </>
         }
       >
-        <p>Your edits to “{displayTitle}” are not saved yet.</p>
+        <p>Your edits to "{displayTitle}" are not saved yet.</p>
       </ConfirmDialog>
     </StudioPage>
   );

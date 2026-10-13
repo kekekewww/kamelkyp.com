@@ -141,7 +141,7 @@ function PlacementControls({
           ? "This is the homepage showreel, but it is not live until you publish. "
           : ""}
         {!meta.isShowreel && other
-          ? `Replaces the current showreel, “${other.title}”. `
+          ? `Replaces the current showreel: ${other.title}. `
           : ""}
         {!meta.isShowreel && !showreelReady
           ? "Add preview audio, full audio or a YouTube link (and save) to use it as the showreel. "
@@ -449,7 +449,7 @@ export function MusicEditorView({ data }: { data: MusicEditorData }) {
               label="Description"
               rows={4}
               maxLength={4000}
-              hint="Plain text. A blank line starts a new paragraph; lines starting with “- ” form a list."
+              hint="Plain text. A blank line starts a new paragraph; lines that start with a hyphen and a space form a list."
               defaultValue={content.description}
             />
           </EditorSection>

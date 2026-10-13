@@ -1,124 +1,92 @@
+-- Media e2e fixture (content-architecture §5.5): unlisted published projects
+-- whose body media blocks exercise the players (YouTube click-to-load, Drive,
+-- direct R2 audio, bounded preview, failing audio, link-only files). Assets
+-- mirror the legacy import (youtube → video, drive → embed, links → link,
+-- audio → audio). Published through project_snapshots, like the engine.
+-- Statements end with ";" at a line end (tests/worker/cms-e2e-fixture.test.ts).
 PRAGMA foreign_keys = ON;
 
-DROP TRIGGER IF EXISTS content_versions_published_immutable_delete;
+-- Leftovers of an interrupted run.
+UPDATE projects SET status = 'draft' WHERE id GLOB 'e2e-media-*';
+DELETE FROM media_usages WHERE entity_id GLOB 'e2e-media-*';
+DELETE FROM projects WHERE id GLOB 'e2e-media-*';
+DELETE FROM media_assets WHERE id GLOB 'e2e-media-asset-*';
 
-DELETE FROM content_publications
-WHERE entry_id IN (
-  'e2e-media-test', 'e2e-mediafire-test', 'e2e-audio-test',
-  'e2e-audio-bounds-test', 'e2e-audio-fallback-test', 'e2e-security-media-test'
-);
-DELETE FROM content_entries
-WHERE id IN (
-  'e2e-media-test', 'e2e-mediafire-test', 'e2e-audio-test',
-  'e2e-audio-bounds-test', 'e2e-audio-fallback-test', 'e2e-security-media-test'
-);
-
-CREATE TRIGGER content_versions_published_immutable_delete
-BEFORE DELETE ON content_versions
-WHEN OLD.state = 'published'
-BEGIN
-  SELECT RAISE(ABORT, 'published_content_immutable');
-END;
-
-INSERT INTO content_entries (
-  id, kind, slug, sort_order, is_listed, created_at, updated_at
+INSERT INTO media_assets (
+  id, kind, source, state, external_url, provider, filename, title_i18n,
+  preview_start_seconds, preview_end_seconds, created_at, updated_at
 ) VALUES
-  ('e2e-media-test', 'work', 'media-test', 9001, 0, '2026-08-19T00:00:00Z', '2026-08-19T00:00:00Z'),
-  ('e2e-mediafire-test', 'work', 'mediafire-test', 9002, 0, '2026-08-19T00:00:00Z', '2026-08-19T00:00:00Z'),
-  ('e2e-audio-test', 'work', 'audio-test', 9003, 0, '2026-08-19T00:00:00Z', '2026-08-19T00:00:00Z'),
-  ('e2e-audio-bounds-test', 'work', 'audio-bounds-test', 9004, 0, '2026-08-19T00:00:00Z', '2026-08-19T00:00:00Z'),
-  ('e2e-audio-fallback-test', 'work', 'audio-fallback-test', 9005, 0, '2026-08-19T00:00:00Z', '2026-08-19T00:00:00Z'),
-  ('e2e-security-media-test', 'work', 'security-media-test', 9006, 0, '2026-08-19T00:00:00Z', '2026-08-19T00:00:00Z');
+  ('e2e-media-asset-youtube', 'video', 'external', 'ready',
+   'https://youtu.be/dQw4w9WgXcQ', 'youtube', 'test-video',
+   '{"zh":"Test video","en":"Test video"}', NULL, NULL,
+   '2026-08-19T00:00:00Z', '2026-08-19T00:00:00Z'),
+  ('e2e-media-asset-mediafire', 'link', 'external', 'ready',
+   'https://www.mediafire.com/file/abc/demo/file', 'external_link', 'external-file',
+   '{"zh":"External file","en":"External file"}', NULL, NULL,
+   '2026-08-19T00:00:00Z', '2026-08-19T00:00:00Z'),
+  ('e2e-media-asset-first', 'audio', 'external', 'ready',
+   'https://media.kamelkyp.com/e2e/first.wav', 'direct', 'first.wav',
+   '{"zh":"First preview","en":"First preview"}', NULL, NULL,
+   '2026-08-19T00:00:00Z', '2026-08-19T00:00:00Z'),
+  ('e2e-media-asset-second', 'audio', 'external', 'ready',
+   'https://media.kamelkyp.com/e2e/second.wav', 'direct', 'second.wav',
+   '{"zh":"Second preview","en":"Second preview"}', NULL, NULL,
+   '2026-08-19T00:00:00Z', '2026-08-19T00:00:00Z'),
+  ('e2e-media-asset-bounded', 'audio', 'external', 'ready',
+   'https://media.kamelkyp.com/e2e/bounded.wav', 'direct', 'bounded.wav',
+   '{"zh":"Bounded preview","en":"Bounded preview"}', 12, 42,
+   '2026-08-19T00:00:00Z', '2026-08-19T00:00:00Z'),
+  ('e2e-media-asset-fallback', 'audio', 'external', 'ready',
+   'https://media.kamelkyp.com/e2e/fallback.wav', 'direct', 'fallback.wav',
+   '{"zh":"Fallback preview","en":"Fallback preview"}', NULL, NULL,
+   '2026-08-19T00:00:00Z', '2026-08-19T00:00:00Z'),
+  ('e2e-media-asset-drive', 'embed', 'external', 'ready',
+   'https://drive.google.com/file/d/1AbCdEfGhIjKlMnOp/view', 'google_drive', 'drive-preview',
+   '{"zh":"Drive preview","en":"Drive preview"}', NULL, NULL,
+   '2026-08-19T00:00:00Z', '2026-08-19T00:00:00Z'),
+  ('e2e-media-asset-dropbox', 'link', 'external', 'ready',
+   'https://www.dropbox.com/s/example/demo.wav?dl=0', 'external_link', 'dropbox-download',
+   '{"zh":"Dropbox download","en":"Dropbox download"}', NULL, NULL,
+   '2026-08-19T00:00:00Z', '2026-08-19T00:00:00Z');
 
-INSERT INTO content_versions (
-  id, entry_id, locale, version_number, state, title, summary, body_json,
-  created_at
+-- English-only test pages (zh 404s, as legacy one-locale works did).
+INSERT INTO projects (
+  id, slug, listed, year, primary_category_id, title_i18n, short_description_i18n,
+  body_i18n, sort_order, created_at, updated_at
 ) VALUES
-  (
-    'e2e-media-test-v1', 'e2e-media-test', 'en', 1, 'draft',
-    'Media privacy test', NULL,
-    '[{"type":"media","mediaId":"e2e-youtube"}]',
-    '2026-08-19T00:00:00Z'
-  ),
-  (
-    'e2e-mediafire-test-v1', 'e2e-mediafire-test', 'en', 1, 'draft',
-    'External media test', NULL,
-    '[{"type":"media","mediaId":"e2e-mediafire"}]',
-    '2026-08-19T00:00:00Z'
-  ),
-  (
-    'e2e-audio-test-v1', 'e2e-audio-test', 'en', 1, 'draft',
-    'Audio playback test', NULL,
-    '[{"type":"media","mediaId":"e2e-audio-first"},{"type":"media","mediaId":"e2e-audio-second"}]',
-    '2026-08-19T00:00:00Z'
-  ),
-  (
-    'e2e-audio-bounds-test-v1', 'e2e-audio-bounds-test', 'en', 1, 'draft',
-    'Audio bounds test', NULL,
-    '[{"type":"media","mediaId":"e2e-audio-bounded"}]',
-    '2026-08-19T00:00:00Z'
-  ),
-  (
-    'e2e-audio-fallback-test-v1', 'e2e-audio-fallback-test', 'en', 1, 'draft',
-    'Audio fallback test', NULL,
-    '[{"type":"media","mediaId":"e2e-audio-fallback"}]',
-    '2026-08-19T00:00:00Z'
-  ),
-  (
-    'e2e-security-media-test-v1', 'e2e-security-media-test', 'en', 1, 'draft',
-    'Security media test', NULL,
-    '[{"type":"media","mediaId":"e2e-drive"},{"type":"media","mediaId":"e2e-dropbox"}]',
-    '2026-08-19T00:00:00Z'
-  );
+  ('e2e-media-test', 'media-test', 0, 2026, 'term-project_category-music',
+   '{"zh":"","en":"Media privacy test"}', '{"zh":"","en":"Fixture media page."}',
+   '{"zh":[],"en":[{"type":"media","mediaId":"e2e-media-asset-youtube"}]}',
+   9001, '2026-08-19T00:00:00Z', '2026-08-19T00:00:00Z'),
+  ('e2e-media-mediafire', 'mediafire-test', 0, 2026, 'term-project_category-music',
+   '{"zh":"","en":"External media test"}', '{"zh":"","en":"Fixture media page."}',
+   '{"zh":[],"en":[{"type":"media","mediaId":"e2e-media-asset-mediafire"}]}',
+   9002, '2026-08-19T00:00:00Z', '2026-08-19T00:00:00Z'),
+  ('e2e-media-audio', 'audio-test', 0, 2026, 'term-project_category-music',
+   '{"zh":"","en":"Audio playback test"}', '{"zh":"","en":"Fixture media page."}',
+   '{"zh":[],"en":[{"type":"media","mediaId":"e2e-media-asset-first"},{"type":"media","mediaId":"e2e-media-asset-second"}]}',
+   9003, '2026-08-19T00:00:00Z', '2026-08-19T00:00:00Z'),
+  ('e2e-media-bounds', 'audio-bounds-test', 0, 2026, 'term-project_category-music',
+   '{"zh":"","en":"Audio bounds test"}', '{"zh":"","en":"Fixture media page."}',
+   '{"zh":[],"en":[{"type":"media","mediaId":"e2e-media-asset-bounded"}]}',
+   9004, '2026-08-19T00:00:00Z', '2026-08-19T00:00:00Z'),
+  ('e2e-media-fallback', 'audio-fallback-test', 0, 2026, 'term-project_category-music',
+   '{"zh":"","en":"Audio fallback test"}', '{"zh":"","en":"Fixture media page."}',
+   '{"zh":[],"en":[{"type":"media","mediaId":"e2e-media-asset-fallback"}]}',
+   9005, '2026-08-19T00:00:00Z', '2026-08-19T00:00:00Z'),
+  ('e2e-media-security', 'security-media-test', 0, 2026, 'term-project_category-music',
+   '{"zh":"","en":"Security media test"}', '{"zh":"","en":"Fixture media page."}',
+   '{"zh":[],"en":[{"type":"media","mediaId":"e2e-media-asset-drive"},{"type":"media","mediaId":"e2e-media-asset-dropbox"}]}',
+   9006, '2026-08-19T00:00:00Z', '2026-08-19T00:00:00Z');
 
-INSERT INTO media_items (
-  id, content_version_id, kind, url, title, start_seconds, end_seconds,
-  sort_order
-) VALUES
-  (
-    'e2e-youtube', 'e2e-media-test-v1', 'youtube',
-    'https://youtu.be/dQw4w9WgXcQ', 'Test video', NULL, NULL, 0
-  ),
-  (
-    'e2e-mediafire', 'e2e-mediafire-test-v1', 'external_link',
-    'https://www.mediafire.com/file/abc/demo/file', 'External file',
-    NULL, NULL, 0
-  ),
-  (
-    'e2e-audio-first', 'e2e-audio-test-v1', 'cloudflare_r2_audio',
-    'https://media.kamelkyp.com/e2e/first.wav', 'First preview',
-    NULL, NULL, 0
-  ),
-  (
-    'e2e-audio-second', 'e2e-audio-test-v1', 'cloudflare_r2_audio',
-    'https://media.kamelkyp.com/e2e/second.wav', 'Second preview',
-    NULL, NULL, 1
-  ),
-  (
-    'e2e-audio-bounded', 'e2e-audio-bounds-test-v1', 'cloudflare_r2_audio',
-    'https://media.kamelkyp.com/e2e/bounded.wav', 'Bounded preview',
-    12, 42, 0
-  ),
-  (
-    'e2e-audio-fallback', 'e2e-audio-fallback-test-v1', 'cloudflare_r2_audio',
-    'https://media.kamelkyp.com/e2e/fallback.wav', 'Fallback preview',
-    NULL, NULL, 0
-  ),
-  (
-    'e2e-drive', 'e2e-security-media-test-v1', 'google_drive',
-    'https://drive.google.com/file/d/1AbCdEfGhIjKlMnOp/view', 'Drive preview',
-    NULL, NULL, 0
-  ),
-  (
-    'e2e-dropbox', 'e2e-security-media-test-v1', 'external_link',
-    'https://www.dropbox.com/s/example/demo.wav?dl=0', 'Dropbox download',
-    NULL, NULL, 1
-  );
+INSERT INTO project_categories (project_id, term_id, position)
+SELECT id, 'term-project_category-music', 0 FROM projects WHERE id GLOB 'e2e-media-*';
 
-UPDATE content_versions
-SET state = 'published', published_at = '2026-08-19T00:00:00Z'
-WHERE id IN (
-  'e2e-media-test-v1', 'e2e-mediafire-test-v1', 'e2e-audio-test-v1',
-  'e2e-audio-bounds-test-v1', 'e2e-audio-fallback-test-v1',
-  'e2e-security-media-test-v1'
-);
+UPDATE projects SET
+  status = 'published',
+  published_json = (SELECT s.snapshot FROM project_snapshots s WHERE s.id = projects.id),
+  published_slug = slug,
+  published_revision = revision,
+  published_at = '2026-08-19T00:00:00Z',
+  first_published_at = '2026-08-19T00:00:00Z'
+WHERE id GLOB 'e2e-media-*';

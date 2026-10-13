@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import {
   clearDraft,
@@ -137,6 +137,7 @@ export function CommissionWizard({
   const [submitMessage, setSubmitMessage] = useState("");
   const [retryCaseId, setRetryCaseId] = useState<string | null>(null);
   const navigate = useNavigate();
+  const saveTimer = useRef<number | undefined>(undefined);
   const versionKey = terms.map((term) => term.versionId).join("|");
 
   useEffect(() => {
@@ -155,8 +156,16 @@ export function CommissionWizard({
     const parsed = CommissionDraftSchema.safeParse(draft);
     if (!parsed.success) return;
     const timer = window.setTimeout(() => saveDraft(locale, parsed.data), 300);
+    saveTimer.current = timer;
     return () => window.clearTimeout(timer);
   }, [draft, loaded, locale]);
+
+  // Clearing storage alone is not enough: a still-pending autosave would write
+  // the discarded draft back (e.g. while the success route is loading).
+  function discardStoredDraft() {
+    window.clearTimeout(saveTimer.current);
+    clearDraft(locale, serviceId);
+  }
 
   const quote = useMemo(
     () =>
@@ -192,7 +201,7 @@ export function CommissionWizard({
   }
 
   function resetCurrentDraft() {
-    clearDraft(locale, serviceId);
+    discardStoredDraft();
     clearRetryCaseId(serviceId);
     setRetryCaseId(null);
     setDraft(createEmptyDraft(serviceId));
@@ -239,7 +248,7 @@ export function CommissionWizard({
         throw new Error(result.error?.message ?? "submission_failed");
       }
       if (!result.data) throw new Error("submission_failed");
-      clearDraft(locale, serviceId);
+      discardStoredDraft();
       clearRetryCaseId(serviceId);
       setTermsAccepted(false);
       setTurnstileToken("");
