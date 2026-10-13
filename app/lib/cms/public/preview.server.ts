@@ -11,14 +11,27 @@
  * Unlike public reads, a row whose required text is empty in the previewed
  * locale still renders (as empty), never with the other locale's text.
  */
+import {
+  isTermDocumentId,
+  TERM_DOCUMENT_SERVICE,
+} from "../../commission/term-outline";
+import {
+  listPublishedTerms,
+  type PublishedTerm,
+} from "../../content/public-content.server";
 import type { Env } from "../../env.server";
 import {
   type FxSnapshot,
   getUsableFxSnapshot,
 } from "../../pricing/fx-repository.server";
 import { getActivePriceRule } from "../../pricing/price-repository.server";
+import type { ServiceId } from "../../services/service-id";
 import { type ContentOf, descriptorFor } from "../db/tables.server";
-import { formDataToObject } from "../forms";
+import { formDataToObject, readString } from "../forms";
+import {
+  parseTermDraftForm,
+  readTermDraft,
+} from "../repositories/terms.server";
 import type { EntityType, Locale } from "../types";
 import {
   buildMusicItem,
@@ -31,6 +44,7 @@ import {
 } from "./build-views";
 import { listProjectMusic } from "./music.server";
 import { buildViewContext, readEntities } from "./read.server";
+import { getCommissionServiceNames } from "./services.server";
 import type {
   EntryFacts,
   PublicMusicItem,
@@ -226,4 +240,65 @@ export async function previewService(
       commissionBaseTwd,
     }),
   };
+}
+
+/**
+ * Legal page preview (`/studio/preview/terms/:documentId?locale=`): the
+ * published documents of `/terms` or `/privacy` for the locale, with the
+ * target document replaced (or inserted in reading order) by the unsaved
+ * form (POST), else its saved draft, else its live version. A draft shows
+ * `now` as its effective date. The posted hidden `locale` must match the
+ * previewed locale: a draft belongs to one language.
+ */
+export async function previewTerms(
+  db: D1Database,
+  locale: Locale,
+  documentId: string,
+  options: { formData?: FormData | null; now: Date },
+): Promise<{
+  page: "terms" | "privacy";
+  terms: PublishedTerm[];
+  serviceNames: Partial<Record<ServiceId, string>>;
+} | null> {
+  if (!isTermDocumentId(documentId)) return null;
+  const page = documentId === "privacy" ? "privacy" : "terms";
+  let clauses: PublishedTerm["clauses"] | null = null;
+  if (options.formData) {
+    if (readString(options.formData, "locale") !== locale) {
+      throw new PreviewFormError();
+    }
+    const form = parseTermDraftForm(options.formData);
+    if (!form.parsed.ok) throw new PreviewFormError();
+    clauses = form.parsed.clauses;
+  } else {
+    clauses = (await readTermDraft(db, documentId, locale))?.clauses ?? null;
+  }
+  const at = options.now.toISOString();
+  const [published, serviceNames] = await Promise.all([
+    listPublishedTerms(db, locale, page, at),
+    getCommissionServiceNames(db, locale),
+  ]);
+  if (clauses === null) return { page, terms: published, serviceNames };
+  const kind: PublishedTerm["kind"] =
+    documentId === "common"
+      ? "common"
+      : documentId === "privacy"
+        ? "privacy"
+        : "service";
+  const target: PublishedTerm = {
+    documentId,
+    kind,
+    serviceId: TERM_DOCUMENT_SERVICE[documentId] ?? null,
+    locale,
+    clauses,
+    effectiveFrom: at,
+  };
+  // Reading order of `listPublishedTerms`: common first, then by id.
+  const rank = (term: PublishedTerm) =>
+    `${term.kind === "common" ? 0 : 1}:${term.documentId}`;
+  const terms = [
+    ...published.filter((term) => term.documentId !== documentId),
+    target,
+  ].sort((a, b) => (rank(a) < rank(b) ? -1 : rank(a) > rank(b) ? 1 : 0));
+  return { page, terms, serviceNames };
 }
