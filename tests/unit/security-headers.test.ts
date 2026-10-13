@@ -122,4 +122,21 @@ describe("Studio header surfaces", () => {
       "frame-ancestors 'none'",
     );
   });
+
+  it("marks every public response of a preview deployment noindex", () => {
+    const headers = buildSecurityHeaders({ nonce: "n", mode: "preview" });
+    expect(headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
+  });
+
+  it("marks a non-indexable production request noindex and keeps HSTS", () => {
+    const headers = buildSecurityHeaders({
+      nonce: "n",
+      mode: "production",
+      indexable: false,
+    });
+    expect(headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
+    expect(headers.get("Strict-Transport-Security")).toBe(
+      "max-age=31536000; includeSubDomains",
+    );
+  });
 });

@@ -15,6 +15,10 @@ import {
   publicErrorResponse,
   safeErrorLog,
 } from "../app/lib/security/safe-error";
+import {
+  deploymentMode,
+  isIndexableRequest,
+} from "../app/lib/seo/origin.server";
 
 const requestHandler = createRequestHandler(
   async () => {
@@ -57,12 +61,11 @@ export default {
     }
 
     const headers = new Headers(response.headers);
-    const mode =
-      env.APP_ORIGIN === "https://kamelkyp.com" ? "production" : "preview";
     for (const [name, value] of buildSecurityHeaders({
       nonce,
-      mode,
+      mode: deploymentMode(env),
       surface: securitySurface(url.pathname),
+      indexable: isIndexableRequest(env, url),
     })) {
       headers.set(name, value);
     }
