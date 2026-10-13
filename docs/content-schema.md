@@ -457,7 +457,7 @@ ignored everywhere (it became `social_links`, §2.7). Spec: `docs/superpowers/sp
 | `link_group_labels.label` | TEXT, PK `(group_id, locale)` | required in ZH and EN on save, ≤ 60 |
 | `links` | one row per locale | custom groups only; a bilingual link is a `zh` and an `en` row with the same `sort_order`, `url` and `enabled` |
 
-Built-in groups (one row each, seeded by `0010`, §3.6); their links are derived at read time:
+Built-in groups (one row each, seeded by `0010`, see its §3 subsection); their links are derived at read time:
 
 | key | Seed id | Default label | Links come from | Hide | Delete |
 | --- | --- | --- | --- | --- | --- |
@@ -504,7 +504,7 @@ Numbering follows `0004_admin_revision.sql`. All statements are idempotent (`IF 
 | `migrations/0007_cms_legacy_import.sql` | existing D1 works, posts, home showreel, media items, social link group → new tables |
 | `migrations/0008_cms_sample_drafts.sql` | file-based placeholder content → draft rows with `todo_content = 1` |
 | `migrations/0009_pricing_terms_studio.sql` | Studio Pricing and Terms: `price_version_publications`, `term_drafts`; inserts no rows (§3.5) |
-| `migrations/0010_cms_footer_groups.sql` | the five built-in footer groups get `link_groups` rows and default labels (§3.6) |
+| `migrations/0010_cms_footer_groups.sql` | the five built-in footer groups get `link_groups` rows and default labels (subsection below) |
 
 ### 3.1 `0005_cms_schema.sql` (complete)
 
@@ -1449,12 +1449,12 @@ against a database without it (the deploy workflows apply migrations before the 
 
 ### 3.6 `0010_cms_footer_groups.sql`
 
-Footer group placement becomes CMS data (§2.11). Additive and idempotent: `INSERT OR IGNORE` only (on the
-`stable_key` UNIQUE constraint and the `link_group_labels` primary key), nothing is updated or deleted, and it reads
-only `link_groups`. It inserts the five built-in rows (`seed-footer-navigate`, `-services`, `-find-me`, `-contact`,
+Footer group placement becomes CMS data (§2 "Footer link groups"). Additive and idempotent: `INSERT OR IGNORE` only
+(on the `stable_key` UNIQUE constraint and the `link_group_labels` primary key), nothing is updated or deleted, and it
+reads only `link_groups`. It inserts the five built-in rows (`seed-footer-navigate`, `-services`, `-find-me`, `-contact`,
 `-legal`) around the existing non-social groups: Navigate at `MIN - 20`, Services at `MIN - 10`, Find Me at
 `MAX + 10`, Contact at `MAX + 20`, Legal at `MAX + 30` (`MIN`/`MAX` default to 30 when there is no other group),
-then the default labels of §2.11. No links, handles or addresses are added.
+then the default labels of §2 "Footer link groups". No links, handles or addresses are added.
 
 Resulting positions: on an empty-then-0007 database (local, loopback e2e, worker tests) navigate 10, services 20,
 `work_resources` 30, find_me 40, contact 50, legal 60; with legacy `admin-*` groups at 100: navigate 80, services 90,
@@ -1707,7 +1707,7 @@ publishTermDraft(db, { documentId, locale, revision, now }): Promise<{ versionId
 discardTermDraft(db, { documentId, locale, revision }): Promise<void>;
 handleTermEditorAction({ db, documentId, locale, formData, intent, now });              // save | publish-term-version | discard-draft
 
-// footer.server.ts (WP3; Studio → Settings → Footer, §2.11)
+// footer.server.ts (WP3; Studio → Settings → Footer, §2 "Footer link groups")
 loadFooterScreen(db): Promise<{ groups: StudioFooterGroup[]; sources: FooterScreenSources }>; // footer order + link sources
 listStudioFooterGroups(db): Promise<StudioFooterGroup[]>;
 saveFooterGroup(db, draft: FooterGroupDraft): Promise<StudioFooterGroup>;   // create when no id; fingerprint check on update
