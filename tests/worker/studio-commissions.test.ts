@@ -598,7 +598,12 @@ describe("handleStudentDiscount", () => {
     });
     const stored = await caseOf(caseId);
     expect(stored).toMatchObject({ locked_price_minor: 8000, currency: "TWD" });
-    expect((await runtimeOf(caseId))?.student_review_state).toBe("none");
+    // Both candidate prices are cleared, as after an accepted student price.
+    expect(await runtimeOf(caseId)).toMatchObject({
+      student_review_state: "none",
+      standard_price_minor: null,
+      student_price_minor: null,
+    });
   });
 
   it("answers 409 for an unknown case and 422 for bad input", async () => {
