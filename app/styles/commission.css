@@ -513,12 +513,14 @@
   background-color: var(--color-bg-2);
 }
 
+/* biome-ignore lint/style/noDescendingSpecificity: not the step-header h2 (wizard header grid); no shared properties */
 .quote-summary h2 {
   font-size: var(--text-h3);
   line-height: 1.25;
   letter-spacing: 0;
 }
 
+/* biome-ignore lint/style/noDescendingSpecificity: not the step-header h2 (wizard header grid); no shared properties */
 :lang(zh) .quote-summary h2 {
   font-size: var(--text-h3);
   line-height: 1.3;
@@ -550,7 +552,7 @@
 
 .quote-summary dl > div,
 .review-card dl > div,
-.review-list > div {
+dl.review-list > div {
   display: grid;
   padding-block: var(--space-3);
   grid-template-columns: minmax(0, 1fr);
@@ -591,7 +593,7 @@
 @media (min-width: 480px) {
   .quote-summary dl > div,
   .review-card dl > div,
-  .review-list > div {
+  dl.review-list > div {
     grid-template-columns: minmax(8rem, 2fr) minmax(0, 5fr);
     align-items: baseline;
   }

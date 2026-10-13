@@ -163,11 +163,7 @@ h3 {
 /* Chinese headings break at punctuation, not inside a word (QA finding 1). */
 :lang(zh) h1,
 :lang(zh) h2,
-:lang(zh) h3,
-:lang(zh) .t-display,
-:lang(zh) .t-title-list,
-:lang(zh) .t-h1,
-:lang(zh) .t-h2 {
+:lang(zh) h3 {
   word-break: keep-all;
   overflow-wrap: anywhere;
 }
@@ -371,6 +367,15 @@ h3 {
 }
 
 /* zh overrides for the utility levels (design-system §3.4) */
+/* Chinese headings break at punctuation, not inside a word (QA finding 1). */
+:lang(zh) .t-display,
+:lang(zh) .t-title-list,
+:lang(zh) .t-h1,
+:lang(zh) .t-h2 {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
 :lang(zh) .t-display {
   font-size: var(--text-display-zh);
   font-weight: var(--weight-display-zh);
@@ -692,6 +697,7 @@ h3 {
    (motion.css); this is the belt-and-braces fallback for everything else.
    ========================================================================== */
 @media (prefers-reduced-motion: reduce) {
+  /* biome-ignore-start lint/complexity/noImportantStyles: the reduced-motion reset must beat every component declaration */
   *,
   *::before,
   *::after {
@@ -701,4 +707,5 @@ h3 {
     transition-duration: var(--dur-1) !important;
     scroll-behavior: auto !important;
   }
+  /* biome-ignore-end lint/complexity/noImportantStyles: reduced-motion reset */
 }

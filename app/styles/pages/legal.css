@@ -230,11 +230,13 @@
   padding-block-start: var(--section-s);
 }
 
+/* biome-ignore lint/style/noDescendingSpecificity: the closing link sits outside .legal-doc__section */
 .legal-doc__closing > p {
   margin: 0;
 }
 
 @media (min-width: 1024px) {
+  /* biome-ignore lint/style/noDescendingSpecificity: the closing link sits outside .legal-doc__section */
   .legal-doc__closing > p {
     grid-column: 4 / 11;
   }

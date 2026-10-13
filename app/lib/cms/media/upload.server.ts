@@ -353,7 +353,7 @@ export async function receiveUpload(
     throw error;
   }
   const asset = await getAsset(db, assetId);
-  if (!asset || asset.source !== "r2" || !asset.storageKey) {
+  if (asset?.source !== "r2" || !asset.storageKey) {
     await discard(request);
     throw new UploadError("not_found");
   }
