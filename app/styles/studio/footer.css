@@ -1,0 +1,296 @@
+/*
+ * Settings → Footer (wp3): the ordered group list, each group's editor, the
+ * "Add a group" form and the public footer preview (which reuses the
+ * `.p3-footer-preview` styles of social.css). Loaded only by
+ * /studio/settings/footer; everything scoped under `.studio`.
+ */
+
+.studio .studio-footer {
+  display: grid;
+  gap: var(--space-6);
+}
+
+@media (min-width: 1024px) {
+  .studio .studio-footer {
+    grid-template-columns: minmax(0, 1fr) 18rem;
+    align-items: start;
+  }
+
+  .studio .studio-footer__preview {
+    position: sticky;
+    inset-block-start: calc(var(--studio-topbar-h) + var(--space-4));
+  }
+}
+
+.studio .studio-footer__main {
+  display: grid;
+  gap: var(--space-4);
+  min-inline-size: 0;
+}
+
+/* ---- Group list ------------------------------------------------------------- */
+
+.studio .studio-footer__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-block-start: 1px solid var(--color-rule-strong);
+}
+
+.studio .studio-footer__row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-3);
+  padding-block: var(--space-3);
+  border-block-end: 1px solid var(--color-rule);
+}
+
+.studio .studio-footer__order {
+  padding-block-start: var(--space-1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .studio .studio-footer__row:hover .studio-order__step,
+  .studio .studio-footer__row:focus-within .studio-order__step {
+    opacity: 1;
+  }
+}
+
+.studio .studio-footer__body {
+  display: grid;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+.studio .studio-footer__summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+}
+
+.studio .studio-footer__name {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--text-body);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.studio .studio-footer__zh {
+  color: var(--color-text-secondary);
+  font-weight: 400;
+  text-transform: none;
+}
+
+.studio .studio-footer__kind,
+.studio .studio-footer__always,
+.studio .studio-footer__state,
+.studio .studio-footer__locale-tag {
+  margin: 0;
+  color: var(--color-text-meta);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta-xs);
+  letter-spacing: 0.08em;
+}
+
+.studio .studio-footer__visibility {
+  margin-inline-start: auto;
+}
+
+.studio .studio-footer__always {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--studio-control-h-compact);
+}
+
+.studio .studio-footer__row:not([data-enabled]) .studio-footer__name {
+  color: var(--color-text-secondary);
+}
+
+.studio .studio-footer__left-out {
+  margin: 0;
+  padding-inline-start: var(--space-2);
+  border-inline-start: 2px solid var(--color-warning);
+}
+
+/* ---- Editor disclosure --------------------------------------------------------- */
+
+.studio .studio-footer__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: var(--studio-control-h-compact);
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  list-style: none;
+  cursor: pointer;
+}
+
+.studio .studio-footer__toggle::-webkit-details-marker {
+  display: none;
+}
+
+.studio .studio-footer__toggle::before {
+  content: "▸";
+}
+
+.studio .studio-footer__details[open] > .studio-footer__toggle::before {
+  content: "▾";
+}
+
+.studio .studio-footer__editor {
+  display: grid;
+  gap: var(--space-4);
+  padding-block: var(--space-3);
+}
+
+.studio .studio-footer__source {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.studio .studio-footer__source .studio-hint {
+  margin: 0;
+}
+
+.studio .studio-footer__derived {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.studio .studio-footer__derived-list {
+  display: grid;
+  gap: var(--space-1);
+  margin: var(--space-1) 0 0;
+  padding: 0;
+  color: var(--color-text-secondary);
+  list-style: none;
+}
+
+.studio .studio-footer__link {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2) var(--space-3);
+  min-inline-size: 0;
+}
+
+.studio .studio-footer__link-cell {
+  display: grid;
+  align-content: start;
+  gap: var(--space-1);
+  min-inline-size: 0;
+}
+
+.studio .studio-footer__link-url,
+.studio .studio-footer__note {
+  grid-column: 1 / -1;
+}
+
+.studio .studio-footer__note {
+  margin: 0;
+  color: var(--color-warning);
+}
+
+.studio .studio-footer__link-shown,
+.studio .studio-footer__enable {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: var(--studio-control-h-compact);
+}
+
+.studio .studio-footer__link-shown input,
+.studio .studio-footer__enable input {
+  accent-color: var(--color-accent);
+}
+
+.studio .studio-footer__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.studio .studio-footer__state {
+  margin-inline-end: auto;
+}
+
+.studio .studio-footer__state[data-state="unsaved"] {
+  color: var(--color-warning);
+}
+
+.studio .studio-footer__state[data-state="error"] {
+  color: var(--color-danger);
+}
+
+.studio .studio-footer__failure {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.studio .studio-footer__failure .studio-field__error {
+  margin: 0;
+}
+
+.studio .studio-footer__danger {
+  display: flex;
+  justify-content: flex-end;
+  padding-block-end: var(--space-2);
+}
+
+/* ---- Add a group ------------------------------------------------------------ */
+
+.studio .studio-footer__add {
+  display: grid;
+  gap: var(--space-3);
+  margin-block-start: var(--space-4);
+  padding-block-start: var(--space-4);
+  border-block-start: 1px dashed var(--color-rule-strong);
+}
+
+.studio .studio-footer__add .studio-section-label {
+  margin: 0;
+}
+
+.studio .studio-footer__add-form {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.studio .studio-footer__enable {
+  margin-inline-end: auto;
+}
+
+/* ---- Preview ------------------------------------------------------------------- */
+
+.studio .studio-footer__preview-groups {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.studio .studio-footer__preview-group {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.studio .studio-footer__preview-group h3 {
+  font-weight: 400;
+}
+
+@media (max-width: 559px) {
+  .studio .studio-footer__link,
+  .studio .studio-footer__derived {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
