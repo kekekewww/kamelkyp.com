@@ -129,6 +129,18 @@ test.describe("footer settings", () => {
     ).toHaveValue(ADDRESS);
     await expect(state).toHaveText("Saved");
 
+    // 4b. A save that normalizes to the stored values is still a clean save:
+    // the field shows the stored address and nothing is left unsaved.
+    await group
+      .getByLabel("Link 1 address", { exact: true })
+      .fill(`example.com/wp3-${token}`);
+    await expect(state).toHaveText("Unsaved changes");
+    await group.getByRole("button", { name: "Save group" }).click();
+    await expect(state).toHaveText("Saved");
+    await expect(
+      group.getByLabel("Link 1 address", { exact: true }),
+    ).toHaveValue(ADDRESS);
+
     // 5. Validation: a missing EN label, then a price figure, then a fix.
     const enLabel = group.getByLabel("Link 1 label EN", { exact: true });
     await enLabel.fill("");

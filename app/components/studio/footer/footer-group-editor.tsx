@@ -2,8 +2,9 @@
  * One footer group's editor (wp3 spec §4.5): bilingual group label for every
  * group; built-in groups show where their links come from (read-only), custom
  * groups edit their links (bilingual labels, one address, shown or not).
- * Keyed by the group's fingerprint, so a save (or "Reload latest") remounts
- * it with the stored, normalized values.
+ * Keyed by the group's fingerprint and its count of successful saves, so
+ * every save (even one that normalizes to the stored values) and "Reload
+ * latest" remount it with the stored, normalized values.
  */
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { type FetcherWithComponents, Link, useRevalidator } from "react-router";

@@ -96,6 +96,10 @@ export function FooterGroupRow({
     result: FooterFailure;
     fingerprint: string;
   } | null>(null);
+  // Successful saves. Part of the editor's key: a save whose values normalize
+  // to the stored ones keeps the fingerprint, yet the editor must still show
+  // the stored values and count as clean.
+  const [saves, setSaves] = useState(0);
   const saved = useRef<unknown>(null);
   const toggled = useRef<unknown>(null);
   const name = footerGroupName(group);
@@ -108,6 +112,7 @@ export function FooterGroupRow({
     saved.current = result;
     if (result.ok) {
       setFailure(null);
+      setSaves((count) => count + 1);
       toast.show({
         message: `Saved “${result.group ? footerGroupName(result.group) : name}”`,
       });
@@ -216,7 +221,7 @@ export function FooterGroupRow({
             Edit<span className="visually-hidden"> {name}</span>
           </summary>
           <FooterGroupEditor
-            key={group.fingerprint}
+            key={`${group.fingerprint}:${saves}`}
             group={group}
             sources={sources}
             fetcher={saver as never}
