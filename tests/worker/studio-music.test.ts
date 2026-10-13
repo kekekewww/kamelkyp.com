@@ -379,7 +379,7 @@ describe("music editor", () => {
       intent: "save",
       now,
     })) as unknown as Result;
-    expect(saved.data).toMatchObject({ ok: true });
+    expect(saved.data).toMatchObject({ ok: true, intent: "save" });
 
     const refused = (await handleMusicEditorAction({
       db: env.DB,
@@ -398,6 +398,7 @@ describe("music editor", () => {
     // The draft is saved (state "Saved"); publishing waits for the checklist.
     expect(refused.data).toMatchObject({
       ok: true,
+      intent: "publish",
       published: false,
       meta: { status: "draft", revision: 2 },
     });
@@ -415,6 +416,7 @@ describe("music editor", () => {
     })) as unknown as Result;
     expect(published.data).toMatchObject({
       ok: true,
+      intent: "publish",
       meta: { status: "published" },
     });
   });
@@ -478,6 +480,7 @@ describe("music editor", () => {
     })) as unknown as Result;
     expect(deleted.data).toMatchObject({
       ok: true,
+      intent: "delete",
       redirectTo: "/studio/music?deleted=1",
     });
     expect(await getEntity(env.DB, "music", id)).toBeNull();
@@ -495,6 +498,7 @@ describe("music editor", () => {
     })) as unknown as Result;
     expect(archived.data).toMatchObject({
       ok: true,
+      intent: "archive",
       meta: { status: "archived", revision: 1 },
     });
     const loaded = await getEntity(env.DB, "music", id);
@@ -510,6 +514,7 @@ describe("music editor", () => {
     })) as unknown as Result;
     expect(restored.data).toMatchObject({
       ok: true,
+      intent: "restore",
       meta: { status: "draft" },
     });
 
@@ -521,6 +526,7 @@ describe("music editor", () => {
       intent: "duplicate",
       now,
     })) as unknown as Result;
+    expect(duplicated.data.intent).toBe("duplicate");
     expect(duplicated.data.redirectTo).toMatch(
       /^\/studio\/music\/[0-9a-f-]{36}\?duplicated=1$/,
     );
@@ -540,6 +546,7 @@ describe("music editor", () => {
         now,
       })) as unknown as Result;
       expect(result.data.ok).toBe(true);
+      expect(result.data.intent).toBe(intent);
     }
     const loaded = await getEntity(env.DB, "music", id);
     expect(loaded?.meta).toMatchObject({ featured: true, isShowreel: true });
@@ -552,5 +559,81 @@ describe("music editor", () => {
       now,
     })) as unknown as Result;
     expect(unknown.init?.status).toBe(422);
+  });
+
+  it("echoes the intent of unpublish, revert, unfeature and clear-showreel", async () => {
+    // The editor chooses its toast from the echoed intent (wp6 a): React can
+    // skip the render that carried the submitted form data.
+    const id = await track("Echo");
+    const editor = async (
+      intent: string,
+      fields: Record<string, string | string[]> = {},
+    ) =>
+      (await handleMusicEditorAction({
+        db: env.DB,
+        env: testEnv(),
+        params: { id },
+        formData: form(fields),
+        intent,
+        now,
+      })) as unknown as Result;
+    const revisionOf = (result: Result) =>
+      String((result.data.meta as { revision: number }).revision);
+
+    const published = await editor("publish", fullForm());
+    expect(published.data).toMatchObject({ ok: true, published: true });
+    // A changed working copy, so the published copy differs.
+    const saved = await editor(
+      "save",
+      fullForm({
+        expectedRevision: revisionOf(published),
+        "title.en": "Echo, edited",
+      }),
+    );
+    expect(saved.data).toMatchObject({ ok: true, intent: "save" });
+    const reverted = await editor("revert", {
+      expectedRevision: revisionOf(saved),
+    });
+    expect(reverted.data).toMatchObject({ ok: true, intent: "revert" });
+    expect((await getEntity(env.DB, "music", id))?.content.title.en).toBe(
+      "Signal Garden",
+    );
+    expect((await editor("unpublish")).data).toMatchObject({
+      ok: true,
+      intent: "unpublish",
+    });
+    expect((await editor("feature")).data).toMatchObject({
+      ok: true,
+      intent: "feature",
+    });
+    expect((await editor("unfeature")).data).toMatchObject({
+      ok: true,
+      intent: "unfeature",
+    });
+    expect((await editor("set-showreel")).data).toMatchObject({
+      ok: true,
+      intent: "set-showreel",
+    });
+    expect((await editor("clear-showreel")).data).toMatchObject({
+      ok: true,
+      intent: "clear-showreel",
+      showreel: null,
+    });
+
+    // The list captures its intent client side: its results stay unchanged.
+    const list = async (intent: string) =>
+      (await handleMusicListAction({
+        db: env.DB,
+        env: testEnv(),
+        formData: form({ id }),
+        intent,
+        now,
+      })) as unknown as Result;
+    const listSet = await list("set-showreel");
+    expect(listSet.data.ok).toBe(true);
+    expect(listSet.data).not.toHaveProperty("intent");
+    const listClear = await list("clear-showreel");
+    expect(listClear.data).toMatchObject({ ok: true, showreel: null });
+    expect(listClear.data).not.toHaveProperty("intent");
   });
 });

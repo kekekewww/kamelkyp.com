@@ -658,7 +658,9 @@ export async function handleMediaLibraryAction({
           intent === "archive",
           now,
         );
-        return actionOk({ asset: toMediaSummary(asset, config) });
+        // The Studio's toast reads the echoed intent: the asset itself is
+        // already revalidated when the fetcher settles.
+        return actionOk({ intent, asset: toMediaSummary(asset, config) });
       });
     case "delete":
       return run(async () => {

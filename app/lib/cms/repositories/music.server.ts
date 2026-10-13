@@ -395,17 +395,28 @@ async function assertShowreelReady(db: D1Database, id: string) {
   return null;
 }
 
-async function setShowreelAction(db: D1Database, id: string) {
+/**
+ * `intent` is echoed only when given (the editor chooses its toast from it);
+ * the list captures its intent client side and calls these without it.
+ */
+async function setShowreelAction(db: D1Database, id: string, intent?: string) {
   const refused = await assertShowreelReady(db, id);
   if (refused) return refused;
   await setShowreel(db, id);
-  return actionOk({ showreel: await getShowreelSummary(db) });
+  return actionOk({
+    showreel: await getShowreelSummary(db),
+    ...(intent ? { intent } : {}),
+  });
 }
 
-async function clearShowreelAction(db: D1Database, id: string | null) {
+async function clearShowreelAction(
+  db: D1Database,
+  id: string | null,
+  intent?: string,
+) {
   const current = await getShowreelSummary(db);
   if (current && (!id || current.id === id)) await setShowreel(db, null);
-  return actionOk({ showreel: null });
+  return actionOk({ showreel: null, ...(intent ? { intent } : {}) });
 }
 
 function titleFrom(formData: FormData): LocalizedText {
@@ -650,6 +661,7 @@ export async function handleMusicEditorAction(args: MusicActionArgs) {
         const saved = await saveFromForm(args, id);
         if (!isMeta(saved)) return saved;
         return actionOk({
+          intent,
           meta: saved,
           issues: await validateEntity(db, "music", id),
         });
@@ -667,12 +679,14 @@ export async function handleMusicEditorAction(args: MusicActionArgs) {
         );
         if (!outcome.ok) {
           return actionOk({
+            intent,
             published: false,
             meta: saved,
             issues: outcome.issues,
           });
         }
         return actionOk({
+          intent,
           published: true,
           meta: outcome.meta,
           issues: await validateEntity(db, "music", id),
@@ -682,25 +696,35 @@ export async function handleMusicEditorAction(args: MusicActionArgs) {
       return run(async () => {
         const saved = await savePendingEdits(args, id);
         if (saved) return saved;
-        return actionOk({ meta: await unpublishEntity(db, "music", id, now) });
+        return actionOk({
+          intent,
+          meta: await unpublishEntity(db, "music", id, now),
+        });
       });
     case "archive":
       return run(async () => {
         const saved = await savePendingEdits(args, id);
         if (saved) return saved;
-        return actionOk({ meta: await archiveEntity(db, "music", id, now) });
+        return actionOk({
+          intent,
+          meta: await archiveEntity(db, "music", id, now),
+        });
       });
     case "restore":
       return run(async () => {
         const saved = await savePendingEdits(args, id);
         if (saved) return saved;
-        return actionOk({ meta: await restoreEntity(db, "music", id, now) });
+        return actionOk({
+          intent,
+          meta: await restoreEntity(db, "music", id, now),
+        });
       });
     case "revert":
       return run(async () => {
         const expected = readExpectedRevision(formOf(args));
         if (expected === null) return missingRevision();
         return actionOk({
+          intent,
           meta: await revertToPublished(db, "music", id, expected, now),
           // The form must show the published copy again.
           reset: true,
@@ -712,6 +736,7 @@ export async function handleMusicEditorAction(args: MusicActionArgs) {
         if (saved) return saved;
         const meta = await duplicateEntity(db, "music", id, now);
         return actionOk({
+          intent,
           duplicateId: meta.id,
           redirectTo: `/studio/music/${meta.id}?duplicated=1`,
         });
@@ -725,6 +750,7 @@ export async function handleMusicEditorAction(args: MusicActionArgs) {
           readString(formOf(args), "confirm") ?? "",
         );
         return actionOk({
+          intent,
           deleted: true,
           redirectTo: "/studio/music?deleted=1",
         });
@@ -733,12 +759,12 @@ export async function handleMusicEditorAction(args: MusicActionArgs) {
     case "unfeature":
       return run(async () => {
         await setFeatured(db, "music", id, intent === "feature");
-        return actionOk({});
+        return actionOk({ intent });
       });
     case "set-showreel":
-      return run(() => setShowreelAction(db, id));
+      return run(() => setShowreelAction(db, id, intent));
     case "clear-showreel":
-      return run(() => clearShowreelAction(db, id));
+      return run(() => clearShowreelAction(db, id, intent));
     default:
       return unknownIntent(intent);
   }
