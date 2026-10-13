@@ -348,21 +348,25 @@ export function CommissionWizard({
             <CommonFields
               draft={draft}
               locale={locale}
+              priceRule={priceRule}
               updateField={updateField}
             />
             <MixFields
               draft={draft}
               locale={locale}
+              priceRule={priceRule}
               updateField={updateField}
             />
             <SimpleTransitionFields
               draft={draft}
               locale={locale}
+              priceRule={priceRule}
               updateField={updateField}
             />
             <EditTransitionFields
               draft={draft}
               locale={locale}
+              priceRule={priceRule}
               updateField={updateField}
             />
           </form>

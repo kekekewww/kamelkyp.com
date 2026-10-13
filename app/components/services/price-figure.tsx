@@ -1,6 +1,7 @@
 import type { PublicServiceItem } from "../../lib/cms/public/view-models";
 import type { Locale } from "../../lib/i18n/locale";
 import type { FxSnapshot } from "../../lib/pricing/fx-repository.server";
+import { bpsToPercentLabel } from "../../lib/pricing/percent";
 import { ServicePrice } from "../pricing/service-price";
 
 /**
@@ -136,7 +137,7 @@ export function studentDiscountNote(
   studentDiscountBps: number | null,
 ): string | undefined {
   if (!studentDiscountBps || studentDiscountBps <= 0) return undefined;
-  const percent = Math.round(studentDiscountBps / 100);
+  const percent = bpsToPercentLabel(studentDiscountBps);
   return locale === "zh"
     ? `學生可申請 ${percent}% 優惠，需提供學生身分證明。`
     : `Students can request ${percent}% off with proof of enrollment.`;
