@@ -1,5 +1,7 @@
 # Kamel Pricing and Commission Flow Implementation Plan
 
+> Consolidated 2026-10-13 (wp6): the earlier draft `2026-08-10-04-pricing-commission-flow.md` was removed. Every line of it is here verbatim or as an expanded replacement (rate-limit paragraph, log-redaction check). Retrieve it with `git show c1152fa:docs/superpowers/plans/2026-08-10-04-pricing-commission-flow.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 交付四種服務的精確報價、每日 USD 換算、瀏覽器草稿、服務特定表單、統一條款、完整複核與 Turnstile 驗證流程。

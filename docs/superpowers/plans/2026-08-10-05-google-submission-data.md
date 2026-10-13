@@ -1,5 +1,7 @@
 # Kamel Google Sync and Data Lifecycle Implementation Plan
 
+> Consolidated 2026-10-13 (wp6): the earlier draft `2026-08-10-05-google-sync-data-lifecycle.md` was removed. Every line of it is here verbatim or as an expanded replacement (the "Expected result" sentence). Retrieve it with `git show 87b2e10:docs/superpowers/plans/2026-08-10-05-google-sync-data-lifecycle.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 將通過伺服器驗證的完整委託內容冪等同步至 Google Form／Sheet 與管理者 Gmail，並完成失敗重試、成功清稿及七日個資清理流程。
