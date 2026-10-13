@@ -50,7 +50,7 @@ URLs with separately authored copy.
 | `/:lang/other` | **301** | Legacy | — | `301 → /:lang/writing` (query string preserved) |
 | `/:lang/other/:slug` | **301** | Legacy | — | `301 → /:lang/writing/:slug` (query string preserved) |
 | `/:lang/commission` | reskinned | START A PROJECT landing: choose project type | Pick the right path | `/commission/mixing`, `/commission/song-transition`, `/services/software#contact` |
-| `/:lang/commission/:category` | reskinned | Choose one of the two services of a category (with price) | Pick a service | `/commission/:category/:service` |
+| `/:lang/commission/:category` | reskinned | Choose one of the two services of a category (with price); lists only services open in this language (active price and effective terms), else a bilingual empty state | Pick a service | `/commission/:category/:service` |
 | `/:lang/commission/:category/:service` | reskinned | Commission wizard, steps unchanged: `details → terms → review → verify` | Submit a commission | `/commission/success` |
 | `/:lang/commission/success` | reskinned | Confirmation (case ID, service, date) | Know what happens next | Home |
 | `/:lang/terms`, `/:lang/privacy` | reskinned | Legal documents in the new document style | Read the terms | Back to commission / home |
@@ -423,7 +423,11 @@ project. Unknown slug → 404.
   - Descriptions must not contain the four service names (e2e asserts
     完整歌曲混音 absent on `/zh/commission`).
 - `/commission/:category`: unchanged copy (選擇混音服務 …), only two services,
-  prices from repository. Breadcrumb `開始合作 / 混音`.
+  prices from repository. Breadcrumb `開始合作 / 混音`. Lists only services that are open in
+  the page language (an active price rule and the general terms, privacy notice and service terms in
+  effect); when none is open it shows 目前沒有開放線上委託的服務 / No services are open for online
+  commissions right now. The wizard of a closed service answers 404 (never a 500); the English wizard
+  without a usable exchange rate loads with "USD unavailable" and refuses submission.
 - `/commission/:category/:service`: wizard unchanged, steps `details`,
   `terms`, `review`, `verify`; step list label 委託步驟 / Commission steps; all
   field labels and buttons unchanged (tests depend on 下一步, Next, Review,

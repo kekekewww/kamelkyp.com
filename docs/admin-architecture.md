@@ -50,7 +50,9 @@ route("studio", "routes/studio/root.tsx", [            // middleware: owner guar
     route("services", "routes/studio/services/list.tsx"),
     route("services/new", "routes/studio/services/new.tsx"),
     route("services/pricing", "routes/studio/services/pricing.tsx"),
+    route("services/pricing/:serviceId", "routes/studio/services/pricing-edit.tsx"),
     route("services/terms", "routes/studio/services/terms.tsx"),
+    route("services/terms/:documentId/:locale", "routes/studio/services/terms-edit.tsx"),
     route("services/:id", "routes/studio/services/edit.tsx"),
     route("social", "routes/studio/social.tsx"),
     route("media", "routes/studio/media/library.tsx"),
@@ -73,6 +75,7 @@ route("studio", "routes/studio/root.tsx", [            // middleware: owner guar
     route("recognition/:id", "routes/studio/preview/recognition.tsx"),
     route("writing/:id", "routes/studio/preview/writing.tsx"),
     route("services/:id", "routes/studio/preview/service.tsx"),
+    route("terms/:documentId", "routes/studio/preview/terms.tsx"),  // ?locale=zh|en
   ]),
 ]),
 route("api/studio/session", "routes/api/studio/session.ts"),
@@ -106,8 +109,10 @@ Auth column: **A** = Access JWT verified (middleware + `withOwner`), **A+C** = A
 | `/studio/recognition`, `/new`, `/:id` | filters year, type | as projects | as projects | A / A+C | P3 |
 | `/studio/writing`, `/new`, `/:id` | filters platform, status, category | as projects | as projects | A / A+C | P3 |
 | `/studio/services`, `/new`, `/:id` | grouped list (filters status, group); editor | rows include live price for commission rows (`getActivePriceRule`) | as projects; commission rows: no `archive`/`delete` | A / A+C | P4 |
-| `/studio/services/pricing` | commission price versions | price versions per service, active rule | `publish-price-version` (existing `publishPriceVersion`) | A / A+C | I |
-| `/studio/services/terms` | legal documents | term versions, publications | `publish-term-version` (requires `legalReviewConfirmed`) | A / A+C | I |
+| `/studio/services/pricing` | commission price versions | `PricingIndexData`: per service the active rule, next scheduled change, marketing row; commission readiness per locale; FX status | `refresh-fx` (`refreshFxRate`; upstream failure → 503 `fx_refresh_failed`) | A / A+C | I |
+| `/studio/services/pricing/:serviceId` | one service's price versions (4 ids, else 404) | `PriceEditorData`: active rule, editable fields, classified history, `versionCount`, NT$ mentions in its live terms | `publish-price-version` (now or scheduled ≥ 5 min ahead, Taipei time; through the existing `publishPriceVersion`; `basedOnVersionId` + `expectedVersionCount` → 409 when stale), `cancel-scheduled` (`versionId`, `expectedVersionCount`) | A / A+C | I |
+| `/studio/services/terms` | legal documents | `TermsIndexData`: 6 documents × 2 locales with live version and draft marker, commission readiness | — | A | I |
+| `/studio/services/terms/:documentId/:locale` | one document's draft (6 ids × `zh`/`en`, else 404) | `TermEditorData`: live version, server draft, other locale's keys, history, issues, diff, expected outline | `save` (revision-checked draft), `publish-term-version` (requires `legalReviewConfirmed`, else 422 and nothing saved; copies the stored draft into the next version, moves the pointer with `effective_from = now`, deletes the draft, one batch), `discard-draft` | A / A+C | I |
 | `/studio/social` | social links table | links | `create`, `update`, `delete`, `toggle`, `reorder` | A / A+C | P3 |
 | `/studio/media` | library | page of assets (`?q&kind&usage&missingAlt&cursor`), CORS/analysis status, upload availability | `register-url`, `update`, `archive`, `delete` (`acknowledgeDraftUsages`), `rebuild-usages` | A / A+C | P2 |
 | `/studio/media/:id` | asset detail | asset, usages, public URL, image sources preview | `update`, `delete` | A / A+C | P2 |
@@ -170,6 +175,9 @@ point of the build.
   editor page's variant adds `frame-src 'self'`.
 - `?locale=zh|en` (default zh). Missing required fields render as empty, not as fallbacks; `TODO_CONTENT` rows
   show the existing PLACEHOLDER badge.
+- `/studio/preview/terms/:documentId?locale=` renders the real `/terms` or `/privacy` page with that document's saved
+  draft (GET; else its live version) or the term editor's unsaved form (POST). The term editor always posts with its
+  own locale; a form posted for the other locale answers 422.
 - Unsaved preview: editor button "Preview changes" uses `formAction="/studio/preview/<type>/<id>?locale=…"`,
   `formTarget="studio-preview"`, `formMethod="post"` on the editor form; the preview route action parses with the
   draft schema and returns the view model; nothing is written.
