@@ -219,9 +219,12 @@ describe("CommissionsInbox", () => {
       expect(select?.[1]).toMatch(
         new RegExp(`<option value="${status}" selected="">`),
       );
-      // Unchanged selection: the button says so without losing focus.
+      // Server markup (before hydration): Update is disabled, so an early
+      // click cannot submit the plain form as a GET filter navigation. Once
+      // hydrated it is `aria-disabled` while the selection is unchanged (not
+      // `disabled`), so focus stays on it after a change lands (wp1 §4.10).
       expect(markup).toMatch(
-        /<button[^>]*type="submit"[^>]*aria-disabled="true"[^>]*>Update<span class="visually-hidden"> status of KAM-/,
+        /<button[^>]*type="submit"[^>]*disabled=""[^>]*>Update<span class="visually-hidden"> status of KAM-/,
       );
     }
   });
