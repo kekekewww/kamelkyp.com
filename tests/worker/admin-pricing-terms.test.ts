@@ -38,6 +38,38 @@ describe("admin price and term publication", () => {
     ).toBe(8000);
   });
 
+  it("writes publish metadata with the version in one batch", async () => {
+    const version = await publishPriceVersion({
+      db: env.DB,
+      serviceId: "vocal_mix",
+      baseTwd: 4500,
+      perSongAfterFiveTwd: 0,
+      studentDiscountBps: 3000,
+      rushBps: 5000,
+      consultationBps: 5000,
+      sourcePrepBps: 500,
+      effectiveFrom: "2026-08-21T00:00:00Z",
+    });
+    const rows = await env.DB.prepare(
+      "SELECT version_id, action, replaces_version_id, published_at " +
+        "FROM price_version_publications WHERE version_id = ?",
+    )
+      .bind(version.id)
+      .all<{
+        version_id: string;
+        action: string;
+        replaces_version_id: string | null;
+        published_at: string;
+      }>();
+    expect(rows.results).toHaveLength(1);
+    expect(rows.results[0]).toMatchObject({
+      version_id: version.id,
+      action: "publish",
+      replaces_version_id: null,
+    });
+    expect(Date.parse(rows.results[0]?.published_at ?? "")).not.toBeNaN();
+  });
+
   it("requires explicit legal review and publishes immutable locale versions", async () => {
     const input = {
       db: env.DB,

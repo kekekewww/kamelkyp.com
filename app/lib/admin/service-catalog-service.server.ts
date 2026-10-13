@@ -11,6 +11,8 @@ const PriceInputSchema = z.object({
   effectiveFrom: z.iso.datetime(),
 });
 
+export type PublishAction = "publish" | "replace" | "cancel";
+
 export interface AdminPriceVersion {
   id: string;
   serviceId: ServiceId;
@@ -72,28 +74,51 @@ export async function publishPriceVersion(input: {
   consultationBps: number;
   sourcePrepBps: number;
   effectiveFrom: string;
+  /** Publish time; breaks ties between versions at the same effective time. */
+  publishedAt?: string;
+  /** `replace` / `cancel` supersede a scheduled version at the same time. */
+  action?: PublishAction;
+  replacesVersionId?: string | null;
 }): Promise<AdminPriceVersion> {
   if (!isServiceId(input.serviceId)) throw new Error("invalid_service_id");
   const values = PriceInputSchema.parse(input);
+  const action = input.action ?? "publish";
+  const replacesVersionId = input.replacesVersionId ?? null;
+  if ((action === "publish") !== (replacesVersionId === null)) {
+    throw new Error("invalid_publish_action");
+  }
   const id = crypto.randomUUID();
-  await input.db
-    .prepare(
-      "INSERT INTO price_versions (id, service_id, base_twd, per_song_after_five_twd, " +
-        "student_discount_bps, rush_bps, consultation_bps, source_prep_bps, effective_from) " +
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-    )
-    .bind(
-      id,
-      input.serviceId,
-      values.baseTwd,
-      values.perSongAfterFiveTwd,
-      values.studentDiscountBps,
-      values.rushBps,
-      values.consultationBps,
-      values.sourcePrepBps,
-      values.effectiveFrom,
-    )
-    .run();
+  // One batch (a D1 transaction): the version and its publish metadata.
+  await input.db.batch([
+    input.db
+      .prepare(
+        "INSERT INTO price_versions (id, service_id, base_twd, per_song_after_five_twd, " +
+          "student_discount_bps, rush_bps, consultation_bps, source_prep_bps, effective_from) " +
+          "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      )
+      .bind(
+        id,
+        input.serviceId,
+        values.baseTwd,
+        values.perSongAfterFiveTwd,
+        values.studentDiscountBps,
+        values.rushBps,
+        values.consultationBps,
+        values.sourcePrepBps,
+        values.effectiveFrom,
+      ),
+    input.db
+      .prepare(
+        "INSERT INTO price_version_publications " +
+          "(version_id, published_at, action, replaces_version_id) VALUES (?, ?, ?, ?)",
+      )
+      .bind(
+        id,
+        input.publishedAt ?? new Date().toISOString(),
+        action,
+        replacesVersionId,
+      ),
+  ]);
   return {
     id,
     serviceId: input.serviceId,
