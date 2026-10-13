@@ -1,5 +1,6 @@
-import { Link, useOutletContext } from "react-router";
+import { Link, type MetaFunction, useOutletContext } from "react-router";
 import type { PublicRouteHandle } from "../../components/layout/public-shell";
+import { pageMeta } from "../../lib/cms/public/meta";
 import type { Locale } from "../../lib/i18n/locale";
 import { localePath } from "../../lib/i18n/path";
 import type { PublicOutletContext } from "./layout";
@@ -7,6 +8,15 @@ import type { PublicOutletContext } from "./layout";
 // Commission pages carry no contact band: the header CTA is the only
 // START A PROJECT instance here (IA §5.1).
 export const handle: PublicRouteHandle = { contactBand: false };
+
+/** Its own title (the h1), so it no longer repeats the home title. */
+export const meta: MetaFunction = ({ matches, location, params }) =>
+  pageMeta(
+    { matches, location },
+    {
+      title: params.lang === "en" ? "Start a project" : "開始合作",
+    },
+  );
 
 interface ProjectPath {
   id: string;
