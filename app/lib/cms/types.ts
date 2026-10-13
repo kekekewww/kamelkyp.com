@@ -47,7 +47,16 @@ export type ValidationIssueCode =
   | "too_long"
   | "snapshot_too_large"
   /** Structural draft problem (wrong type, malformed value). */
-  | "invalid_value";
+  | "invalid_value"
+  // Pricing and terms (wp2 §4.13).
+  | "duplicate_key"
+  | "unchanged"
+  | "legal_review_required"
+  | "effective_in_past"
+  | "expected_clause"
+  | "price_mention"
+  | "base_outdated"
+  | "large_change";
 
 export type ValidationIssue = {
   /** Dotted path, e.g. "story.context", "gallery.2.assetId". */
