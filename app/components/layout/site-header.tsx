@@ -5,6 +5,7 @@ import type { Locale } from "../../lib/i18n/locale";
 import {
   isNavSectionActive,
   localePath,
+  NAV_PATHS,
   type NavSection,
 } from "../../lib/i18n/path";
 import { useMagnetic } from "../../lib/motion/use-magnetic";
@@ -12,14 +13,6 @@ import { NavigationProgress } from "../motion/navigation-progress";
 import { LanguageSwitcher } from "./language-switcher";
 
 type NavKey = Exclude<NavSection, "home" | "cta">;
-
-/** Site structure: each navigation key's page. Labels stay UI copy. */
-const NAV_PATHS: Record<NavKey, string> = {
-  work: "/works",
-  services: "/services",
-  about: "/about",
-  writing: "/writing",
-};
 
 const DEFAULT_NAVIGATION: ReadonlyArray<{ key: NavKey; visible: boolean }> = [
   { key: "work", visible: true },
