@@ -2,8 +2,9 @@
 -- projects across categories (three featured, explicit order), a draft, a
 -- renamed slug with its redirect, two recognition rows, internal + external
 -- writing plus a draft, a published showreel on an intercepted
--- media.kamelkyp.com/e2e/*.wav, a project track and two social links (one
--- disabled). Titles say "Fixture"; no personal names. Everything is
+-- media.kamelkyp.com/e2e/*.wav, a project track, two social links (one
+-- disabled) and a hidden footer group (it must never render). Titles say
+-- "Fixture"; no personal names. Everything is
 -- published through the snapshot views, exactly like the engine.
 -- Statements end with ";" at a line end (tests/worker/cms-e2e-fixture.test.ts).
 PRAGMA foreign_keys = ON;
@@ -20,6 +21,9 @@ DELETE FROM recognitions WHERE id GLOB 'e2e-cms-*';
 DELETE FROM writings WHERE id GLOB 'e2e-cms-*';
 DELETE FROM projects WHERE id GLOB 'e2e-cms-*';
 DELETE FROM social_links WHERE id GLOB 'e2e-cms-*';
+DELETE FROM links WHERE group_id GLOB 'e2e-cms-*';
+DELETE FROM link_group_labels WHERE group_id GLOB 'e2e-cms-*';
+DELETE FROM link_groups WHERE id GLOB 'e2e-cms-*';
 DELETE FROM media_assets WHERE id GLOB 'e2e-cms-asset-*';
 
 -- The one showreel slot (music_tracks_single_showreel). On the shared preview
@@ -225,3 +229,17 @@ INSERT INTO social_links (
   ('e2e-cms-github', 'github', '{"zh":"GitHub","en":"GitHub"}',
    'https://github.com/kamel-fixture', NULL, 0, 20,
    '2026-09-20T00:00:00Z', '2026-09-20T00:00:00Z');
+
+-- Footer: a hidden custom group (Settings → Footer "Hidden"). Disabled groups
+-- never render, so the footer still shows six groups; its label and address
+-- must not reach the served HTML.
+INSERT INTO link_groups (id, stable_key, sort_order, enabled)
+VALUES ('e2e-cms-footer-hidden', 'e2e_hidden', 35, 0);
+INSERT INTO link_group_labels (group_id, locale, label) VALUES
+  ('e2e-cms-footer-hidden', 'zh', '隱藏測試群組'),
+  ('e2e-cms-footer-hidden', 'en', 'Fixture hidden group');
+INSERT INTO links (id, group_id, locale, label, url, sort_order, enabled) VALUES
+  ('e2e-cms-footer-hidden-zh', 'e2e-cms-footer-hidden', 'zh', '隱藏測試連結',
+   'https://example.com/e2e-hidden-footer', 0, 1),
+  ('e2e-cms-footer-hidden-en', 'e2e-cms-footer-hidden', 'en', 'Fixture hidden link',
+   'https://example.com/e2e-hidden-footer', 0, 1);

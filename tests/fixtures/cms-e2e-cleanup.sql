@@ -16,6 +16,9 @@ DELETE FROM recognitions WHERE id GLOB 'e2e-cms-*';
 DELETE FROM writings WHERE id GLOB 'e2e-cms-*';
 DELETE FROM projects WHERE id GLOB 'e2e-cms-*';
 DELETE FROM social_links WHERE id GLOB 'e2e-cms-*';
+DELETE FROM links WHERE group_id GLOB 'e2e-cms-*';
+DELETE FROM link_group_labels WHERE group_id GLOB 'e2e-cms-*';
+DELETE FROM link_groups WHERE id GLOB 'e2e-cms-*';
 DELETE FROM media_assets WHERE id GLOB 'e2e-cms-asset-*';
 
 CREATE TABLE IF NOT EXISTS e2e_cms_showreel_backup (
