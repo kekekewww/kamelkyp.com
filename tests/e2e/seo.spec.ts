@@ -163,6 +163,38 @@ test("a filtered work index canonicalizes to the bare path", async ({
   );
 });
 
+test("a case or percent-encoded spelling canonicalizes to the lowercase path", async ({
+  request,
+}) => {
+  // React Router matches segments case-insensitively and after decoding, so
+  // these render; their head must point to the one lowercase URL. (Requested
+  // without a browser, which would normalize the escape before sending.)
+  const origin = await siteOrigin(request);
+  for (const [path, canonical] of [
+    ["/en/Works/fixture-signal-map", "/en/works/fixture-signal-map"],
+    ["/en/%61bout", "/en/about"],
+  ] as const) {
+    const response = await request.get(path);
+    expect(response.status(), path).toBe(200);
+    const html = await response.text();
+    const head = html.slice(0, html.indexOf("</head>"));
+    expect(head, path).toContain(
+      `rel="canonical" href="${origin}${canonical}"`,
+    );
+    expect(head, path).toContain(
+      `property="og:url" content="${origin}${canonical}"`,
+    );
+    const siteUrls = [...head.matchAll(/"(https?:\/\/[^"]+)"/g)]
+      .map((match) => match[1] ?? "")
+      .filter((url) => url.startsWith(`${origin}/`));
+    expect(siteUrls.length, path).toBeGreaterThan(2);
+    expect(
+      siteUrls.filter((url) => /[A-Z%]/.test(url.slice(origin.length))),
+      path,
+    ).toEqual([]);
+  }
+});
+
 test("an unlisted, one-locale project is noindex without canonical or alternates", async ({
   page,
 }) => {

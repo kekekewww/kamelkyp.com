@@ -277,7 +277,9 @@ student, rush, consultation and source-prep fields that a single amount cannot e
   - Every indexable page emits an absolute canonical (the router location's path, no query, no trailing slash) and a
     matching `og:url`. Pages that render in both locales add `zh-Hant`, `en` and `x-default` (→ `en`, the
     negotiation fallback) alternates and `og:locale:alternate`; one-locale pages emit none. `/:lang/works?category=x`
-    canonicalizes to `/:lang/works`.
+    canonicalizes to `/:lang/works`. The router matches segments case-insensitively and after percent-decoding, and
+    every public path is lowercase ASCII, so the canonical and the alternates decode and lowercase each segment:
+    `/en/Works/a` and `/en/%61bout` point to `/en/works/a` and `/en/about`.
   - `<meta name="robots" content="noindex">` (and no canonical, alternates or `og:url`): unlisted project and writing
     detail pages (owner decision O1), `/:lang/commission/:category`, `/:lang/commission/:category/:service`,
     `/:lang/commission/success` and the error page. Deployment-level noindex lives only in

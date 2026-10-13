@@ -34,6 +34,25 @@ describe("seo url helpers", () => {
     expect(absoluteUrl(PROD, "/en/works")).toBe(`${PROD}/en/works`);
   });
 
+  it("gives case and percent-encoded spellings the one lowercase path", () => {
+    // React Router matches segments case-insensitively and after decoding,
+    // so these render the same page as their lowercase twin.
+    expect(canonicalPath("/en/Works/fixture-signal-map")).toBe(
+      "/en/works/fixture-signal-map",
+    );
+    expect(canonicalPath("/en/ABOUT/")).toBe("/en/about");
+    expect(canonicalPath("/en/%61bout")).toBe("/en/about");
+    expect(canonicalPath("/%65n")).toBe("/en");
+    expect(canonicalPath("/en/works/fixture%2Dsignal-map")).toBe(
+      "/en/works/fixture-signal-map",
+    );
+    // A decoded slash stays inside its segment; other characters stay valid.
+    expect(canonicalPath("/en/works/A%2Fb")).toBe("/en/works/a%2Fb");
+    expect(canonicalPath("/en/works/%E4%B8%AD")).toBe("/en/works/%E4%B8%AD");
+    // A malformed escape cannot be decoded (React Router keeps it as is).
+    expect(canonicalPath("/en/works/%zz")).toBe("/en/works/%zz");
+  });
+
   it("matches <html lang> and the negotiation fallback", () => {
     expect(HREFLANG).toEqual({ zh: "zh-Hant", en: "en" });
     expect(X_DEFAULT_LOCALE).toBe("en");
@@ -54,6 +73,14 @@ describe("seo url helpers", () => {
       { hrefLang: "zh-Hant", href: `${PROD}/zh` },
       { hrefLang: "en", href: `${PROD}/en` },
       { hrefLang: "x-default", href: `${PROD}/en` },
+    ]);
+  });
+
+  it("links the lowercase path from a case or percent-encoded spelling", () => {
+    expect(localeAlternates(PROD, "/en/Works/%61", ["zh", "en"])).toEqual([
+      { hrefLang: "zh-Hant", href: `${PROD}/zh/works/a` },
+      { hrefLang: "en", href: `${PROD}/en/works/a` },
+      { hrefLang: "x-default", href: `${PROD}/en/works/a` },
     ]);
   });
 

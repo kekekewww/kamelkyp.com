@@ -18,9 +18,26 @@ export const HREFLANG: Record<Locale, string> = { zh: "zh-Hant", en: "en" };
 /** Equal to the `/` negotiation fallback (locale-cookie.server.ts). */
 export const X_DEFAULT_LOCALE: Locale = "en";
 
-/** Strips trailing slashes (never the root); queries and hashes are not paths. */
+/**
+ * The one spelling of a public path. React Router matches segments
+ * case-insensitively and after percent-decoding, so `/en/ABOUT` and
+ * `/en/%61bout` render `/en/about`; every public path is lowercase ASCII
+ * (locales, static segments, slugs per `isValidSlug`), so each segment is
+ * decoded, lowercased and re-encoded. Strips trailing slashes (never the
+ * root); queries and hashes are not paths.
+ */
 export function canonicalPath(pathname: string): string {
-  return pathname.replace(/\/+$/, "") || "/";
+  const path = pathname.split("/").map(canonicalSegment).join("/");
+  return path.replace(/\/+$/, "") || "/";
+}
+
+function canonicalSegment(segment: string): string {
+  try {
+    return encodeURIComponent(decodeURIComponent(segment).toLowerCase());
+  } catch {
+    // A malformed escape: React Router keeps the segment as is (and 404s).
+    return segment;
+  }
 }
 
 export function absoluteUrl(origin: string, path: string): string {

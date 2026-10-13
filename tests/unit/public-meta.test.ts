@@ -392,6 +392,35 @@ describe("public meta: canonical, hreflang, sharing and icons (WP4)", () => {
     ).toEqual({ origin: ORIGIN });
   });
 
+  it("points a case or percent-encoded spelling to the one lowercase URL", () => {
+    // React Router matches segments case-insensitively and after decoding,
+    // so this location renders the same page as its lowercase twin.
+    const tags = pageMeta(
+      {
+        matches: [
+          {
+            id: "routes/public/layout",
+            loaderData: {
+              locale: "en",
+              site: fixtureSiteContext(),
+              seo: { origin: ORIGIN },
+            },
+          },
+        ],
+        location: { pathname: "/en/Works/%66ixture-signal-map/" },
+      },
+      { title: "Signal map" },
+    ) as Descriptor[];
+    const url = `${ORIGIN}/en/works/fixture-signal-map`;
+    expect(links(tags, "canonical")[0]?.href).toBe(url);
+    expect(find(tags, "property", "og:url")?.content).toBe(url);
+    expect(links(tags, "alternate").map((link) => link.href)).toEqual([
+      `${ORIGIN}/zh/works/fixture-signal-map`,
+      url,
+      url,
+    ]);
+  });
+
   it("never emits a Person, an author or an email address", () => {
     const tags = publicMeta({
       site: fixtureSiteContext(),
