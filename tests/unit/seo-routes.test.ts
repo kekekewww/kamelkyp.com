@@ -80,6 +80,17 @@ const seoSources = rawSources(
   ),
 );
 
+const studioHintSources = rawSources(
+  import.meta.glob<string>(
+    [
+      "../../app/components/studio/settings/site-form.tsx",
+      "../../app/components/studio/projects/editor-sections.tsx",
+      "../../app/components/studio/writing/writing-editor.tsx",
+    ],
+    { query: "?raw", import: "default", eager: true },
+  ),
+);
+
 /** WP5's admin retirement audit regex (WP5 spec §6.1, plan §2.6). */
 const ADMIN_LITERAL = /["'`]\/admin(?:[/?"'`]|$)/m;
 
@@ -198,5 +209,34 @@ describe("admin retirement audit compatibility", () => {
     expect('const path = "/admin";').toMatch(ADMIN_LITERAL);
     expect("'/admin/cases'").toMatch(ADMIN_LITERAL);
     expect('"Disallow: /admin"').not.toMatch(ADMIN_LITERAL);
+  });
+});
+
+describe("Studio hints (WP4 §4.12)", () => {
+  const hint = (file: string, text: string) =>
+    expect(studioHintSources[`app/components/studio/${file}`]).toContain(
+      `hint="${text}"`,
+    );
+
+  it("states the share image fallbacks", () => {
+    hint(
+      "settings/site-form.tsx",
+      "Shown when the homepage is shared, and by pages without their own image when no default social image is set. 1200 × 630 works best. When empty, the homepage uses the default social image, then the built-in Kamel image.",
+    );
+    hint(
+      "settings/site-form.tsx",
+      "Used by pages that have no image of their own. When empty, the OpenGraph image is used, then the built-in Kamel image.",
+    );
+  });
+
+  it("states what unlisting does to the sitemap and search", () => {
+    hint(
+      "projects/editor-sections.tsx",
+      "Unlisted projects stay reachable by their URL but are left out of /works, the homepage and the sitemap, and ask search engines not to index them. Takes effect when you publish.",
+    );
+    hint(
+      "writing/writing-editor.tsx",
+      "Unlisted articles stay reachable by their URL but are left out of lists, the homepage and the sitemap, and ask search engines not to index them. Takes effect when you publish.",
+    );
   });
 });

@@ -521,7 +521,7 @@ export function PublicationSection({
           name="listed"
           label="Show in lists"
           defaultChecked={content.listed}
-          hint="Unlisted projects stay reachable by their URL but are left out of /works and the homepage. Takes effect when you publish."
+          hint="Unlisted projects stay reachable by their URL but are left out of /works, the homepage and the sitemap, and ask search engines not to index them. Takes effect when you publish."
         />
         <LocalizedTextField
           name="seo.title"
