@@ -4,7 +4,7 @@
  * the links of custom groups; the preview shows the saved public footer.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useBlocker, useFetcher } from "react-router";
+import { useBlocker, useFetcher, useRevalidator } from "react-router";
 import type {
   FooterScreenSources,
   StudioFooterGroup,
@@ -213,6 +213,7 @@ export function FooterSettings({
 }) {
   const reorderFetcher = useFetcher<FooterResult>();
   const remover = useFetcher<FooterResult>();
+  const revalidator = useRevalidator();
   const { csrfToken } = useStudioSession();
   const toast = useToast();
   const [dirtyRows, setDirtyRows] = useState<ReadonlySet<string>>(new Set());
@@ -290,7 +291,9 @@ export function FooterSettings({
         ? { message: `Deleted “${removing.current}”` }
         : { tone: "error", message: result.message },
     );
-  }, [remover.state, remover.data, toast]);
+    // Gone elsewhere: show the current list.
+    if (!result.ok && result.code === "not_found") revalidator.revalidate();
+  }, [remover.state, remover.data, toast, revalidator]);
 
   // Mod+S saves the group form that has focus.
   useEffect(() => {

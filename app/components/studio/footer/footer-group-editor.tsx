@@ -5,7 +5,7 @@
  * Keyed by the group's fingerprint, so a save (or "Reload latest") remounts
  * it with the stored, normalized values.
  */
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { type FetcherWithComponents, Link, useRevalidator } from "react-router";
 import {
   type FooterSystemKey,
@@ -110,18 +110,21 @@ function LinkFields({
   index,
   field,
   issues,
+  idPrefix,
 }: {
   link: StudioFooterLink;
   index: number;
   field: (key: string) => string;
   issues?: readonly ValidationIssue[];
+  /** Keeps error ids unique across group editors. */
+  idPrefix: string;
 }) {
   const number = index + 1;
   const base = `links.${index}`;
   const zhError = issueFor(issues, `${base}.label`, "zh");
   const enError = issueFor(issues, `${base}.label`, "en");
   const urlError = issueFor(issues, `${base}.url`);
-  const errorId = (name: string) => `${field(name)}-error`;
+  const errorId = (name: string) => `${idPrefix}-${field(name)}-error`;
   return (
     <div className="studio-footer__link">
       <label className="studio-footer__link-cell">
@@ -227,6 +230,7 @@ export function FooterGroupEditor({
   onDirty: (id: string, dirty: boolean) => void;
 }) {
   const revalidator = useRevalidator();
+  const idPrefix = useId();
   const formRef = useRef<HTMLFormElement>(null);
   const baseline = useRef<string | null>(null);
   const [dirty, setDirty] = useState(false);
@@ -323,6 +327,7 @@ export function FooterGroupEditor({
                 index={index}
                 field={field}
                 issues={issues}
+                idPrefix={idPrefix}
               />
             )}
           />
