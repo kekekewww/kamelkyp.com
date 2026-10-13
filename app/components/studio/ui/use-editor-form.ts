@@ -114,7 +114,12 @@ export function useEditorForm({
   /** Server `updated_at` of the loaded record. */
   updatedAt: string | null;
   fetcher: FetcherWithComponents<unknown>;
-  saveIntent?: string;
+  /**
+   * The intent Mod+S submits. `null`: Mod+S submits nothing (a page whose
+   * only action is a deliberate Publish) but still never opens the
+   * browser's save dialog.
+   */
+  saveIntent?: string | null;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const baseline = useRef<string | null>(null);
@@ -178,11 +183,13 @@ export function useEditorForm({
     },
   });
 
-  // Mod+S saves (and never opens the browser's save dialog).
+  // Mod+S saves (and never opens the browser's save dialog), unless the
+  // page has no save intent.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
         event.preventDefault();
+        if (saveIntent === null) return;
         const form = formRef.current;
         if (form) form.requestSubmit(findIntentButton(form, saveIntent));
       }

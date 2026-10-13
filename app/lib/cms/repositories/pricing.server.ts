@@ -34,9 +34,11 @@ import {
   EDITABLE_PRICE_FIELDS,
   extractTwdAmounts,
   isAmountField,
+  MIN_SCHEDULE_LEAD_MS,
   PRICE_VALUE_FIELDS,
   type PriceValues,
   priceChangeWarnings,
+  priceInputName,
 } from "../../pricing/sample-quotes";
 import { commissionServicePath, getService } from "../../services/catalog";
 import {
@@ -56,7 +58,12 @@ import type {
 } from "../types";
 
 export type { PriceValues } from "../../pricing/sample-quotes";
-export { EDITABLE_PRICE_FIELDS } from "../../pricing/sample-quotes";
+export {
+  EDITABLE_PRICE_FIELDS,
+  MIN_SCHEDULE_LEAD_MS,
+  PERCENT_INPUT_NAMES,
+  priceInputName,
+} from "../../pricing/sample-quotes";
 
 export type PublishAction = "publish" | "replace" | "cancel";
 
@@ -113,27 +120,6 @@ export type PriceEditorData = {
   termMentions: TermMention[];
   now: string;
 };
-
-/** Percent inputs are posted as plain strings (no `:number` suffix). */
-export const PERCENT_INPUT_NAMES: Record<
-  Exclude<keyof PriceValues, "baseTwd" | "perSongAfterFiveTwd">,
-  string
-> = {
-  studentDiscountBps: "studentDiscountPercent",
-  rushBps: "rushPercent",
-  consultationBps: "consultationPercent",
-  sourcePrepBps: "sourcePrepPercent",
-};
-
-/** The posted input name of a value (amounts carry a `:number` suffix). */
-export function priceInputName(field: keyof PriceValues): string {
-  return isAmountField(field)
-    ? field
-    : PERCENT_INPUT_NAMES[field as keyof typeof PERCENT_INPUT_NAMES];
-}
-
-/** A scheduled time must be at least this far ahead. */
-export const MIN_SCHEDULE_LEAD_MS = 5 * 60 * 1000;
 
 // ---- Reads -------------------------------------------------------------------
 

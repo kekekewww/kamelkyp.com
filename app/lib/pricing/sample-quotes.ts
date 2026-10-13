@@ -61,6 +61,30 @@ export function isAmountField(field: keyof PriceValues): boolean {
   return field === "baseTwd" || field === "perSongAfterFiveTwd";
 }
 
+/** Percent inputs are posted as plain strings (no `:number` suffix). */
+export const PERCENT_INPUT_NAMES: Record<
+  Exclude<keyof PriceValues, "baseTwd" | "perSongAfterFiveTwd">,
+  string
+> = {
+  studentDiscountBps: "studentDiscountPercent",
+  rushBps: "rushPercent",
+  consultationBps: "consultationPercent",
+  sourcePrepBps: "sourcePrepPercent",
+};
+
+/**
+ * The form name of a value without its type suffix: amounts post as
+ * `baseTwd:number`, percentages as `studentDiscountPercent`. Issues use it.
+ */
+export function priceInputName(field: keyof PriceValues): string {
+  return isAmountField(field)
+    ? field
+    : PERCENT_INPUT_NAMES[field as keyof typeof PERCENT_INPUT_NAMES];
+}
+
+/** A scheduled price takes effect at least this far ahead. */
+export const MIN_SCHEDULE_LEAD_MS = 5 * 60 * 1000;
+
 export function isTransition(serviceId: ServiceId): boolean {
   return serviceId === "simple_transition" || serviceId === "edit_transition";
 }

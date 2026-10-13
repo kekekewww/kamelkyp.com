@@ -102,6 +102,7 @@ describe("PriceFields", () => {
     const html = renderInRouter(
       <PriceFields
         commissionLinked
+        commissionServiceId="full_mix"
         livePrice={{ baseTwd: 4321, versionId: "v-test" }}
         defaultMode="starting_from"
         defaultAmount={null}
@@ -110,7 +111,7 @@ describe("PriceFields", () => {
     );
     expect(html).toContain("NT$4,321");
     expect(html).toContain("v-test");
-    expect(html).toContain('href="/studio/services/pricing"');
+    expect(html).toContain('href="/studio/services/pricing/full_mix"');
     expect(html).toContain("Change in Pricing");
     expect(html).not.toContain('name="priceAmount:number"');
     expect(html).not.toContain('name="priceMode"');
