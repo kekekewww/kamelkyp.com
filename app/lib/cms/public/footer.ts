@@ -141,13 +141,40 @@ export const SAMPLE_MARKER =
 /** Characters a site path may not contain (`/\host` acts like `//host`). */
 export const UNSAFE_PATH_CHARACTER = /[\s\\\p{Cc}]/u;
 
-/** A site path (not protocol-relative), an `https:` or a `mailto:` URL. */
+/**
+ * An `https:` address a browser reads as another site. `https:/host`,
+ * `https:host` and `https:\host` parse as `https://host/`, but in an `href`
+ * on an `https:` page they resolve against the page (`/host`).
+ */
+export const HTTPS_ADDRESS = /^https:\/\/[^/\\]/i;
+
+const DOT_SEGMENT = /^(?:\.|%2e){1,2}$/i;
+
+/**
+ * True when the path part has a `.` or `..` segment (`%2e` included): the
+ * browser resolves it, so `/en/../studio` leaves the locale prefix.
+ */
+export function hasDotSegment(path: string): boolean {
+  const pathname = path.split(/[?#]/, 1)[0] ?? "";
+  return pathname.split("/").some((segment) => DOT_SEGMENT.test(segment));
+}
+
+/**
+ * A site path (not protocol-relative, no dot segment), an `https://` or a
+ * `mailto:` URL.
+ */
 export function isSafeFooterUrl(url: string): boolean {
   if (url.startsWith("/")) {
-    return !url.startsWith("//") && !UNSAFE_PATH_CHARACTER.test(url);
+    return (
+      !url.startsWith("//") &&
+      !UNSAFE_PATH_CHARACTER.test(url) &&
+      !hasDotSegment(url)
+    );
   }
   try {
-    return ["https:", "mailto:"].includes(new URL(url).protocol);
+    const { protocol } = new URL(url);
+    if (protocol === "https:") return HTTPS_ADDRESS.test(url);
+    return protocol === "mailto:";
   } catch {
     return false;
   }

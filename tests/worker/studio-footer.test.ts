@@ -325,6 +325,8 @@ describe("save-group", () => {
           { zh: "連結", en: "Link", url: "ftp://example.com" },
           { zh: "工作室", en: "Studio", url: "/studio/settings/footer" },
           { zh: "From NT$4,000", en: "Rates", url: "https://example.com" },
+          { zh: "繞路", en: "Detour", url: "/zh/../studio" },
+          { zh: "斜線", en: "Slash", url: "https:/example.com" },
         ],
       }),
     );
@@ -353,6 +355,12 @@ describe("save-group", () => {
           locale: "zh",
           code: "price_forbidden",
         }),
+        expect.objectContaining({
+          field: "links.3.url",
+          code: "invalid_url",
+          message: "Link to a public page of the site.",
+        }),
+        expect.objectContaining({ field: "links.4.url", code: "invalid_url" }),
       ]),
     );
 

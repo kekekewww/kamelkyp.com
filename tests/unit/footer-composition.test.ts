@@ -354,9 +354,37 @@ describe("footer URLs", () => {
       "http://plain.example",
       "javascript:alert(1)",
       "",
+      // Resolved against the page, these leave the locale prefix or the site.
+      "/../studio",
+      "/en/%2e%2e/studio",
+      "/zh/./../admin",
+      "https:/example.com",
+      "https:example.com",
+      "https:\\\\example.com",
     ]) {
       expect(isSafeFooterUrl(url), url).toBe(false);
     }
+  });
+
+  it("never links a dot-segment path out of the locale prefix", () => {
+    const groups = composeFooterGroups(
+      sources("en", {
+        groups: [
+          record({
+            id: "custom-dots",
+            label: "More",
+            links: [
+              { id: "dots", label: "Studio", url: "/../studio" },
+              { id: "slash", label: "Broken", url: "https:/example.com" },
+              { id: "works", label: "Works", url: "/works" },
+            ],
+          }),
+        ],
+      }),
+    );
+    expect(groups.find((group) => group.id === "custom-dots")?.links).toEqual([
+      { id: "works", label: "Works", url: "/en/works" },
+    ]);
   });
 
   it("localizes locale-less paths and keeps localized and absolute ones", () => {

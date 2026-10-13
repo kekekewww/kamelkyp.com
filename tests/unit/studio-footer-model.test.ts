@@ -49,6 +49,13 @@ describe("normalizeFooterUrl", () => {
     expect(normalizeFooterUrl("/english")).toBe("/english");
     expect(normalizeFooterUrl("http://x.example")).toBe("http://x.example");
   });
+
+  it("writes the https and mailto schemes in lower case", () => {
+    expect(normalizeFooterUrl("HTTPS://Example.com/A")).toBe(
+      "https://Example.com/A",
+    );
+    expect(normalizeFooterUrl("MailTo:a@b.co")).toBe("mailto:a@b.co");
+  });
 });
 
 describe("footerUrlProblem", () => {
@@ -67,6 +74,27 @@ describe("footerUrlProblem", () => {
     ["/admin", "Link to a public page of the site."],
     ["/admin?x=1", "Link to a public page of the site."],
     ["javascript:alert(1)", "Use an https:// address"],
+    // Dot segments climb out of the locale prefix: /en/../studio is /studio.
+    ["/../studio", "Link to a public page of the site."],
+    ["/%2e%2e/studio", "Link to a public page of the site."],
+    ["/.%2E/admin", "Link to a public page of the site."],
+    ["/works/../../api/x", "Link to a public page of the site."],
+    ["/works/./about", "Link to a public page of the site."],
+    // The site's own Studio, API and legacy admin as absolute addresses.
+    ["https://kamelkyp.com/studio", "Link to a public page of the site."],
+    [
+      "https://www.kamelkyp.com/admin?x=1",
+      "Link to a public page of the site.",
+    ],
+    [
+      "https://KAMELKYP.com/works/../api/x",
+      "Link to a public page of the site.",
+    ],
+    // A browser reads these as paths on this site, not as other sites.
+    ["https:/example.com", "Use an https:// address"],
+    ["https:example.com", "Use an https:// address"],
+    ["https:\\\\example.com", "Use an https:// address"],
+    ["https:///example.com", "Use an https:// address"],
   ])("refuses %s", (url, message) => {
     expect(footerUrlProblem(url)).toContain(message);
   });
@@ -76,10 +104,25 @@ describe("footerUrlProblem", () => {
     "/",
     "/services/software#contact",
     "/studios-page",
+    "/.well-known/security.txt",
+    "/works?next=/../studio",
     "https://example.com",
+    "https://kamelkyp.com/works",
     "mailto:a@b.co",
   ])("accepts %s", (url) => {
     expect(footerUrlProblem(url)).toBeNull();
+  });
+
+  it("refuses what normalizes to a dot segment or a Studio address", () => {
+    for (const raw of [
+      "/zh/../studio",
+      "/en/%2e%2e/api",
+      "kamelkyp.com/studio",
+    ]) {
+      expect(footerUrlProblem(normalizeFooterUrl(raw)), raw).toBe(
+        "Link to a public page of the site.",
+      );
+    }
   });
 });
 

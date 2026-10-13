@@ -11,6 +11,8 @@
 import { z } from "zod";
 import {
   type FooterSystemKey,
+  HTTPS_ADDRESS,
+  hasDotSegment,
   isFooterSystemKey,
   SAMPLE_MARKER,
   UNSAFE_PATH_CHARACTER,
@@ -33,6 +35,9 @@ export const PRICE_FIGURE =
 
 /** Site paths that are not public pages (the public site never links to them). */
 export const RESERVED_PATH_PREFIXES = ["/studio", "/api", "/admin"] as const;
+
+/** The site's own hosts: an absolute address there is judged like a site path. */
+const SITE_HOSTS: readonly string[] = ["kamelkyp.com", "www.kamelkyp.com"];
 
 export type FooterGroupKind = FooterSystemKey | "custom";
 
@@ -119,12 +124,14 @@ export function footerGroupKind(stableKey: string): FooterGroupKind | "social" {
 const BARE_EMAIL = /^[^\s@/:]+@[^\s@/:]+\.[^\s@/:]+$/;
 const BARE_HOST = /^[a-z0-9-]+(\.[a-z0-9-]+)+(:\d+)?([/?#]\S*)?$/i;
 const LOCALE_SEGMENT = /^\/(?:zh|en)(?=[/?#]|$)/;
+const SCHEME = /^(?:https|mailto):/i;
 
 /**
  * What the owner typed → what is stored: a bare email becomes `mailto:`, a
  * bare host gets `https://`, a localized site path loses its locale segment
- * (`/zh/works` → `/works`, `/en` → `/`). Anything else is only trimmed and
- * judged by {@link footerUrlProblem}.
+ * (`/zh/works` → `/works`, `/en` → `/`), `HTTPS:`/`MAILTO:` are written in
+ * lower case. Anything else is only trimmed and judged by
+ * {@link footerUrlProblem}.
  */
 export function normalizeFooterUrl(raw: string): string {
   const value = raw.trim();
@@ -136,7 +143,7 @@ export function normalizeFooterUrl(raw: string): string {
     const rest = value.slice(segment[0].length);
     return rest.startsWith("/") ? rest : `/${rest}`;
   }
-  return value;
+  return value.replace(SCHEME, (scheme) => scheme.toLowerCase());
 }
 
 const PATH_MESSAGE = "Link to a public page of the site.";
@@ -165,8 +172,11 @@ function urlIssue(
     return { code: "too_long", message: "This address is too long." };
   }
   if (url.startsWith("/")) {
+    // Dot segments are refused: the public footer prefixes the locale, and
+    // `/en/../studio` would resolve to the Studio.
     return url.startsWith("//") ||
       UNSAFE_PATH_CHARACTER.test(url) ||
+      hasDotSegment(url) ||
       isReservedPath(url)
       ? { code: "invalid_url", message: PATH_MESSAGE }
       : null;
@@ -182,7 +192,7 @@ function urlIssue(
       ? null
       : { code: "invalid_url", message: FORMAT_MESSAGE };
   }
-  if (parsed.protocol !== "https:") {
+  if (parsed.protocol !== "https:" || !HTTPS_ADDRESS.test(url)) {
     return { code: "invalid_url", message: FORMAT_MESSAGE };
   }
   if (parsed.username || parsed.password) {
@@ -190,6 +200,9 @@ function urlIssue(
       code: "invalid_url",
       message: "Remove the user name and password from the address.",
     };
+  }
+  if (SITE_HOSTS.includes(parsed.hostname) && isReservedPath(parsed.pathname)) {
+    return { code: "invalid_url", message: PATH_MESSAGE };
   }
   return null;
 }
