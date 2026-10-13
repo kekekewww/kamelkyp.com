@@ -138,28 +138,33 @@ contain the substring "Kamel" (the e2e test `getByRole("heading", { name:
 
 ## 3. Footer
 
-The footer stays data-driven: `listFooterGroups()` reads D1 `link_groups` /
-`links` and falls back to `getDefaultFooterGroups()` when D1 has no rows (the
-e2e database has no footer rows, so **tests see the defaults**). Desktop renders
-`<section>` columns inside `<nav aria-label="頁尾連結 | Footer links">`;
+The footer is CMS data, composed by `composeFooterGroups`
+(`app/lib/cms/public/footer.ts`) for the public layout, the Studio preview and
+the D1-unavailable fallback alike. Every group has a `link_groups` row
+(migration 0010 seeds the five built-in groups); its order, visibility and
+ZH/EN label are edited in KAMEL STUDIO → Settings → Footer, which also creates
+and deletes custom link groups. Built-in groups derive their links from other
+settings; code keeps only the site structure (paths) and UI-copy defaults.
+Desktop renders `<section>` columns inside `<nav aria-label="頁尾連結 | Footer links">`;
 mobile renders one `<details><summary>` accordion per group (summary ≥ 44 px).
+Hidden groups and groups without links are left out.
 
-### 3.1 New default groups — **5 groups** (count unchanged)
+### 3.1 Footer groups
 
-| # | `stable_key` | zh label | en label | Links (zh / en → target) |
+| # | `stable_key` | zh label | en label | Links come from (zh / en → target) |
 | --- | --- | --- | --- | --- |
-| 1 | `navigate` | 導覽 | Navigate | 作品 / Work → `/works`; 服務 / Services → `/services`; 關於 / About → `/about`; 文章 / Writing → `/writing` |
-| 2 | `services` | 服務 | Services | 混音 / Mixing → `/mixing`; 歌曲銜接 / Song Transition → `/song-transition`; 軟體與互動 / Software & Interactive → `/services/software`; 開始合作 / Start a project → `/commission` |
-| 3 | `work_resources` | 作品與資源 | Work & Resources | GitHub → `https://github.com/kekekewww`; 網站專案 / Website repository → `https://github.com/kekekewww/kamelkyp.com` |
-| 4 | `contact` | 聯絡 | Contact | `kevinyaungputra@gmail.com` → `mailto:` |
-| 5 | `legal` | 條款與網站 | Legal | 服務條款 / Terms → `/terms`; 隱私說明 / Privacy → `/privacy` |
+| 1 | `navigate` | 導覽 | Navigate | the header navigation (`site.navigation`, order and visibility): 作品 / Work → `/works`; 服務 / Services → `/services`; 關於 / About → `/about`; 文章 / Writing → `/writing` |
+| 2 | `services` | 服務 | Services | the service areas (`site.serviceAreas` names, defaults 混音 / Mixing → `/mixing`; 歌曲銜接 / Song Transition → `/song-transition`; 軟體與互動 / Software & Interactive → `/services/software`) plus 開始合作 / Start a project → `/commission` |
+| 3 | `work_resources` | 作品與資源 | Work & Resources | a seeded custom group (its own `links` rows): GitHub → `https://github.com/kekekewww`; 網站專案 / Website repository (seeded **hidden**, content-architecture §8 item 8) |
+| 4 | `find_me` | 社群 | Find Me | the social links switched to Shown (`social_links`); omitted when none is shown |
+| 5 | `contact` | 聯絡 | Contact | `brand.contactEmail` → `mailto:`; omitted when no address is set |
+| 6 | `legal` | 條款與網站 | Legal | 服務條款 / Terms → `/terms`; 隱私說明 / Privacy → `/privacy` (always shown) |
 
-- Changes vs today: `navigate` loses Home and "Other Work", gains Services,
-  About, Writing; `services` gains Software & Interactive and relabels the
-  commission link to 開始合作 / Start a project.
-- `find_me` label stays in `GROUP_LABELS` for D1-driven setups but is not in the
-  defaults (no social handles are known; none are invented).
-- Link count: 13 `<a>` in footer groups (test requires > 3).
+- Labels are the defaults (UI copy, seeded by 0010); the owner can rename every
+  group per locale. Custom groups keep their links in `links` (one address,
+  ZH/EN labels); stored site paths are localized on render (`/works` →
+  `/en/works`).
+- Seeded databases show 6 groups when a social link is shown (5 otherwise).
 
 ### 3.2 Footer lead and base
 

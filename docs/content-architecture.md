@@ -483,7 +483,7 @@ silently.
 | Software offerings (7), capabilities, About, hero roles/statement, service-area and page copy | published/settings, taken verbatim from the redesign files, never placeholder-flagged (**confirm**) |
 | Brand settings | `brandName: "Kamel"`, contact email from `CONTACT_EMAIL` flagged |
 | Site settings | titles/descriptions from `copy.ts`, availability `unspecified`, homepage counts 4/3/3, all sections visible |
-| Footer | code structure groups + D1 groups; `work_resources` defaults inserted only if `link_groups` is empty |
+| Footer | code structure groups + D1 groups; `work_resources` defaults inserted only if `link_groups` is empty; all groups have `link_groups` rows (0010); order, visibility and labels edited in Settings → Footer |
 | Prices, terms, cases, FX | untouched |
 
 ### 5.4 Verification queries (Kevin runs with `wrangler d1 execute kamelkyp-production --remote --command "…"`)

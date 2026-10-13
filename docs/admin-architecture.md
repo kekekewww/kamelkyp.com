@@ -121,7 +121,7 @@ Auth column: **A** = Access JWT verified (middleware + `withOwner`), **A+C** = A
 | `/studio/settings/brand` | BrandSettings | `{ value, revision }`, asset summaries | `save`, `confirm-contact-email`, `acknowledge-redesign-copy` | A / A+C | P4 |
 | `/studio/settings/site` | SiteSettings | `{ value, revision }` | `save` | A / A+C | P4 |
 | `/studio/settings/taxonomies` | terms per vocabulary (`?vocabulary=`) | terms with usage counts | `create`, `update`, `archive`, `delete`, `reorder` | A / A+C | P4 |
-| `/studio/settings/footer` | footer link groups (existing `LinkGroupEditor` logic) | groups | `save-group`, `delete-group`, `reorder` | A / A+C | I |
+| `/studio/settings/footer` | footer groups (order, visibility, labels) and custom link groups, live on save | `{ groups, sources }` (groups in footer order with paired links and fingerprints; navigation, service areas, shown social links, contact email) | `save-group` (create without `id`), `toggle-group`, `delete-group`, `reorder` (`ids` JSON) | A / A+C | WP3 |
 | `/studio/commissions` | Commissions inbox (port of the legacy case list): student-price and cleanup-due queues, then cases from `?status&service&cursor` (legacy names kept; invalid values ignored, an invalid cursor shows the newest page) | the six permanent case fields + runtime facts (cleanup date, student review pending, temporary records kept/removed), all pending student reviews, all due cleanups, service names | — | A | I |
 | `/studio/commissions/status` | resource route | — | `set-status` (`updateCaseStatus`; same status writes nothing) | A+C | I |
 | `/studio/commissions/student-discount` | resource route | — | `accept-student-price` / `reject-student-price` (`resolveStudentDiscount`) | A+C | I |
@@ -438,6 +438,7 @@ Section maps per type:
 | Media asset | preview, filename, type, size, dimensions/duration, public URL (copy), title/alt/caption ZH/EN, credit, focal point (images: click on an SVG overlay), preview range (audio), tags, usages list, delete |
 | Brand settings | **IDENTITY** brand name, tagline, roles, location · **HERO** statement, subtext, CTAs · **ABOUT** short bio, long bio, sections · **CAPABILITIES** · **CONTACT** email + "Confirm this address" · **ASSETS** portrait, logo, favicon, brand assets |
 | Site settings | **SEO** site title, site description, SEO description, OG image, default social image · **NAVIGATION** order/visibility · **FOOTER** message, copyright · **AVAILABILITY** · **SERVICE PAGES** service areas, services process, software page |
+| Footer | single list of groups in footer order (order controls, Shown/Hidden switch with Undo, Legal "Always shown"), one disclosure per group: label ZH/EN; built-in groups show where their links come from (Settings → Site, Social links, Settings → Brand, Terms); custom groups edit links (label ZH/EN, one address, shown) · **ADD A GROUP** · **PUBLIC FOOTER** preview ZH/EN |
 
 ### 4.5 Publication panel
 

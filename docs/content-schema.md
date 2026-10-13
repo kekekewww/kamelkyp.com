@@ -443,6 +443,49 @@ new published slug is deleted in the same batch (a live URL always beats a redir
 its redirects. Public detail loaders: `published_slug = ?` hit → render; else redirect hit → `301` to
 `/:lang/<section>/<current published_slug>`; else 404. The legacy `/other/*` → `/writing/*` redirect stays in code.
 
+### 2.11 Footer link groups (`link_groups`, `link_group_labels`, `links`)
+
+No draft state: a save is live (Studio → Settings → Footer, `/studio/settings/footer`). The legacy `social` group is
+ignored everywhere (it became `social_links`, §2.7). Spec: `docs/superpowers/specs/2026-10-13-wp3-footer.md`.
+
+| Column | Type | Rule |
+| --- | --- | --- |
+| `link_groups.id` | TEXT PK | built-in rows use the seed ids below; Studio-created groups a UUID |
+| `link_groups.stable_key` | TEXT UNIQUE | a built-in key, a legacy key (`work_resources`, `footer`, `workRepository`, …) or `custom-<uuid>` |
+| `link_groups.sort_order` | INTEGER | footer order of **every** group (a reorder stores index × 10) |
+| `link_groups.enabled` | INTEGER 0/1 | hidden groups never render (Legal is always shown) |
+| `link_group_labels.label` | TEXT, PK `(group_id, locale)` | required in ZH and EN on save, ≤ 60 |
+| `links` | one row per locale | custom groups only; a bilingual link is a `zh` and an `en` row with the same `sort_order`, `url` and `enabled` |
+
+Built-in groups (one row each, seeded by `0010`, §3.6); their links are derived at read time:
+
+| key | Seed id | Default label | Links come from | Hide | Delete |
+| --- | --- | --- | --- | --- | --- |
+| `navigate` | `seed-footer-navigate` | 導覽 / Navigate | `site.navigation.items` (order, visibility), header UI copy, `NAV_PATHS` | yes | no |
+| `services` | `seed-footer-services` | 服務 / Services | `site.serviceAreas[].name` (UI-copy default when empty) + "Start a project" → `/commission` | yes | no |
+| `find_me` | `seed-footer-find-me` | 社群 / Find Me | enabled `social_links` | yes | no |
+| `contact` | `seed-footer-contact` | 聯絡 / Contact | `brand.contactEmail` (omitted when empty) | yes | no |
+| `legal` | `seed-footer-legal` | 條款與網站 / Legal | `/terms`, `/privacy` | **no** | no |
+| any other key | row id | stored only | its `links` rows | yes | yes (≤ 20 custom groups) |
+
+- **Order.** Stored rows by `(sort_order, id)`; a built-in key without a row is placed first (Navigate, Services) or
+  last (Find Me, Contact, Legal). New custom groups go before the first Find Me / Contact / Legal group.
+- **Labels.** Built-in: the stored label, else the default. Custom: the stored label; a custom group without a label
+  in a locale is left out in that locale (no cross-locale fallback, never a raw key).
+- **Pairing.** The Studio pairs rows by `(group_id, sort_order)`: the i-th `zh` row (by id) with the i-th `en` row.
+  Leftovers (legacy one-locale rows) become one-locale links with a load note. Saving replaces a group's links with
+  complete pairs (`sort_order` = index × 10, fresh ids). A save from an older version (SHA-256 fingerprint of the
+  stored labels and link rows) answers 409.
+- **Addresses.** Stored after normalization: a bare email → `mailto:`, a bare host → `https://`, `/zh/…` or `/en/…`
+  → the locale-less path. Allowed: a site path (`/…`, not `//…`, no backslash, whitespace or control character, not
+  under `/studio`, `/api` or `/admin`), an `https:` URL without credentials, or a `mailto:` address; ≤ 2048. The
+  public footer localizes stored site paths (`/works` → `/en/works`).
+- **Labels refused on save:** a price figure (`price_forbidden`), a sample marker (`todo_content`), a personal-name
+  variant (`brand_name`, server-side brand guard). Link labels ≤ 80, at most 50 links per group.
+- **Public read.** `composeFooterGroups` (`app/lib/cms/public/footer.ts`) builds every footer (public layout, Studio
+  preview, D1-unavailable fallback). Only the composed groups enter the loader data, so labels of hidden groups and
+  hidden links never reach the served HTML. The footer never shows prices.
+
 ---
 
 ## 3. SQL migrations
@@ -457,6 +500,7 @@ Numbering follows `0004_admin_revision.sql`. All statements are idempotent (`IF 
 | `migrations/0007_cms_legacy_import.sql` | existing D1 works, posts, home showreel, media items, social link group → new tables |
 | `migrations/0008_cms_sample_drafts.sql` | file-based placeholder content → draft rows with `todo_content = 1` |
 | `migrations/0009_pricing_terms_studio.sql` | Studio Pricing and Terms: `price_version_publications`, `term_drafts`; inserts no rows (§3.5) |
+| `migrations/0010_cms_footer_groups.sql` | the five built-in footer groups get `link_groups` rows and default labels (§3.6) |
 
 ### 3.1 `0005_cms_schema.sql` (complete)
 
@@ -1399,6 +1443,30 @@ The new `getActivePriceRule` joins `price_version_publications`, so code from th
 against a database without it (the deploy workflows apply migrations before the Worker deploy; after pulling, run
 `npx wrangler d1 migrations apply kamelkyp-com --local --config wrangler.base.jsonc` for hand-run dev servers).
 
+### 3.6 `0010_cms_footer_groups.sql`
+
+Footer group placement becomes CMS data (§2.11). Additive and idempotent: `INSERT OR IGNORE` only (on the
+`stable_key` UNIQUE constraint and the `link_group_labels` primary key), nothing is updated or deleted, and it reads
+only `link_groups`. It inserts the five built-in rows (`seed-footer-navigate`, `-services`, `-find-me`, `-contact`,
+`-legal`) around the existing non-social groups: Navigate at `MIN - 20`, Services at `MIN - 10`, Find Me at
+`MAX + 10`, Contact at `MAX + 20`, Legal at `MAX + 30` (`MIN`/`MAX` default to 30 when there is no other group),
+then the default labels of §2.11. No links, handles or addresses are added.
+
+Resulting positions: on an empty-then-0007 database (local, loopback e2e, worker tests) navigate 10, services 20,
+`work_resources` 30, find_me 40, contact 50, legal 60; with legacy `admin-*` groups at 100: navigate 80, services 90,
+legacy groups 100, find_me 110, contact 120, legal 130. Either way the public order equals the order before 0010.
+The Studio repeats the same statements (`ensureFooterSystemGroupStatements`) at the start of a write batch when a
+built-in row is missing. Verification query:
+
+```sql
+SELECT g.sort_order, g.id, g.stable_key, g.enabled, zh.label AS zh, en.label AS en,
+       (SELECT COUNT(*) FROM links l WHERE l.group_id = g.id) AS link_rows
+FROM link_groups g
+LEFT JOIN link_group_labels zh ON zh.group_id = g.id AND zh.locale = 'zh'
+LEFT JOIN link_group_labels en ON en.group_id = g.id AND en.locale = 'en'
+ORDER BY g.sort_order, g.id;
+```
+
 ---
 
 ## 4. Typed models (zod shapes)
@@ -1634,6 +1702,19 @@ saveTermDraft(db, { documentId, locale, clauses, expectedRevision, now }): Promi
 publishTermDraft(db, { documentId, locale, revision, now }): Promise<{ versionId; versionNumber; effectiveFrom }>;
 discardTermDraft(db, { documentId, locale, revision }): Promise<void>;
 handleTermEditorAction({ db, documentId, locale, formData, intent, now });              // save | publish-term-version | discard-draft
+
+// footer.server.ts (WP3; Studio → Settings → Footer, §2.11)
+loadFooterScreen(db): Promise<{ groups: StudioFooterGroup[]; sources: FooterScreenSources }>; // footer order + link sources
+listStudioFooterGroups(db): Promise<StudioFooterGroup[]>;
+saveFooterGroup(db, draft: FooterGroupDraft): Promise<StudioFooterGroup>;   // create when no id; fingerprint check on update
+setFooterGroupEnabled(db, id: string, enabled: boolean): Promise<StudioFooterGroup>; // Legal → 409
+deleteFooterGroup(db, id: string): Promise<void>;                             // custom groups only
+reorderFooterGroups(db, ids: string[]): Promise<void>;                        // full list or 409
+ensureFooterSystemGroupStatements(db): D1PreparedStatement[];                 // the statements of 0010
+footerGroupFingerprint(label: LocalizedText, rows: FooterLinkRow[]): Promise<string>;
+parseFooterGroupForm(formData): FooterGroupDraft;
+handleFooterAction({ db, formData, intent, now });  // save-group, toggle-group, delete-group, reorder
+// public/footer.ts (client-safe): composeFooterGroups(sources: FooterSources): FooterGroup[]
 ```
 
 ### 5.4 Public reads (foundation builds, P5 owns after foundation; `app/lib/cms/public/*.server.ts`)
@@ -1704,7 +1785,7 @@ Status legend: **Pub** = published by the migration, **Draft/TODO** = `status='d
 | `app/routes/public/services-index.tsx` + `app/components/home/services-overview.tsx` | 3 area blurbs | `site.serviceAreas` | Settings | |
 | | 4 process steps | `site.servicesPage.process` | Settings | |
 | `app/routes/public/home.tsx` | contact band body | `site.homepage.contactBandBody` | Settings | |
-| `app/lib/content/footer-repository.server.ts` | default groups | navigate/services/legal: code (site structure); work_resources: `link_groups` seed when empty; contact: computed from `brand.contactEmail` | | email label/url no longer hard-coded |
+| `app/lib/content/footer-repository.server.ts` (removed) | default groups | structure and defaults in `app/lib/cms/public/footer.ts`; group placement in `link_groups` (0010); work_resources: `link_groups` seed when empty; contact: computed from `brand.contactEmail` | Settings → Footer | email label/url no longer hard-coded |
 
 ### 6.2 Existing D1 content (production, entered through `/admin`)
 
