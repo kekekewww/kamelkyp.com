@@ -41,13 +41,22 @@ const SITE_HOSTS: readonly string[] = ["kamelkyp.com", "www.kamelkyp.com"];
 
 export type FooterGroupKind = FooterSystemKey | "custom";
 
+/** One stored `links` row of a pair, as the public footer reads it. */
+export type StoredFooterLinkRow = { id: string; url: string; enabled: boolean };
+
 export type StudioFooterLink = {
   /** First row id of the pair (client key only). */
   key: string;
-  /** The stored row id per locale (the public footer's link ids). */
-  rowIds: Partial<Record<Locale, string>>;
+  /**
+   * The stored row per locale. The public footer reads each locale's own row
+   * (its id, address and flag), so the preview does too, even when a legacy
+   * pair disagrees.
+   */
+  rows: Partial<Record<Locale, StoredFooterLinkRow>>;
   label: LocalizedText;
+  /** The address the editor shows and a save writes to both rows (ZH first). */
   url: string;
+  /** The flag the editor shows and a save writes to both rows (ZH first). */
   enabled: boolean;
   /** Load notes; they never block loading. */
   notes: string[];
@@ -333,11 +342,16 @@ export function pairFooterLinkRows(
           "Shown in one language only; saving applies one setting to both.",
         );
       }
+      const stored = ({ id, url, enabled }: FooterLinkRow) => ({
+        id,
+        url,
+        enabled,
+      });
       links.push({
         key: first.id,
-        rowIds: {
-          ...(zhRow ? { zh: zhRow.id } : {}),
-          ...(enRow ? { en: enRow.id } : {}),
+        rows: {
+          ...(zhRow ? { zh: stored(zhRow) } : {}),
+          ...(enRow ? { en: stored(enRow) } : {}),
         },
         label: { zh: zhRow?.label ?? "", en: enRow?.label ?? "" },
         url: first.url,

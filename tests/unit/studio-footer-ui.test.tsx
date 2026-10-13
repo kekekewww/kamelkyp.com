@@ -63,7 +63,10 @@ function link(
 ): StudioFooterLink {
   return {
     key,
-    rowIds: { zh: `${key}-zh`, en: `${key}-en` },
+    rows: {
+      zh: { id: `${key}-zh`, url, enabled },
+      en: { id: `${key}-en`, url, enabled },
+    },
     label,
     url,
     enabled,

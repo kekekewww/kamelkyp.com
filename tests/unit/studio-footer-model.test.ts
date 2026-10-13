@@ -4,13 +4,21 @@
  */
 import { describe, expect, it } from "vitest";
 import {
+  isLeftOut,
+  localizeRecords,
+  shownLinksSummary,
+} from "../../app/components/studio/footer/footer-model";
+import { composeFooterGroups } from "../../app/lib/cms/public/footer";
+import {
   type FooterGroupDraft,
   type FooterLinkRow,
+  type FooterScreenSources,
   footerGroupIssues,
   footerGroupKind,
   footerUrlProblem,
   normalizeFooterUrl,
   pairFooterLinkRows,
+  type StudioFooterGroup,
 } from "../../app/lib/cms/schemas/footer";
 
 const text = (zh: string, en = zh) => ({ zh, en });
@@ -286,10 +294,16 @@ describe("pairFooterLinkRows", () => {
       ["a-zh", { zh: "第一", en: "First" }, []],
       ["b-zh", { zh: "第二", en: "Second" }, []],
     ]);
-    // The public footer's link ids are the per-locale row ids.
-    expect(links.map((item) => item.rowIds)).toEqual([
-      { zh: "a-zh", en: "a-en" },
-      { zh: "b-zh", en: "b-en" },
+    // The public footer reads each locale's own row (id, address, flag).
+    expect(links.map((item) => item.rows)).toEqual([
+      {
+        zh: { id: "a-zh", url: "https://example.com/a", enabled: true },
+        en: { id: "a-en", url: "https://example.com/a", enabled: true },
+      },
+      {
+        zh: { id: "b-zh", url: "https://example.com/a", enabled: true },
+        en: { id: "b-en", url: "https://example.com/a", enabled: true },
+      },
     ]);
   });
 
@@ -297,10 +311,12 @@ describe("pairFooterLinkRows", () => {
     const [only] = pairFooterLinkRows([row("x-zh", "zh", "只有中文", 0)]);
     expect(only?.label).toEqual({ zh: "只有中文", en: "" });
     expect(only?.notes).toEqual(["EN label missing; add it before saving."]);
-    expect(only?.rowIds).toEqual({ zh: "x-zh" });
+    expect(only?.rows).toEqual({
+      zh: { id: "x-zh", url: "https://example.com/a", enabled: true },
+    });
   });
 
-  it("keeps the ZH address and flag when the pair disagrees", () => {
+  it("edits the ZH address and flag but keeps each stored row when the pair disagrees", () => {
     const [pair] = pairFooterLinkRows([
       row("x-zh", "zh", "甲", 0, { url: "https://example.com/zh" }),
       row("x-en", "en", "A", 0, {
@@ -310,6 +326,10 @@ describe("pairFooterLinkRows", () => {
     ]);
     expect(pair?.url).toBe("https://example.com/zh");
     expect(pair?.enabled).toBe(true);
+    expect(pair?.rows).toEqual({
+      zh: { id: "x-zh", url: "https://example.com/zh", enabled: true },
+      en: { id: "x-en", url: "https://example.com/en", enabled: false },
+    });
     expect(pair?.notes).toEqual([
       "ZH and EN pointed to different addresses; saving keeps the ZH address.",
       "Shown in one language only; saving applies one setting to both.",
@@ -322,6 +342,90 @@ describe("pairFooterLinkRows", () => {
       row("x2", "zh", "二", 0),
     ]);
     expect(links.map((item) => item.key)).toEqual(["x1", "x2"]);
+  });
+});
+
+describe("footer screen model with a legacy pair that disagrees", () => {
+  // ZH shown at /zh, EN hidden at /en; EN shown with an unsafe address.
+  const links = pairFooterLinkRows([
+    {
+      id: "a-zh",
+      locale: "zh",
+      label: "甲",
+      url: "https://example.com/zh",
+      sortOrder: 0,
+      enabled: true,
+    },
+    {
+      id: "a-en",
+      locale: "en",
+      label: "A",
+      url: "https://example.com/en",
+      sortOrder: 0,
+      enabled: false,
+    },
+    {
+      id: "b-zh",
+      locale: "zh",
+      label: "乙",
+      url: "https://example.com/b",
+      sortOrder: 10,
+      enabled: false,
+    },
+    {
+      id: "b-en",
+      locale: "en",
+      label: "B",
+      url: "http://example.com/b",
+      sortOrder: 10,
+      enabled: true,
+    },
+  ]);
+  const group: StudioFooterGroup = {
+    id: "legacy",
+    key: "legacy",
+    kind: "custom",
+    stored: true,
+    label: text("舊連結", "Old links"),
+    enabled: true,
+    hideable: true,
+    links,
+    fingerprint: "f".repeat(64),
+  };
+  const sources: FooterScreenSources = {
+    navigation: [],
+    serviceAreas: [],
+    socialLinks: [],
+    contactEmail: "",
+  };
+  const preview = (locale: "zh" | "en") =>
+    composeFooterGroups(localizeRecords([group], sources, locale)).find(
+      (item) => item.id === "legacy",
+    )?.links;
+
+  it("previews each locale from its own row, as the public footer does", () => {
+    expect(preview("zh")).toEqual([
+      { id: "a-zh", label: "甲", url: "https://example.com/zh" },
+    ]);
+    // EN: A is hidden in EN and B's EN address is not safe.
+    expect(preview("en")).toBeUndefined();
+  });
+
+  it("counts a link shown in either language", () => {
+    expect(shownLinksSummary(group)).toBe("2 of 2 links shown");
+    expect(isLeftOut(group, sources)).toBe(false);
+    const hidden = {
+      ...group,
+      links: links.map((link) => ({
+        ...link,
+        rows: {
+          zh: link.rows.zh && { ...link.rows.zh, enabled: false },
+          en: link.rows.en && { ...link.rows.en, enabled: false },
+        },
+      })),
+    };
+    expect(shownLinksSummary(hidden)).toBe("0 of 2 links shown");
+    expect(isLeftOut(hidden, sources)).toBe(true);
   });
 });
 

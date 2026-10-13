@@ -315,7 +315,7 @@ export function FooterGroupEditor({
             itemLabel={(index) => `link ${index + 1}`}
             create={() => ({
               key: "",
-              rowIds: {},
+              rows: {},
               label: { zh: "", en: "" },
               url: "",
               enabled: true,

@@ -15,6 +15,7 @@ import type {
   FooterGroupKind,
   FooterScreenSources,
   StudioFooterGroup,
+  StudioFooterLink,
 } from "../../../lib/cms/schemas/footer";
 import type { Locale } from "../../../lib/cms/types";
 
@@ -84,9 +85,18 @@ export function defaultLabelHint(key: string): string {
   return ` Default: ${zh} / ${en}.`;
 }
 
+/**
+ * Whether the public footer shows the link in at least one language: each
+ * locale reads its own stored row (a legacy pair may disagree).
+ */
+export function isLinkShown(link: StudioFooterLink): boolean {
+  const rows = Object.values(link.rows);
+  return rows.length > 0 ? rows.some((row) => row?.enabled) : link.enabled;
+}
+
 /** "N of M links shown" for a custom group. */
 export function shownLinksSummary(group: StudioFooterGroup): string {
-  const shown = group.links.filter((link) => link.enabled).length;
+  const shown = group.links.filter(isLinkShown).length;
   const total = group.links.length;
   return `${shown} of ${total} ${total === 1 ? "link" : "links"} shown`;
 }
@@ -102,7 +112,7 @@ export function isLeftOut(
   if (!group.enabled) return false;
   switch (group.kind) {
     case "custom":
-      return !group.links.some((link) => link.enabled);
+      return !group.links.some(isLinkShown);
     case "find_me":
       return sources.socialLinks.length === 0;
     case "contact":
@@ -114,8 +124,9 @@ export function isLeftOut(
 
 /**
  * The preview's `composeFooterGroups` input for one locale, as
- * `getPublicSiteContext` builds it: stored labels, the shown link pairs that
- * have a label in this locale (with that locale's row id), and the social
+ * `getPublicSiteContext` builds it: stored labels, the links whose row in
+ * this locale is shown and has a label (with that row's id and address, so a
+ * legacy pair that disagrees previews like the live footer), and the social
  * links with a label in this locale and a safe address. Groups keep the
  * loader's footer order.
  */
@@ -134,9 +145,9 @@ export function localizeRecords(
       label: group.label[locale],
       links: group.enabled
         ? group.links.flatMap((link) => {
-            const id = link.rowIds[locale];
-            return link.enabled && id && link.label[locale].trim()
-              ? [{ id, label: link.label[locale], url: link.url }]
+            const row = link.rows[locale];
+            return row?.enabled && link.label[locale].trim()
+              ? [{ id: row.id, label: link.label[locale], url: row.url }]
               : [];
           })
         : [],

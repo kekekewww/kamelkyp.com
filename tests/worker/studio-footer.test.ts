@@ -753,6 +753,17 @@ describe("other intents and sources", () => {
       env.DB.prepare(
         "INSERT INTO links (id, group_id, locale, label, url, sort_order, enabled) VALUES ('legacy-zh-only', 'seed-work-resources', 'zh', '只有中文', 'https://example.com/zh-only', 5, 1)",
       ),
+      // Legacy pairs whose rows disagree: the public footer reads each
+      // locale's own row (flag and address), so the preview must too.
+      env.DB.prepare(
+        `INSERT INTO links (id, group_id, locale, label, url, sort_order, enabled) VALUES
+           ('flag-zh', 'seed-work-resources', 'zh', '中文才顯示', 'https://example.com/flag', 6, 1),
+           ('flag-en', 'seed-work-resources', 'en', 'Hidden in EN', 'https://example.com/flag', 6, 0),
+           ('unsafe-zh', 'seed-work-resources', 'zh', '安全網址', 'https://example.com/safe', 7, 1),
+           ('unsafe-en', 'seed-work-resources', 'en', 'Unsafe in EN', 'http://example.com/unsafe', 7, 1),
+           ('split-zh', 'seed-work-resources', 'zh', '中文網址', 'https://example.com/zh-address', 8, 1),
+           ('split-en', 'seed-work-resources', 'en', 'EN address', 'https://example.com/en-address', 8, 1)`,
+      ),
       env.DB.prepare(
         "INSERT INTO link_groups (id, stable_key, sort_order, enabled) VALUES ('hidden-custom', 'hidden_custom', 35, 0)",
       ),
@@ -782,7 +793,22 @@ describe("other intents and sources", () => {
       (await publicFooter("zh"))
         .find((item) => item.id === "seed-work-resources")
         ?.links.map((link) => link.label),
-    ).toContain("只有中文");
+    ).toEqual(
+      expect.arrayContaining([
+        "只有中文",
+        "中文才顯示",
+        "安全網址",
+        "中文網址",
+      ]),
+    );
+    const english = (await publicFooter("en")).find(
+      (item) => item.id === "seed-work-resources",
+    )?.links;
+    expect(english?.map((link) => link.label)).not.toContain("Hidden in EN");
+    expect(english?.map((link) => link.label)).not.toContain("Unsafe in EN");
+    expect(english?.find((link) => link.label === "EN address")?.url).toBe(
+      "https://example.com/en-address",
+    );
   });
 
   it("tells the social links screen how the Find Me group is set", async () => {
