@@ -16,5 +16,5 @@ export const action = withOwnerMutation(handleSocialAction);
 
 export default function SocialLinksRoute() {
   const data = useLoaderData<typeof loader>();
-  return <SocialLinks links={data.links} />;
+  return <SocialLinks links={data.links} findMe={data.findMe} />;
 }

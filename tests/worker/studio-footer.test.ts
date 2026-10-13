@@ -12,6 +12,7 @@ import {
   handleFooterAction,
   loadFooterScreen,
 } from "../../app/lib/cms/repositories/footer.server";
+import { loadSocialLinks } from "../../app/lib/cms/repositories/social-links.server";
 import type { StudioFooterGroup } from "../../app/lib/cms/schemas/footer";
 import type { Locale } from "../../app/lib/cms/types";
 import { createTestEnv } from "../helpers/test-env";
@@ -774,6 +775,32 @@ describe("other intents and sources", () => {
         .find((item) => item.id === "seed-work-resources")
         ?.links.map((link) => link.label),
     ).toContain("只有中文");
+  });
+
+  it("tells the social links screen how the Find Me group is set", async () => {
+    expect((await loadSocialLinks({ db: env.DB })).findMe).toEqual({
+      label: { zh: "社群", en: "Find Me" },
+      enabled: true,
+    });
+    await env.DB.batch([
+      env.DB.prepare(
+        "UPDATE link_group_labels SET label = 'Elsewhere' WHERE group_id = 'seed-footer-find-me' AND locale = 'en'",
+      ),
+      env.DB.prepare(
+        "UPDATE link_groups SET enabled = 0 WHERE id = 'seed-footer-find-me'",
+      ),
+    ]);
+    expect((await loadSocialLinks({ db: env.DB })).findMe).toEqual({
+      label: { zh: "社群", en: "Elsewhere" },
+      enabled: false,
+    });
+    await env.DB.prepare(
+      "DELETE FROM link_groups WHERE id = 'seed-footer-find-me'",
+    ).run();
+    expect((await loadSocialLinks({ db: env.DB })).findMe).toEqual({
+      label: { zh: "社群", en: "Find Me" },
+      enabled: true,
+    });
   });
 
   it("never sends a hidden group's label to the page", async () => {
