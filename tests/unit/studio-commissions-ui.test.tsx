@@ -9,6 +9,7 @@ import { createRoutesStub } from "react-router";
 import { describe, expect, it } from "vitest";
 import { CleanupDialog } from "../../app/components/studio/commissions/cleanup-dialog";
 import { CommissionsInbox } from "../../app/components/studio/commissions/commissions-inbox";
+import { cleanupFeedback } from "../../app/components/studio/commissions/needs-action";
 import { useCommissionAction } from "../../app/components/studio/commissions/use-commission-action";
 import {
   StudioSessionProvider,
@@ -438,5 +439,66 @@ describe("CleanupDialog", () => {
     expect(html).toContain("Check all three to continue.");
     expect(html).toContain("The permanent record stays");
     expect(html).not.toMatch(/href="https?:\/\//);
+  });
+});
+
+describe("cleanupFeedback", () => {
+  const sent = { intent: "confirm-cleanup", caseId: ID_4 };
+  const failed = {
+    ok: false as const,
+    code: "cleanup_gateway_failed",
+    message:
+      "Nothing was deleted: the Apps Script ledger did not confirm. Try again in a moment.",
+  };
+
+  it("shows a failure in the open dialog, so Retry is one click", () => {
+    expect(cleanupFeedback(failed, sent, ID_4)).toEqual({
+      close: false,
+      inlineError: failed.message,
+      toast: null,
+    });
+  });
+
+  it("toasts a failure that arrives after the dialog was closed", () => {
+    for (const openCaseId of [null, ID_5]) {
+      expect(cleanupFeedback(failed, sent, openCaseId)).toEqual({
+        close: false,
+        inlineError: null,
+        toast: { tone: "error", message: failed.message },
+      });
+    }
+  });
+
+  it("closes only the dialog of the confirmed case", () => {
+    const done = cleanupFeedback(
+      { ok: true, intent: "confirm-cleanup", caseId: ID_4 },
+      sent,
+      ID_4,
+    );
+    expect(done.close).toBe(true);
+    expect(done.toast?.message).toBe(
+      `Temporary records removed for ${ID_4}. The permanent record stays.`,
+    );
+    expect(
+      cleanupFeedback(
+        { ok: true, intent: "confirm-cleanup", caseId: ID_4 },
+        sent,
+        ID_5,
+      ).close,
+    ).toBe(false);
+    const stale = cleanupFeedback(
+      {
+        ok: false,
+        code: "cleanup_not_due",
+        message: "Cleanup is not due for this case.",
+      },
+      sent,
+      ID_4,
+    );
+    expect(stale).toEqual({
+      close: true,
+      inlineError: null,
+      toast: { tone: "error", message: "Cleanup is not due for this case." },
+    });
   });
 });

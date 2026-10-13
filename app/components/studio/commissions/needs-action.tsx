@@ -11,7 +11,7 @@ import type {
   CleanupDueItem,
   CommissionsModel,
 } from "../../../lib/cms/schemas/commission";
-import { useStudioSession, useToast } from "../ui";
+import { type ToastInput, useStudioSession, useToast } from "../ui";
 import { CaseIdText, ServiceNameText } from "./case-row";
 import { CaseMarkerBadge, CaseStatusBadge } from "./case-status-badge";
 import { CleanupDialog } from "./cleanup-dialog";
@@ -168,6 +168,47 @@ function CleanupQueueItem({
   );
 }
 
+export type CleanupFeedback = {
+  /** Close the dialog; focus then moves to the queue heading. */
+  close: boolean;
+  /** Shown in the open dialog, so Retry is one click. */
+  inlineError: string | null;
+  toast: ToastInput | null;
+};
+
+/**
+ * What a finished cleanup shows. `openCaseId` is the case whose dialog is
+ * open now (null when closed): Cancel and Escape stay usable while the
+ * request runs, so a result can arrive after the dialog closed (or while it
+ * shows another case). Such a failure becomes a toast, never a message in a
+ * closed dialog.
+ */
+export function cleanupFeedback(
+  result: CommissionResult,
+  sent: SentFields,
+  openCaseId: string | null,
+): CleanupFeedback {
+  const inDialog = openCaseId !== null && openCaseId === sent.caseId;
+  if (result.ok) {
+    return {
+      close: inDialog,
+      inlineError: null,
+      toast: {
+        message: `Temporary records removed for ${sent.caseId}. The permanent record stays.`,
+      },
+    };
+  }
+  // A stale queue is being refreshed: close and report.
+  if (STALE_PAGE_CODES.has(result.code) || !inDialog) {
+    return {
+      close: inDialog,
+      inlineError: null,
+      toast: { tone: "error", message: result.message },
+    };
+  }
+  return { close: false, inlineError: result.message, toast: null };
+}
+
 function CleanupQueue({ data }: { data: CommissionsModel }) {
   const toast = useToast();
   const session = useStudioSession();
@@ -188,27 +229,18 @@ function CleanupQueue({ data }: { data: CommissionsModel }) {
     target?.focus();
   };
 
+  const openCaseId = dialog?.open ? dialog.item.caseId : null;
   const confirm = useCommissionAction(
     "/studio/commissions/cleanup",
     (result: CommissionResult, sent: SentFields) => {
-      if (result.ok) {
+      const feedback = cleanupFeedback(result, sent, openCaseId);
+      if (feedback.close) {
         focusAfterClose.current = heading.current;
         setDialog((current) => (current ? { ...current, open: false } : null));
         setError(null);
-        toast.show({
-          message: `Temporary records removed for ${sent.caseId}. The permanent record stays.`,
-        });
-        return;
       }
-      if (STALE_PAGE_CODES.has(result.code)) {
-        // The queue is out of date: it is being refreshed.
-        focusAfterClose.current = heading.current;
-        setDialog((current) => (current ? { ...current, open: false } : null));
-        setError(null);
-        toast.show({ tone: "error", message: result.message });
-        return;
-      }
-      setError(result.message);
+      if (feedback.inlineError) setError(feedback.inlineError);
+      if (feedback.toast) toast.show(feedback.toast);
     },
   );
 
