@@ -341,6 +341,101 @@ test.describe("terms", () => {
     expect(await livePart(page)).toBe(before);
   });
 
+  test("outline marks and field errors follow the rows on screen; nothing is saved", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await openStudio(page, "/studio/services/terms/common/zh");
+    await page.locator(".studio-term-start__summary").click();
+    await page.getByRole("button", { name: "Start blank" }).click();
+    const rows = page.locator(".studio-list-editor__row");
+    await expect(rows).toHaveCount(0);
+    const deposit = page
+      .locator(".studio-term-outline__item")
+      .filter({ has: page.locator("code", { hasText: /^deposit$/ }) });
+    await expect(deposit.locator(".studio-term-outline__mark")).toHaveText(
+      "missing",
+    );
+
+    // A typed key counts at once, before any save.
+    const add = page.getByRole("button", { name: "Add clause" });
+    await add.click();
+    await page.locator('input[name="clauses.0.key"]').fill("deposit");
+    await expect(deposit.locator(".studio-term-outline__mark")).toHaveText(
+      "present",
+    );
+
+    // An empty row before a malformed key: the error lands on the bad row.
+    await add.click();
+    await add.click();
+    await expect(rows).toHaveCount(3);
+    const badKey = page.locator('input[name="clauses.2.key"]');
+    await badKey.fill("Bad Key");
+    await page
+      .locator(".studio-topbar")
+      .getByRole("button", { name: "Save", exact: true })
+      .click();
+    await expect(badKey).toHaveAttribute("aria-invalid", "true");
+    await expect(
+      page.locator('input[name="clauses.1.key"]'),
+    ).not.toHaveAttribute("aria-invalid", "true");
+
+    await page
+      .locator(".studio-topbar__crumb")
+      .getByRole("link", { name: "Terms" })
+      .click();
+    const dialog = page.getByRole("dialog", { name: "Leave without saving?" });
+    await dialog.getByRole("button", { name: "Discard" }).click();
+    await expect(page).toHaveURL(new RegExp(`${TERMS_INDEX}$`));
+  });
+
+  test("a stale save shows Reload latest, which clears the banner", async ({
+    page,
+    context,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await openStudio(page, PRIVACY_EN);
+    await discardDraftIfAny(page);
+    const other = await context.newPage();
+    await other.setViewportSize({ width: 1440, height: 900 });
+    await openStudio(other, PRIVACY_EN);
+
+    const addClause = async (target: Page, key: string) => {
+      const rows = target.locator(".studio-list-editor__row");
+      const count = await rows.count();
+      await target.getByRole("button", { name: "Add clause" }).click();
+      await target.locator(`input[name="clauses.${count}.key"]`).fill(key);
+      await target
+        .locator(`input[name="clauses.${count}.title"]`)
+        .fill(`Title ${key}`);
+      await target
+        .locator(`textarea[name="clauses.${count}.text"]`)
+        .fill("Draft text written by the end-to-end test.");
+    };
+
+    // This tab saves first; the other tab's save is then stale.
+    await addClause(page, `stale_a_${token}`);
+    await page.keyboard.press("ControlOrMeta+s");
+    await expect(page.locator(".studio-topbar .studio-save-state")).toHaveText(
+      /SAVED \d\d:\d\d/,
+    );
+    await addClause(other, `stale_b_${token}`);
+    await other.keyboard.press("ControlOrMeta+s");
+    const banner = other
+      .locator(".studio-kit-banner")
+      .filter({ hasText: "Your edits are not saved." });
+    await expect(banner).toBeVisible();
+    await banner.getByRole("button", { name: "Reload latest" }).click();
+    await expect(other.locator(`input[value="stale_a_${token}"]`)).toHaveCount(
+      1,
+    );
+    await expect(banner).toHaveCount(0);
+    await other.close();
+
+    await openStudio(page, PRIVACY_EN);
+    await discardDraftIfAny(page);
+  });
+
   test("the leave guard covers typed edits and list changes", async ({
     page,
   }) => {

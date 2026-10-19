@@ -7,6 +7,10 @@
  *   public page for this editor's language (nothing is written).
  * - Publish needs the legal-review checkbox and no blocking issue; the
  *   server checks both again. Publishing takes effect at once.
+ * - The checklist and the expected-outline marks follow the rows on screen
+ *   (empty rows count, as the field errors do). The personal-name warning
+ *   is server-only: it is shown for the saved text, and the server holds
+ *   back a publish of edited text that carries one until it was shown.
  * - Adding, removing or moving a clause changes no input event, so a
  *   MutationObserver marks the form dirty; "Start over" options, "Use as
  *   starting point" and a backup restore rebuild the clause list.
@@ -72,6 +76,34 @@ type TermActionData = ActionData & {
 };
 
 const isError = (issue: ValidationIssue) => issue.severity === "error";
+
+/** Issues only the server can compute (its personal-name list). */
+const isServerOnly = (issue: ValidationIssue) => issue.code === "brand_name";
+
+/**
+ * A server issue on stored clause `i` belongs to editor row `rows[i]`: the
+ * saved draft has no empty rows, the form on screen may.
+ */
+function toEditorRow(
+  issue: ValidationIssue,
+  rows: readonly number[],
+): ValidationIssue {
+  const match = /^clauses\.(\d+)(\..+)?$/.exec(issue.field);
+  if (!match) return issue;
+  const row = rows[Number(match[1])];
+  return row === undefined
+    ? issue
+    : { ...issue, field: `clauses.${row}${match[2] ?? ""}` };
+}
+
+/** What the last check of the form on screen found. */
+type FormCheck = {
+  issues: ValidationIssue[];
+  /** Keys typed in the clause rows. */
+  keys: string[];
+  /** Editor row of each non-empty clause. */
+  rows: number[];
+};
 
 /** The preview column exists from 1200 px (admin-architecture §4.4). */
 const previewWide = () =>
@@ -192,9 +224,10 @@ export function TermEditor({ data }: { data: TermEditorData }) {
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [legalKey, setLegalKey] = useState(0);
   const [legalError, setLegalError] = useState<string | null>(null);
-  const [clientIssues, setClientIssues] = useState<ValidationIssue[] | null>(
-    null,
-  );
+  const [formCheck, setFormCheck] = useState<FormCheck | null>(null);
+  // 409 results whose "Reload latest" was clicked (fetcher data outlives a
+  // reload).
+  const [dismissed, setDismissed] = useState<unknown>(null);
   const [leaveTo, setLeaveTo] = useState<string | null>(null);
   const saveAndLeave = useRef<string | null>(null);
   const legalRef = useRef<HTMLInputElement>(null);
@@ -220,17 +253,24 @@ export function TermEditor({ data }: { data: TermEditorData }) {
   const check = useCallback(() => {
     const form = editor.formRef.current;
     if (!form) return;
-    const parsed = parseDraftClauses(readDraftClauseRows(new FormData(form)));
-    setClientIssues(
-      parsed.ok
-        ? validateTermClausesForPublish(parsed.clauses, {
-            live: live?.clauses ?? null,
-            expected: data.expected,
-            activePrice: data.activeAmounts,
-            baseOutdated,
-          })
+    const rows = readDraftClauseRows(new FormData(form));
+    const parsed = parseDraftClauses(rows);
+    setFormCheck({
+      issues: parsed.ok
+        ? validateTermClausesForPublish(
+            parsed.clauses,
+            {
+              live: live?.clauses ?? null,
+              expected: data.expected,
+              activePrice: data.activeAmounts,
+              baseOutdated,
+            },
+            parsed.rows,
+          )
         : parsed.issues,
-    );
+      keys: rows.map((row) => row.key.trim()).filter(Boolean),
+      rows: parsed.ok ? parsed.rows : [],
+    });
   }, [editor.formRef, live, data.expected, data.activeAmounts, baseOutdated]);
 
   const onChange = useCallback(() => {
@@ -240,20 +280,23 @@ export function TermEditor({ data }: { data: TermEditorData }) {
 
   useListWatch(listRef, onChange, formKey);
 
-  // After a rebuild: mark the replaced content as an edit, or restore the
-  // backup into the rebuilt rows.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: runs once per rebuild
+  // After a (re)mount: mark the replaced content as an edit, restore the
+  // backup into the rebuilt rows, or check the rows now on screen.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: runs once per mount
   useEffect(() => {
     const action = afterMount.current;
     afterMount.current = null;
     if (action === "restore") editor.restoreBackup();
     else if (action === "dirty") onChange();
+    else check();
   }, [formKey]);
 
-  // "Reload latest" ends once the new copy has arrived.
+  // New loader data: "Reload latest" ends, and the check uses the new
+  // live version, outline and prices.
   // biome-ignore lint/correctness/useExhaustiveDependencies: on new loader data
   useEffect(() => {
     if (reloading) setReloading(false);
+    check();
   }, [data]);
 
   // React to each settled action result once (keyed on its identity).
@@ -267,7 +310,6 @@ export function TermEditor({ data }: { data: TermEditorData }) {
     if (result.ok && result.published) {
       setLegalKey((key) => key + 1);
       setLegalError(null);
-      setClientIssues(null);
     }
     if (result.ok && result.published === false) {
       checklistRef.current?.focus();
@@ -313,8 +355,19 @@ export function TermEditor({ data }: { data: TermEditorData }) {
     [editor.dirty, rebuild],
   );
 
+  // The rows on screen, checked as typed; when they are the saved text, the
+  // server's personal-name warnings for it are added.
   const issues =
-    editor.dirty && clientIssues !== null ? clientIssues : data.issues;
+    formCheck === null
+      ? data.issues
+      : editor.dirty
+        ? formCheck.issues
+        : [
+            ...formCheck.issues,
+            ...data.issues
+              .filter(isServerOnly)
+              .map((issue) => toEditorRow(issue, formCheck.rows)),
+          ];
   const blocking = issues.filter(isError);
   const result = fetcher.state === "idle" ? fetcher.data : null;
   const errors = fieldErrors(
@@ -382,8 +435,13 @@ export function TermEditor({ data }: { data: TermEditorData }) {
     blocking.length > 0
       ? `Publish · ${blocking.length} ${blocking.length === 1 ? "issue" : "issues"}`
       : `Publish ${tag} version`;
-  const stale = result?.ok === false && result.code === "stale_revision";
-  const presentKeys = new Set(startClauses.map((clause) => clause.key));
+  const stale =
+    result?.ok === false &&
+    result.code === "stale_revision" &&
+    result !== dismissed;
+  const presentKeys = new Set(
+    formCheck?.keys ?? startClauses.map((clause) => clause.key),
+  );
   const diff = data.diff;
   const clauseIssues = issues.filter(
     (issue) => isError(issue) && issue.field.startsWith("clauses."),
@@ -450,6 +508,7 @@ export function TermEditor({ data }: { data: TermEditorData }) {
             type="button"
             className="studio-btn studio-btn--secondary studio-btn--compact"
             onClick={() => {
+              setDismissed(result);
               setReloading(true);
               revalidator.revalidate();
             }}
@@ -494,7 +553,7 @@ export function TermEditor({ data }: { data: TermEditorData }) {
             src={`/studio/preview/terms/${document.id}`}
             title={`${document.label} · ${tag}`}
             defaultLocale={locale}
-            reloadKey={draft?.revision ?? 0}
+            reloadKey={`${live?.id ?? "none"}:${draft?.revision ?? 0}`}
           />
         }
       >

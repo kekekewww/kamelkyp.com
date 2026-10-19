@@ -93,26 +93,40 @@ function isEmptyRow(value: unknown): boolean {
   );
 }
 
-function issueField(path: ReadonlyArray<PropertyKey>): string {
-  return ["clauses", ...path.map(String)].join(".");
+/** `clauses.<row>.<field>`, with the kept clause index mapped to its row. */
+function issueField(
+  path: ReadonlyArray<PropertyKey>,
+  rows: readonly number[],
+): string {
+  const [index, ...rest] = path;
+  if (typeof index !== "number") {
+    return ["clauses", ...path.map(String)].join(".");
+  }
+  return ["clauses", String(rows[index] ?? index), ...rest.map(String)].join(
+    ".",
+  );
 }
 
 /**
  * Lenient parse of posted clauses (rows with three empty fields dropped),
- * with structural problems as issues on `clauses.<i>.<field>`.
+ * with structural problems as issues on `clauses.<row>.<field>`. `row` and
+ * `rows` count the posted rows, empty ones included, so issues land on the
+ * row the editor shows.
  */
 export function parseDraftClauses(
   raw: unknown,
 ):
-  | { ok: true; clauses: TermDraftClause[] }
+  | { ok: true; clauses: TermDraftClause[]; rows: number[] }
   | { ok: false; issues: ValidationIssue[] } {
-  const rows = Array.isArray(raw) ? raw.filter((row) => !isEmptyRow(row)) : raw;
-  const parsed = TermDraftSchema.safeParse(rows ?? []);
+  const posted: unknown[] = Array.isArray(raw) ? raw : [];
+  const rows = posted.flatMap((row, index) => (isEmptyRow(row) ? [] : [index]));
+  const kept = Array.isArray(raw) ? rows.map((index) => posted[index]) : raw;
+  const parsed = TermDraftSchema.safeParse(kept ?? []);
   if (!parsed.success) {
     return {
       ok: false,
       issues: parsed.error.issues.map((issue) => ({
-        field: issueField(issue.path),
+        field: issueField(issue.path, rows),
         code: issue.code === "too_big" ? "too_long" : "invalid_value",
         severity: "error",
         message: issue.message,
@@ -122,7 +136,7 @@ export function parseDraftClauses(
   if (serializedBytes(parsed.data) > TERM_LIMITS.bodyBytes) {
     return { ok: false, issues: [tooLarge()] };
   }
-  return { ok: true, clauses: parsed.data };
+  return { ok: true, clauses: parsed.data, rows };
 }
 
 function tooLarge(): ValidationIssue {
@@ -168,10 +182,15 @@ export function baseOutdatedMessage(
   return `This draft started ${base}; v${outdated.liveVersionNumber} has been published since. Compare before publishing.`;
 }
 
-/** Strict publish validation: errors block publishing, warnings never do. */
+/**
+ * Strict publish validation: errors block publishing, warnings never do.
+ * `rows` (from `parseDraftClauses`) names and links each clause by its
+ * editor row when empty rows were dropped; by default clause i is row i.
+ */
 export function validateTermClausesForPublish(
   clauses: readonly TermDraftClause[],
   context: TermPublishContext,
+  rows?: readonly number[],
 ): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
   const error = (
@@ -194,8 +213,9 @@ export function validateTermClausesForPublish(
 
   const seen = new Map<string, number>();
   clauses.forEach((clause, index) => {
-    const n = index + 1;
-    const at = (field: string) => `clauses.${index}.${field}`;
+    const row = rows?.[index] ?? index;
+    const n = row + 1;
+    const at = (field: string) => `clauses.${row}.${field}`;
     if (!clause.key) {
       error(at("key"), "required", `Clause ${n}: the key is required.`);
     } else if (clause.key.length > TERM_LIMITS.key) {

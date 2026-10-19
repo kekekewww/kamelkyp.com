@@ -99,6 +99,7 @@ describe("term draft schema (save)", () => {
         { key: "deposit", title: "Deposit", text: "Pay." },
         { key: "final", title: "", text: "" },
       ],
+      rows: [0, 2],
     });
     const invalid = parseDraftClauses([clause("Bad Key")]);
     expect(invalid.ok).toBe(false);
@@ -109,6 +110,42 @@ describe("term draft schema (save)", () => {
         severity: "error",
       });
     }
+  });
+});
+
+describe("issue positions with empty rows", () => {
+  const EMPTY = { key: "", title: "", text: "" };
+
+  it("reports save issues at the editor row, counting dropped empty rows", () => {
+    const invalid = parseDraftClauses([EMPTY, clause("Bad Key")]);
+    expect(invalid.ok).toBe(false);
+    if (!invalid.ok) {
+      expect(invalid.issues.map((issue) => issue.field)).toEqual([
+        "clauses.1.key",
+      ]);
+    }
+  });
+
+  it("names and links publish issues by editor row", () => {
+    const parsed = parseDraftClauses([
+      clause("deposit"),
+      EMPTY,
+      clause("deposit", ""),
+    ]);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const issues = validateTermClausesForPublish(
+      parsed.clauses,
+      NO_CONTEXT,
+      parsed.rows,
+    );
+    expect(issues.map((issue) => [issue.field, issue.message])).toEqual([
+      [
+        "clauses.2.key",
+        "Clause 3: the key “deposit” is already used by clause 1.",
+      ],
+      ["clauses.2.title", "Clause 3: the title is required."],
+    ]);
   });
 });
 
