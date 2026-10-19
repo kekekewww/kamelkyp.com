@@ -149,6 +149,56 @@ test("changes a status with Undo, also when the row leaves a filtered list", asy
   await expect.poll(() => pendingBadge(page)).toBe(before);
 });
 
+test("Update posts nothing while the selection is unchanged and keeps focus after a change", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openStudio(page, "/studio/commissions");
+  const statusPosts: string[] = [];
+  page.on("request", (request) => {
+    if (
+      request.method() === "POST" &&
+      request.url().includes("/studio/commissions/status")
+    ) {
+      statusPosts.push(request.url());
+    }
+  });
+  const row = caseRow(page, ID.review);
+  const select = row.getByRole("combobox", { name: `Status for ${ID.review}` });
+  const update = row.getByRole("button", {
+    name: `Update status of ${ID.review}`,
+  });
+  // Unchanged: announced as unavailable, yet focusable (not `disabled`), so
+  // focus can stay on it once a change has landed (wp1 §4.10).
+  await expect(update).toHaveAttribute("aria-disabled", "true");
+  await expect(update).not.toHaveAttribute("disabled");
+  await update.focus();
+  await page.keyboard.press("Enter");
+  await page.waitForTimeout(500);
+  expect(statusPosts).toEqual([]);
+  await expect(page.locator(".studio-toasts")).not.toContainText(ID.review);
+  await expect(update).toBeFocused();
+
+  await select.selectOption("pending_deposit");
+  await expect(update).not.toHaveAttribute("aria-disabled");
+  await update.focus();
+  await page.keyboard.press("Enter");
+  const toasts = page.locator(".studio-toasts");
+  await expect(toasts).toContainText(`${ID.review} is now “Awaiting deposit”`);
+  await expect(row.locator(".commissions-status")).toHaveText(
+    "Awaiting deposit",
+  );
+  // The change landed: the selection equals the stored status again.
+  await expect(update).toHaveAttribute("aria-disabled", "true");
+  await expect(update).toBeFocused();
+  expect(statusPosts).toHaveLength(1);
+
+  // Back to the seeded status for the next steps.
+  await toasts.locator(".studio-toast", { hasText: "is now" }).hover();
+  await toasts.getByRole("button", { name: "Undo" }).click();
+  await expect(row.locator(".commissions-status")).toHaveText("Pending review");
+});
+
 test("a status change made while another is in flight waits, and both report", async ({
   page,
 }) => {
