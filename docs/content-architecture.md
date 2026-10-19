@@ -19,7 +19,7 @@ specific. Brief sections are cited as §n.
 | Wrangler | `wrangler.base.jsonc`: D1 binding `DB` (`migrations_dir: migrations`), cron, observability. **No R2, KV or Images binding.** |
 | Per-environment config | `scripts/render-wrangler-config.mjs` renders `build/server/.wrangler.generated.jsonc`: Worker name, D1 id (`kamelkyp-production` / `kamelkyp-preview`), rate limiter, production custom domain `kamelkyp.com`, vars `TURNSTILE_SITE_KEY`, `ACCESS_AUD`, `ACCESS_TEAM_DOMAIN`, `ADMIN_EMAIL`, `FX_API_URL`, `APP_ORIGIN`, required secrets. `scripts/render-worker-secrets.mjs` writes the four secrets file (`TURNSTILE_SECRET`, `APPS_SCRIPT_URL`, `APPS_SCRIPT_HMAC_SECRET`, `CSRF_SECRET`). `scripts/verify-production-config.mjs` validates vars, bindings and secrets and **fails if the production build contains `TEST_ADMIN_BYPASS` or a test JWT key**. |
 | Delivery | `.github/workflows/`: `ci`, `e2e` (loopback Worker + Playwright), `deploy-preview` (PR Worker on workers.dev), `deploy-production` (manual, main only: time-travel bookmark → `d1 migrations apply --remote` → deploy → health check). |
-| Dependencies | zod 4.4, jose 6.2, wavesurfer.js, isbot, Fontsource. No UI library, no ORM. Node 24. |
+| Dependencies | zod 4.4, jose 6.2, isbot, Fontsource. No UI library, no ORM. Node 24. |
 
 ### 1.2 Security headers and CSP (`app/lib/security/headers.server.ts`, `csp-nonce.server.ts`)
 
