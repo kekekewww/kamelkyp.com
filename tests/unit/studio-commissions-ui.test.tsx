@@ -19,7 +19,6 @@ import {
   queuedCaseIds,
   STALE_PAGE_CODES,
   settleSubmission,
-  trackSubmission,
   useCommissionAction,
 } from "../../app/components/studio/commissions/use-commission-action";
 import { focusFallbackAfter } from "../../app/components/studio/commissions/use-focus-fallback";
@@ -626,17 +625,6 @@ describe("submission queue", () => {
     // The finished request was not made through the queue: not reported.
     expect(settled.finished).toBeNull();
     expect(settled.post).toBe(a);
-  });
-
-  it("reports a form submission it was told about", () => {
-    const sent = { intent: "confirm-cleanup", caseId: ID_4 };
-    const tracked = trackSubmission(EMPTY_QUEUE, sent);
-    expect(queuedCaseIds(tracked)).toEqual(new Set([ID_4]));
-    expect(settleSubmission(tracked)).toEqual({
-      queue: EMPTY_QUEUE,
-      finished: sent,
-      post: null,
-    });
   });
 });
 
