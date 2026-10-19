@@ -365,6 +365,17 @@ describe("loadCommissions", () => {
     expect(model.cases.length).toBeGreaterThan(0);
   });
 
+  it("explains an over-long cursor like any other rejected page link", async () => {
+    // Longer than any cursor the list issues: parsing drops it before
+    // `listCases`, which must still tell the owner the link was not used.
+    const model = await load(`?cursor=${"a".repeat(513)}`);
+    expect(model.cursorRejected).toBe(true);
+    expect(model.query.cursor).toBeNull();
+    expect(model.cases.length).toBeGreaterThan(0);
+    // An empty cursor is no cursor at all, not a rejected one.
+    expect((await load("?cursor=")).cursorRejected).toBe(false);
+  });
+
   it("lists every pending student price and due cleanup, whatever the filter", async () => {
     const student = await seedCase({
       submittedAt: "2026-06-01T01:00:00.000Z",

@@ -147,7 +147,10 @@ export async function loadCommissions(input: {
       cursorSecret: input.cursorSecret,
     });
 
-  let cursorRejected = false;
+  // A cursor that parsing dropped (longer than any the list issues) is a
+  // rejected page link too, so the owner sees the same notice (wp1 §8).
+  let cursorRejected =
+    parsed.cursor === null && Boolean(input.url.searchParams.get("cursor"));
   const page = pageOf(parsed.cursor).catch((error: unknown) => {
     // A rotated secret or an edited link: show the newest cases instead.
     if (
