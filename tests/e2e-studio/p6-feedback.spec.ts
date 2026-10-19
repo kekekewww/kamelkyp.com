@@ -68,6 +68,48 @@ async function archiveTrack(page: Page, cdp: CDPSession, path: string) {
   }
 }
 
+/** Creates a project draft and waits for its editor (the slug needs hydration). */
+async function createProjectDraft(page: Page, en: string): Promise<string> {
+  await page.locator('input[name="title.zh"]').fill("回饋測試");
+  const titleEn = page.locator('input[name="title.en"]');
+  await expect(async () => {
+    await titleEn.fill("");
+    await titleEn.pressSequentially(en);
+    await expect(page.locator('input[name="slug"]')).not.toHaveValue("", {
+      timeout: 2_000,
+    });
+  }).toPass();
+  await page.getByRole("button", { name: "Create draft" }).click();
+  await expect(page).toHaveURL(/\/studio\/projects\/[0-9a-f-]{36}$/);
+  await expect(topSaveState(page)).toHaveText(/SAVED|NO CHANGES/);
+  return new URL(page.url()).pathname;
+}
+
+/** Saves the project form with Mod+S and waits for the action's answer. */
+async function saveProject(page: Page, path: string) {
+  const response = page.waitForResponse(
+    (candidate) =>
+      candidate.request().method() === "POST" &&
+      new URL(candidate.url()).pathname.startsWith(path),
+  );
+  await page.keyboard.press("ControlOrMeta+s");
+  return response;
+}
+
+/** Clean-up: archive the project, so nothing a run publishes stays live. */
+async function archiveProject(page: Page, cdp: CDPSession, path: string) {
+  await unthrottle(cdp);
+  acceptDialogs(page);
+  await openStudio(page, path);
+  const archive = page.getByRole("button", { name: "Archive", exact: true });
+  if (await archive.isVisible()) {
+    await archive.click();
+    await expect(
+      page.getByRole("button", { name: "Restore to draft" }),
+    ).toBeVisible();
+  }
+}
+
 function availability(page: Page) {
   const form = page.locator('form[data-section-form="availability"]');
   return {
@@ -244,6 +286,77 @@ test.describe("studio feedback on a slow CPU", () => {
 
     await openStudio(page, new URL(editorUrl).pathname);
     await expect(page.locator('input[name="role.en"]')).toHaveValue(role);
+  });
+
+  test("project: revert remounts the editor with the published copy", async ({
+    page,
+  }) => {
+    // Publishing at a sixth of the CPU, plus the clean-up, takes longer.
+    test.setTimeout(360_000);
+    await openStudio(page, "/studio/projects/new");
+    const cdp = await throttle(page);
+    let editorPath: string | null = null;
+    let published = false;
+    try {
+      editorPath = await createProjectDraft(page, `P6 Revert ${token}`);
+      const role = page.locator('input[name="role.en"]');
+      const publishedRole = `Published role ${token}`;
+      await page.locator('input[name="year:number"]').fill("2026");
+      await page.locator("#section-classification > summary").click();
+      await page
+        .locator('select[name="primaryCategoryId"]')
+        .selectOption("term-project_category-software");
+      await page.locator('textarea[name="shortDescription.zh"]').fill("摘要");
+      await page
+        .locator('textarea[name="shortDescription.en"]')
+        .fill("Summary");
+      await role.fill(publishedRole);
+      await page.locator('header button[value="publish"]').click();
+      await expect(toast(page, /^Published$/)).toBeVisible();
+      published = true;
+
+      // An unpublished change, saved.
+      await role.fill(`Draft role ${token}`);
+      await expect(topSaveState(page)).toHaveText("UNSAVED CHANGES");
+      expect((await saveProject(page, editorPath)).ok()).toBe(true);
+      const revert = page.getByRole("button", { name: "Revert to published" });
+      await expect(revert).toBeVisible();
+
+      // Typing while the revert is in flight renders the editor urgently,
+      // which widens the window in which the revert settles before the
+      // revalidated loader data commits. The remount must still show the
+      // published copy (whatever was typed is replaced by it). The toast
+      // (4 s) can come and go while the slow typing runs, so it is awaited
+      // from the click on.
+      await revert.click();
+      const reverted = toast(page, "Reverted to the published version")
+        .waitFor({ timeout: 60_000 })
+        .then(
+          () => true,
+          () => false,
+        );
+      await page
+        .locator('input[name="role.zh"]')
+        .pressSequentially("typing meanwhile");
+      expect(await reverted).toBe(true);
+      await expect(role).toHaveValue(publishedRole);
+      await expect(revert).toBeHidden();
+
+      // The next save keeps the published text: the fields came from the
+      // reverted copy, not from the pre-revert working copy.
+      await page.locator('textarea[name="description.en"]').fill("After");
+      await expect(topSaveState(page)).toHaveText("UNSAVED CHANGES");
+      expect((await saveProject(page, editorPath)).ok()).toBe(true);
+      await openStudio(page, editorPath);
+      await expect(page.locator('input[name="role.en"]')).toHaveValue(
+        publishedRole,
+      );
+      await expect(page.locator('textarea[name="description.en"]')).toHaveValue(
+        "After",
+      );
+    } finally {
+      if (editorPath && published) await archiveProject(page, cdp, editorPath);
+    }
   });
 
   test("homepage section: saving reaches SAVED", async ({ page }) => {

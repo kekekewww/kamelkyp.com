@@ -36,6 +36,7 @@ import {
   useFetcherSettled,
   useToast,
 } from "../ui";
+import type { ReloadTarget } from "../ui/editor-reload";
 import {
   BasicSection,
   CaseStudySection,
@@ -118,8 +119,11 @@ export function ProjectEditor({
   onReload,
 }: {
   data: ProjectEditorData;
-  /** Remount with the latest server copy (after revert or a conflict). */
-  onReload?: () => void;
+  /**
+   * Remount with the latest server copy: once the loader data reaches
+   * `target` (after a revert), or now (after a conflict's revalidation).
+   */
+  onReload?: (target?: ReloadTarget) => void;
 }) {
   const { meta, content } = data;
   const fetcher = useFetcher<ProjectActionData>();
@@ -379,7 +383,9 @@ export function ProjectEditor({
         break;
       case "revert":
         toast.show({ message: "Reverted to the published version" });
-        onReload?.();
+        // Remount on the revision the revert produced, not now: this can
+        // run before the revalidated loader data commits (fetcher-settle.ts).
+        onReload?.(result.meta);
         break;
       case "duplicate":
         toast.show({ message: "Duplicated. You are editing the copy." });
