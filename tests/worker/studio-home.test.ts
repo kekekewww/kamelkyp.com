@@ -184,11 +184,46 @@ describe("needs attention", () => {
       (item) => item.key === "commissions-review",
     );
     expect(review?.count).toBe(2);
+    expect(review?.href).toBe("/studio/commissions?status=pending_review");
+    expect(review?.action).toBe("Review cases");
+    expect(review?.detail).toMatch(/Gmail or the Google Form/);
     expect(home.commissions).toMatchObject({
       pendingReview: 2,
       awaitingDeposit: 0,
       inProduction: 1,
     });
+  });
+
+  it("links student price checks to their queue", async () => {
+    const id = await insertCase("preview_approval");
+    await env.DB.prepare(
+      "INSERT INTO case_runtime (case_id, cleanup_due_at, student_review_state, standard_price_minor, student_price_minor, updated_at) VALUES (?, NULL, 'pending', 8000, 5600, '2026-09-20T00:00:00Z')",
+    )
+      .bind(id)
+      .run();
+    const home = await getStudioHome(env.DB, now);
+    const student = home.attention.find(
+      (item) => item.key === "student-review",
+    );
+    expect(student?.count).toBe(1);
+    expect(student?.href).toBe("/studio/commissions#student-reviews");
+    expect(student?.action).toBe("Check student prices");
+    expect(student?.detail).toMatch(/student price or charge the standard/);
+  });
+
+  it("links due cleanups to their queue", async () => {
+    const id = await insertCase("delivered");
+    await env.DB.prepare(
+      "INSERT INTO case_runtime (case_id, cleanup_due_at, student_review_state, standard_price_minor, student_price_minor, updated_at) VALUES (?, '2026-09-24T00:00:00Z', 'none', NULL, NULL, '2026-09-17T00:00:00Z')",
+    )
+      .bind(id)
+      .run();
+    const home = await getStudioHome(env.DB, now);
+    const cleanup = home.attention.find((item) => item.key === "cleanup-due");
+    expect(cleanup?.count).toBe(1);
+    expect(cleanup?.href).toBe("/studio/commissions#cleanup-due");
+    expect(cleanup?.action).toBe("Confirm cleanups");
+    expect(cleanup?.detail).toMatch(/then confirm the cleanup/);
   });
 
   it("gives the sidebar the same number as the attention list", async () => {

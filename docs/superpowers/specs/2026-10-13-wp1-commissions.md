@@ -318,7 +318,7 @@ Handlers (each: `if (!formData) return unknownIntent(intent)`, then switch on `i
 | --- | --- | --- | --- |
 | `handleCommissionStatus` | `set-status` | parse `SetStatusInputSchema` (422 `invalid_request` + `issues`) → `SELECT status FROM cases WHERE case_id = ?` (none → 404) → **same status → `actionOk({ unchanged: true })` with no write** (a repeated terminal status is not "entering" it, plan 06 `:623`, so it must not push the cleanup date) → `updateCaseStatus` → read `cleanup_due_at` | `{ intent, caseId, status, previousStatus, cleanupDueAt, unchanged }` |
 | `handleStudentDiscount` | `accept-student-price` (accepted = true), `reject-student-price` (accepted = false) | parse → `resolveStudentDiscount` → read `locked_price_minor, currency` | `{ intent, caseId, lockedPriceMinor, currency }` |
-| `handleCommissionCleanup` | `confirm-cleanup` | parse `CleanupInputSchema`; any missing box → 422 `cleanup_checklist_incomplete` with one issue per missing field (`code: "required"`), **before** any DB or gateway call → `confirmVerifiedCleanup({ checklist: all true, gateway, now })`; any error that is not one of the service's coded errors (e.g. a D1 failure in the delete batch after the ledger call) → 503 `cleanup_failed` (plan 06 `:681`; a retry is safe because `cleanup_ledger` is idempotent, `:563`) | `{ intent, caseId }` |
+| `handleCommissionCleanup` | `confirm-cleanup` | parse `CleanupInputSchema`; any missing box → 422 `cleanup_checklist_incomplete` with one issue per missing field (`code: "required"`), **before** any DB or gateway call → `confirmVerifiedCleanup({ checklist: all true, gateway, now })`; any error that is not one of the service's coded errors (e.g. a D1 failure in the delete batch after the ledger call) → 503 `cleanup_failed` (plan 06 `:681`; a retry is safe because `cleanup_ledger` is idempotent, `:563`). **Deviation (§14.1):** after the ledger confirmed, the answer depends on what D1 still holds | `{ intent, caseId }` |
 
 Issues: `ValidationIssue` (`app/lib/cms/types.ts:52-61`) needs `field`, `code`, `severity`, `message`; zod issues map to
 `{ field: path.join("."), code: missing ? "required" : "invalid_value", severity: "error", message }` (both codes
@@ -337,7 +337,9 @@ handlers add no logging of their own:
 | `cleanup_not_due` | 409 | same | "Cleanup is not due for this case." |
 | `student_review_pending` | 409 | same | "Decide the student price before the cleanup." |
 | `cleanup_gateway_failed` | 503 | same | "Nothing was deleted: the Apps Script ledger did not confirm. Try again in a moment." |
-| any other error inside the cleanup (D1) | 503 | `cleanup_failed` | "The cleanup did not finish and nothing was marked as done. Try again in a moment." |
+| any other error inside the cleanup (D1), before the ledger confirmed, or after it while the `case_runtime` row is still there | 503 | `cleanup_failed` | "The cleanup did not finish and nothing was marked as done. Try again in a moment." |
+| (§14.1) any other error after the ledger confirmed, when the read-back finds no `case_runtime` row and the case row present (the delete batch committed; only a later step failed) | 200 | — (success) | the normal success toast |
+| (§14.1) any other error after the ledger confirmed, when even the read-back fails | 503 | `cleanup_unverified` | "The Studio could not check whether the cleanup finished. Reload the page: if the case is still in Cleanup due, confirm it again." |
 | `case_record_missing` | 500 | same | "Temporary records were removed, but the case record is missing. Check the database before anything else." (the one non-503 cleanup failure: the deletion already happened, so a retry cannot help; it can only occur if the case row vanished concurrently) |
 | zod parse failure | 422 | `invalid_request` + `issues` | "This request could not be read. Reload the page and try again." |
 | unknown / missing intent | 422 | `unknown_intent` | existing `unknownIntent` copy (`responses.ts:96-101`) |
@@ -358,7 +360,7 @@ These codes are passed to `actionError(code, { status, message })` directly; `Cm
 | `cleanup-dialog.tsx` | Port of `CleanupChecklist` inside `ConfirmDialog tone="danger"` (`app/components/studio/ui/confirm-dialog.tsx:8-59`). `ConfirmDialog` renders `actions` **outside** `children` (`:55-56`), so the body holds `<StudioForm fetcher={…} id={formId} action="/studio/commissions/cleanup">` with hidden `caseId` and a `<fieldset><legend>` with the three native checkboxes (`googleRecordsDeleted`, `gmailDeleted`, `otherSensitiveCopiesDeleted`, all `required`) plus the explanation (§4.9); `actions` holds Cancel and **Confirm cleanup** as `<button type="submit" form={formId} name="intent" value="confirm-cleanup">` (`studio-btn--danger-filled`, disabled until all three are checked, `aria-describedby` → "Check all three to continue."). Opening the dialog calls `useStudioSession().refresh()` so a long checklist session does not post an expired token. On 503 the dialog stays open with the error shown inline (`role="alert"`) so Retry is one click. On success the dialog closes, the toast reports it and focus moves to the "Cleanup due" heading (the opener leaves the queue). If `studentReviewPending`, the queue item's button is disabled with "Decide the student price first" (link to `#student-reviews`). |
 | `case-list.tsx` | Filter form (GET, `role="search"`, label "Filter cases"; `Select` "Status" = All + 8; `Select` "Service" = All + 4 names; auto-submit on change like `FilterBar` (`list.tsx:84-93`), plus an Apply button; "Clear filters" link when a filter is set; inside a "Filters" `<details>` below 768 px). The filter form has **no `cursor` field**: changing a filter always returns to the newest page. Cursor notice when `cursorRejected` ("That page link is no longer valid. Showing the newest cases.", `role="status"`). Rows via `RowList` (`app/components/studio/ui/list.tsx:130-157`) with an `aria-hidden` column head (`Case ID · Submitted (UTC) · Service · Locked price · Status`). Pagination: "Older cases" (`cursor=nextCursor`, filters kept) and "Newest cases" when a cursor is active. Empty states: no cases at all → "No commissions yet" / "Cases appear here when someone submits the commission form."; filtered → "No cases match these filters" + "Clear filters". |
 | `case-row.tsx` | One `<li aria-label="Case KAM-…">`: case ID (mono, `translate="no"`, CSS `user-select: all` so one click selects it for a Gmail search), submitted date `YYYY-MM-DD` (UTC, the same date as the ID segment), service name (zh, with the EN name as secondary line when different; `lang="zh-Hant"` / `lang="en"`), locked price, `CaseStatusBadge`, markers, `CaseStatusControl`. Cells carry visually hidden labels that become visible when rows stack under 768 px (pattern of `social-links.tsx:47-75`). |
-| `case-status-control.tsx` | `<label class="visually-hidden">Status for KAM-…</label>` + native `<select>` (8 options, `CASE_STATUS_LABELS`) + **Update** button (`aria-busy` while this row's change is pending, label "Updating…"; disabled while the selection equals the current status). Submits `set-status` through the `submit` prop from `CommissionsInbox` (it owns no fetcher). |
+| `case-status-control.tsx` | `<label class="visually-hidden">Status for KAM-…</label>` + native `<select>` (8 options, `CASE_STATUS_LABELS`) + **Update** button (`aria-busy` while this row's change is pending, label "Updating…"; disabled while the selection equals the current status; **deviation (§14.2):** after hydration "disabled" is `aria-disabled="true"` plus a submit guard, natively `disabled` only before hydration). Submits `set-status` through the `submit` prop from `CommissionsInbox` (it owns no fetcher). |
 | `case-status-badge.tsx` | `CaseStatusBadge({ status })` and marker badges (`STUDENT PRICE`, `CLEANUP DUE`, `CLEANUP 20 OCT`, `CLEANED`) on the badge geometry of admin-architecture §5.8; the word is always present. |
 | `use-commission-action.ts` | `useProjectSubmit` (`app/components/studio/projects/use-project-submit.ts:14-55`) generalised with an `action` path: `fetcher.submit({ csrfToken, ...fields }, { method: "post", action })`, `onResult(data, sentFields)` once per completion, `busy`, `sent` (fields in flight). When the result code is `case_not_found`, `student_review_conflict`, `cleanup_not_due` or `student_review_pending`, it also calls `useRevalidator().revalidate()` (React Router does not revalidate after a 4xx action; §4.1). Used only by components that stay mounted (`CommissionsInbox`, `NeedsAction`). "Finished" uses the 227faa1 rule of `use-project-submit.ts:25-44` (idle **and** either a busy state was seen or the data is new), never the busy-state-only pattern that wp6's static ban rejects (wp6 §4.1.5). wp6 merges first (plan §5), so when WP1 rebases onto it, build the hook on `useFetcherSettled` (`app/components/studio/ui/use-fetcher-settled.ts`) instead of copying the rule, in the isolated hook commit (plan §3.1, §12). |
 | `format.ts` (pure, client-safe) | `formatCaseMoney(minor, currency)`: TWD → `NT$${Intl.NumberFormat("en-US").format(minor)}`, USD → `US$${(minor / 100).toFixed(2)}` (exactly the public formats in `app/components/pricing/service-price.tsx:15,24`); `caseMarkers(row, now)`; `cleanupLabel(dueAt, now)`; `serviceName(services, id)`. No arithmetic on prices besides the cents → dollars display. Do **not** reuse `formatMoney` from `app/components/studio/services/price.ts:45-47`: it treats every amount as major units, so 26000 USD cents would print "US$26,000". |
@@ -739,7 +741,7 @@ as it is for the migrations in `harness.ts:60-90`. Steps, in this order:
 | Case vanished (orphan cleanup ran) | 404 toast; the hook's explicit `revalidate()` removes the row (React Router would not revalidate after a 404 on its own) |
 | Second tab already decided | 409 toast; explicit `revalidate()` updates queues |
 | Apps Script down or missing `cleanup_ledger` | 503; nothing deleted; dialog stays open for Retry |
-| D1 error inside the cleanup | 503 `cleanup_failed`; nothing marked as done; Retry is safe (ledger idempotent) |
+| D1 error inside the cleanup | 503 `cleanup_failed`; nothing marked as done; Retry is safe (ledger idempotent). After the ledger confirmed (§14.1): no runtime row left → reported as done; read-back fails → 503 `cleanup_unverified` (reload, confirm again if still listed) |
 | D1 failure in the loader | thrown → Studio root error boundary "Something went wrong" |
 
 ---
@@ -786,7 +788,9 @@ No price value is introduced or changed.
       answers 409 and refreshes the list.
 - [ ] Every due cleanup is listed; the dialog requires all three confirmations; success removes
       `submission_attempts` + `case_runtime` after the Apps Script ledger confirms and keeps the six-column case;
-      gateway or D1 failure answers 503, marks nothing done and allows retry; pending student review blocks cleanup.
+      gateway or D1 failure answers 503, marks nothing done and allows retry (a D1 error after the delete batch
+      committed is reported as done, or as 503 `cleanup_unverified` when even the read-back fails, §14.1); pending
+      student review blocks cleanup.
 - [ ] `workers/app.ts` is unchanged and the retention-policy test proves the cron never confirms cleanup.
 - [ ] Home attention rows for commissions deep-link to `?status=pending_review`, `#student-reviews`,
       `#cleanup-due` with distinct link labels; both anchors always exist; counts and the badge rule are unchanged.
@@ -880,3 +884,43 @@ Integration-plan completeness review (2026-10-13, plan §9):
   (plan §2.1).
 - The owner-list item "nightly retention cleanup" is closed by §2.3 and recorded as plan decision D7.
 - `LocalizedText` comes from `app/lib/cms/types.ts` (plan §2.9).
+
+---
+
+## 14. Implementation deviations (recorded 2026-10-20)
+
+Recorded here (plan §3.2: a package amends only its own spec, to record a deviation) so the reason does not live only
+in a source comment.
+
+1. **Cleanup error mapping after the ledger confirmed** (§4.4, §8, §11). The table above mapped every uncoded error
+   inside the cleanup to 503 `cleanup_failed`, whose message says nothing was marked as done. That is false once the
+   delete batch has committed (for example when only the read after it fails), and a retry would then answer 409
+   `cleanup_not_due` for a cleanup that went through. `handleCommissionCleanup` therefore records whether the ledger
+   call confirmed; an uncoded error before it stays `cleanup_failed`. After it, one read-back (`cases` and
+   `case_runtime` only, never `submission_attempts`, §4.7) decides: runtime row still there → 503 `cleanup_failed`
+   (nothing removed; retry safe); no runtime row and the case present → success; no runtime row and no case → 500
+   `case_record_missing`; read-back fails → 503 `cleanup_unverified` ("The Studio could not check whether the cleanup
+   finished. Reload the page: if the case is still in Cleanup due, confirm it again."). Worker tests: "answers 503 and
+   marks nothing done when D1 fails after the ledger; a retry finishes", "reports the cleanup as done when only the
+   read after the committed delete fails", "never says nothing was done when D1 cannot be read after the delete",
+   "decides a failed cleanup without reading submission_attempts".
+2. **Update is `aria-disabled`, not `disabled`, after hydration** (§4.5). A natively disabled button loses focus when
+   it becomes disabled, and it does exactly that the moment a status change lands (the selection equals the stored
+   status again), which would drop focus to `<body>` and break §4.10 ("a status change keeps focus on the row's
+   Update button"). After hydration the button is `aria-disabled="true"` while the selection is unchanged or the
+   case's change is in flight, and the form's submit handler posts nothing in that state. Before hydration it is
+   natively `disabled` (the status change exists only in the React submit handler; a plain form submit would GET
+   `?status=…`), which is what the §7.1 markup test sees. Studio e2e: "Update posts nothing while the selection is
+   unchanged and keeps focus after a change".
+3. **One queue per commissions fetcher** (§4.5 `use-commission-action.ts`). A second `fetcher.submit` on the shared
+   fetcher aborts the first (its toast, its Undo and possibly the change are lost), so the hook queues a submission
+   made while another is in flight and posts it once that one has settled (`useFetcherSettled`); rows and queue items
+   are busy while their case is in flight or waiting. The cleanup checklist posts through the same queue (its form
+   markup is unchanged; the submit handler calls the hook's `submit`), so confirming a second case while the first
+   is in flight waits instead of being dropped, and "Confirming…" shows only for the dialog's own case.
+4. **Focus after a student-price decision** (§4.5, §4.10). Focus moves to the "Student prices to check" heading only
+   when the decided item took focus with it (the shared focus fallback of the case list and the cleanup queue); focus
+   the owner moved elsewhere while the request ran stays there. The inline confirmation's buttons are named
+   "Confirm decision for KAM-…" and "Cancel decision for KAM-…".
+5. **Over-long cursor** (§4.3, §8). `parseCommissionQuery` still drops a cursor over 512 characters; the loader now
+   reports it as `cursorRejected`, so the owner sees the same notice as for any other rejected page link.

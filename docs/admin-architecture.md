@@ -117,10 +117,10 @@ Auth column: **A** = Access JWT verified (middleware + `withOwner`), **A+C** = A
 | `/studio/settings/site` | SiteSettings | `{ value, revision }` | `save` | A / A+C | P4 |
 | `/studio/settings/taxonomies` | terms per vocabulary (`?vocabulary=`) | terms with usage counts | `create`, `update`, `archive`, `delete`, `reorder` | A / A+C | P4 |
 | `/studio/settings/footer` | footer link groups (existing `LinkGroupEditor` logic) | groups | `save-group`, `delete-group`, `reorder` | A / A+C | I |
-| `/studio/commissions` | cases (existing `CaseTable`, filters service/status, cursor) | cases, student reviews, cleanup due | — | A | I |
-| `/studio/commissions/status` | resource route | — | POST status change (`updateCaseStatus`) | A+C | I |
-| `/studio/commissions/student-discount` | resource route | — | POST (`resolveStudentDiscount`) | A+C | I |
-| `/studio/commissions/cleanup` | resource route | — | POST verified cleanup (`confirmVerifiedCleanup` + Apps Script ledger) | A+C | I |
+| `/studio/commissions` | Commissions inbox (port of the legacy case list): student-price and cleanup-due queues, then cases from `?status&service&cursor` (legacy names kept; invalid values ignored, an invalid cursor shows the newest page) | the six permanent case fields + runtime facts (cleanup date, student review pending, temporary records kept/removed), all pending student reviews, all due cleanups, service names | — | A | I |
+| `/studio/commissions/status` | resource route | — | `set-status` (`updateCaseStatus`; same status writes nothing) | A+C | I |
+| `/studio/commissions/student-discount` | resource route | — | `accept-student-price` / `reject-student-price` (`resolveStudentDiscount`) | A+C | I |
+| `/studio/commissions/cleanup` | resource route | — | `confirm-cleanup` (three-item checklist, then `confirmVerifiedCleanup` + Apps Script ledger; never automatic) | A+C | I |
 | `/studio/preview/home` | home as it would look (`?locale&drafts=1`) | public home view models in preview mode | — | A | P5 |
 | `/studio/preview/projects/:id` | project detail preview (`?locale`) | working-copy view model | POST: form data (unsaved) → view model, nothing stored | A / A+C | P5 |
 | `/studio/preview/{music,recognition,writing,services}/:id` | same pattern (music: hero + player card; recognition: home row; writing: detail or outbound card; service: its area page) | | POST (unsaved) | A / A+C | P5 |
