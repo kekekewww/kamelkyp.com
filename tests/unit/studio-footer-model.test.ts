@@ -205,23 +205,66 @@ describe("footerGroupIssues", () => {
     );
   });
 
-  it.each(["From NT$4,000", "US$260.00", "1,000 元", "TWD 900", "$40 an hour"])(
-    "refuses the price figure %s",
-    (value) => {
-      const issues = footerGroupIssues(
-        draft({ links: [link(text(value, "Rates"))] }),
+  it.each([
+    "From NT$4,000",
+    "US$260.00",
+    "1,000 元",
+    "TWD 900",
+    "$40 an hour",
+    // Common spellings without a `$`, or with the code next to the digits.
+    "Mixing from NTD 4,000",
+    "NT 4,000",
+    "NT4000",
+    "4000TWD",
+    "TWD4000",
+    "USD260",
+    "260 usd",
+    "4000$",
+    "€40",
+    "¥5000",
+    // Chinese numerals and full-width digits before 元, and currency words.
+    "混音 4千元起",
+    "1萬元",
+    "千元起",
+    "每首 ４０００元",
+    "＄４０００",
+    "台幣 4,000",
+    "新臺幣報價",
+    "美金計價",
+    "100 美元",
+  ])("refuses the price figure %s", (value) => {
+    const issues = footerGroupIssues(
+      draft({ links: [link(text(value, "Rates"))] }),
+      "custom",
+    );
+    expect(issues).toEqual([
+      expect.objectContaining({
+        field: "links.0.label",
+        locale: "zh",
+        code: "price_forbidden",
+        message: "Footer links never show prices. Remove the amount.",
+      }),
+    ]);
+  });
+
+  it.each([
+    "Sample packs",
+    "多元服務",
+    "單元測試",
+    "Event 2026",
+    "Plant 3",
+    "Mint 4",
+    "USDA Organic",
+    "NTU Lab",
+    "Top 10 tools",
+  ])("allows the label %s", (value) => {
+    expect(
+      footerGroupIssues(
+        draft({ links: [link(text(value, "Tools"))] }),
         "custom",
-      );
-      expect(issues).toEqual([
-        expect.objectContaining({
-          field: "links.0.label",
-          locale: "zh",
-          code: "price_forbidden",
-          message: "Footer links never show prices. Remove the amount.",
-        }),
-      ]);
-    },
-  );
+      ),
+    ).toEqual([]);
+  });
 
   it.each([
     "Sample: x",

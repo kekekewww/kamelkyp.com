@@ -485,8 +485,10 @@ Built-in groups (one row each, seeded by `0010`, see its §3 subsection); their 
   `www.kamelkyp.com` and the Worker's `workers.dev` hosts, a trailing root dot as in `kamelkyp.com.` included), or a
   `mailto:` address; ≤ 2048. The public footer localizes stored site paths (`/works` → `/en/works`) and skips any row
   that breaks these shape rules.
-- **Labels refused on save:** a price figure (`price_forbidden`), a sample marker (`todo_content`), a personal-name
-  variant (`brand_name`, server-side brand guard). Link labels ≤ 80, at most 50 links per group.
+- **Labels refused on save:** a price figure (`price_forbidden`: NT$, US$, NTD, TWD, USD or `NT` next to an amount,
+  `$`/€/£/¥ before or after digits, an amount before 元 in ASCII, full-width or Chinese numerals such as `4千元`, and
+  台幣 / 臺幣 / 美元 / 美金), a sample marker (`todo_content`), a personal-name variant (`brand_name`, server-side brand
+  guard). Link labels ≤ 80, at most 50 links per group.
 - **Public read.** `composeFooterGroups` (`app/lib/cms/public/footer.ts`) builds every footer (public layout, Studio
   preview, D1-unavailable fallback). Only the composed groups enter the loader data, so labels of hidden groups and
   hidden links never reach the served HTML. The footer never shows prices.

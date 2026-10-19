@@ -29,9 +29,15 @@ export const FOOTER_LIMITS = {
   customGroups: 20,
 } as const;
 
-/** Price figures (NT$, US$, TWD, USD, $4, 4 元): the footer never shows prices. */
+/**
+ * Price figures: the footer never shows prices. Currency signs and codes
+ * (NT$, US$, `NT 4,000`, NTD, TWD, USD, `$4`, `4$`, €, £, ¥; a code counts
+ * next to digits too, as in `TWD4000`), an amount before 元 in ASCII,
+ * full-width or Chinese numerals (`4 元`, `４０００元`, `4千元`, `1萬元`), and the
+ * currency words 台幣 / 臺幣 / 美元 / 美金.
+ */
 export const PRICE_FIGURE =
-  /(?:NT|US)\s*[$＄]|\bTWD\b|\bUSD\b|[$＄]\s*\d|\d\s*元/i;
+  /(?:NT|US)\s*[$＄]|(?<![a-z])(?:NTD|TWD|USD)(?![a-z])|(?<![a-z])NT\s*[\d０-９]|[$＄€£¥￥]\s*[\d０-９]|[\d０-９]\s*[$＄€£¥￥]|[\d０-９〇零一二兩两三四五六七八九十百千萬万億亿]\s*元|[台臺]幣|美[元金]/i;
 
 /** Site paths that are not public pages (the public site never links to them). */
 export const RESERVED_PATH_PREFIXES = ["/studio", "/api", "/admin"] as const;
