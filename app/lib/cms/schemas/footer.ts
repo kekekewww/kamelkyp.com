@@ -39,6 +39,19 @@ export const RESERVED_PATH_PREFIXES = ["/studio", "/api", "/admin"] as const;
 /** The site's own hosts: an absolute address there is judged like a site path. */
 const SITE_HOSTS: readonly string[] = ["kamelkyp.com", "www.kamelkyp.com"];
 
+/** The Worker's `workers.dev` hosts: production and PR previews. */
+const WORKER_HOST = /^kamelkyp-com(?:-pr-\d+)?\.[a-z0-9-]+\.workers\.dev$/;
+
+/**
+ * Whether a parsed host name is the site. The URL parser lower-cases the
+ * name but keeps the DNS root dot, and `kamelkyp.com.` resolves to the same
+ * site, so trailing dots are dropped before the comparison.
+ */
+function isSiteHost(hostname: string): boolean {
+  const host = hostname.replace(/\.+$/, "");
+  return SITE_HOSTS.includes(host) || WORKER_HOST.test(host);
+}
+
 export type FooterGroupKind = FooterSystemKey | "custom";
 
 /** One stored `links` row of a pair, as the public footer reads it. */
@@ -210,7 +223,7 @@ function urlIssue(
       message: "Remove the user name and password from the address.",
     };
   }
-  if (SITE_HOSTS.includes(parsed.hostname) && isReservedPath(parsed.pathname)) {
+  if (isSiteHost(parsed.hostname) && isReservedPath(parsed.pathname)) {
     return { code: "invalid_url", message: PATH_MESSAGE };
   }
   return null;

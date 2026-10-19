@@ -98,6 +98,19 @@ describe("footerUrlProblem", () => {
       "https://KAMELKYP.com/works/../api/x",
       "Link to a public page of the site.",
     ],
+    // The same host written with its root dot (or dots) is the same site.
+    ["https://kamelkyp.com./studio", "Link to a public page of the site."],
+    ["https://WWW.kamelkyp.com../api/x", "Link to a public page of the site."],
+    ["https://kamelkyp。com。/studio", "Link to a public page of the site."],
+    // The Worker's own workers.dev hosts (production and PR previews).
+    [
+      "https://kamelkyp-com-pr-12.example-team.workers.dev/studio",
+      "Link to a public page of the site.",
+    ],
+    [
+      "https://kamelkyp-com.example-team.workers.dev./admin",
+      "Link to a public page of the site.",
+    ],
     // A browser reads these as paths on this site, not as other sites.
     ["https:/example.com", "Use an https:// address"],
     ["https:example.com", "Use an https:// address"],
@@ -116,6 +129,9 @@ describe("footerUrlProblem", () => {
     "/works?next=/../studio",
     "https://example.com",
     "https://kamelkyp.com/works",
+    "https://kamelkyp.com./works",
+    "https://example.com./studio",
+    "https://other-worker.example-team.workers.dev/studio",
     "mailto:a@b.co",
   ])("accepts %s", (url) => {
     expect(footerUrlProblem(url)).toBeNull();

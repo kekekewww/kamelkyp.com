@@ -481,9 +481,10 @@ Built-in groups (one row each, seeded by `0010`, see its §3 subsection); their 
   → the locale-less path, `HTTPS:`/`MAILTO:` → lower case. Allowed: a site path (`/…`, not `//…`, no backslash,
   whitespace, control character or `.`/`..` segment (`%2e` included, since `/en/../studio` resolves to `/studio`), not
   under `/studio`, `/api` or `/admin`), an `https://` URL without credentials (`https:/host` and `https:host` resolve
-  against the page, so they are refused; on `kamelkyp.com` the same three paths are refused), or a `mailto:` address;
-  ≤ 2048. The public footer localizes stored site paths (`/works` → `/en/works`) and skips any row that breaks these
-  shape rules.
+  against the page, so they are refused; on the site's own hosts the same three paths are refused: `kamelkyp.com`,
+  `www.kamelkyp.com` and the Worker's `workers.dev` hosts, a trailing root dot as in `kamelkyp.com.` included), or a
+  `mailto:` address; ≤ 2048. The public footer localizes stored site paths (`/works` → `/en/works`) and skips any row
+  that breaks these shape rules.
 - **Labels refused on save:** a price figure (`price_forbidden`), a sample marker (`todo_content`), a personal-name
   variant (`brand_name`, server-side brand guard). Link labels ≤ 80, at most 50 links per group.
 - **Public read.** `composeFooterGroups` (`app/lib/cms/public/footer.ts`) builds every footer (public layout, Studio
