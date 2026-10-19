@@ -3,7 +3,7 @@
  * names), the rows, and cursor pagination. The filter form carries no
  * cursor, so changing a filter always returns to the newest page.
  */
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Form, Link } from "react-router";
 import {
   CASE_STATUS_LABELS,
@@ -24,6 +24,16 @@ function Filters({ data }: { data: CommissionsModel }) {
   const ref = useRef<HTMLDetailsElement>(null);
   const { query } = data;
   const active = [query.status, query.service].filter(Boolean).length;
+  // Controlled, so a navigation updates the same selects instead of
+  // replacing them: the one in use keeps focus.
+  const [status, setStatus] = useState(query.status ?? "");
+  const [service, setService] = useState(query.service ?? "");
+  useEffect(() => {
+    setStatus(query.status ?? "");
+  }, [query.status]);
+  useEffect(() => {
+    setService(query.service ?? "");
+  }, [query.service]);
 
   // Open on wide screens; folded into a disclosure on phones.
   useEffect(() => {
@@ -38,8 +48,12 @@ function Filters({ data }: { data: CommissionsModel }) {
     return () => media.removeEventListener("change", apply);
   }, []);
 
-  const submitOnChange = (event: React.ChangeEvent<HTMLSelectElement>) =>
-    event.currentTarget.form?.requestSubmit();
+  const submitOnChange =
+    (set: (value: string) => void) =>
+    (event: React.ChangeEvent<HTMLSelectElement>) => {
+      set(event.currentTarget.value);
+      event.currentTarget.form?.requestSubmit();
+    };
 
   return (
     <details className="commissions-filters" ref={ref} open>
@@ -47,8 +61,6 @@ function Filters({ data }: { data: CommissionsModel }) {
         {active ? `Filters · ${active}` : "Filters"}
       </summary>
       <Form
-        // Remount on navigation so the selects show the current query.
-        key={`${query.status ?? ""}|${query.service ?? ""}`}
         method="get"
         action="/studio/commissions"
         role="search"
@@ -60,23 +72,23 @@ function Filters({ data }: { data: CommissionsModel }) {
           name="status"
           label="Status"
           placeholder="All"
-          defaultValue={query.status ?? ""}
-          options={CASE_STATUSES.map((status) => ({
-            value: status,
-            label: CASE_STATUS_LABELS[status],
+          value={status}
+          options={CASE_STATUSES.map((option) => ({
+            value: option,
+            label: CASE_STATUS_LABELS[option],
           }))}
-          onChange={submitOnChange}
+          onChange={submitOnChange(setStatus)}
         />
         <Select
           name="service"
           label="Service"
           placeholder="All"
-          defaultValue={query.service ?? ""}
-          options={data.services.map((service) => ({
-            value: service.id,
-            label: serviceOptionLabel(service),
+          value={service}
+          options={data.services.map((option) => ({
+            value: option.id,
+            label: serviceOptionLabel(option),
           }))}
-          onChange={submitOnChange}
+          onChange={submitOnChange(setService)}
         />
         <button
           type="submit"

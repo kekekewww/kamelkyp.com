@@ -307,6 +307,25 @@ test("the legacy query string selects the same view", async ({ page }) => {
   );
 });
 
+test("a filter change keeps focus on its select", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openStudio(page, "/studio/commissions");
+  const filters = page.getByRole("search", { name: "Filter cases" });
+  const status = filters.getByLabel("Status");
+  await status.focus();
+  await status.selectOption("pending_review");
+  await expect(page).toHaveURL(/[?&]status=pending_review/);
+  await expect(caseRow(page, ID.production)).toHaveCount(0);
+  // The list changed under the same select, which keeps focus.
+  await expect(status).toBeFocused();
+  await expect(status).toHaveValue("pending_review");
+
+  // Back to the unfiltered list: the select follows the URL.
+  await page.goBack();
+  await expect(caseRow(page, ID.production)).toBeVisible();
+  await expect(status).toHaveValue("");
+});
+
 test("stacks rows on a phone without horizontal scrolling", async ({
   page,
 }) => {
