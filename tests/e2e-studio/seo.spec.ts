@@ -182,8 +182,13 @@ test("publish, unlist and unpublish drive the sitemap and the page head", async 
   expect(await sitemap(request)).not.toContain(slug);
   expect((await request.get(`/en/works/${slug}`)).status()).toBe(404);
 
-  // 4. The Studio stays out of search.
+  // 4. The Studio stays out of search: its rendered shell (not an error
+  // body, which would have no canonical either) is noindex and canonical-free.
   const studio = await request.get("/studio");
+  expect(studio.status(), "Studio shell").toBe(200);
+  expect(studio.headers()["content-type"]).toContain("text/html");
   expect(studio.headers()["x-robots-tag"]).toBe("noindex, nofollow");
-  expect(await studio.text()).not.toContain('rel="canonical"');
+  const shell = await studio.text();
+  expect(shell).toContain("KAMEL STUDIO");
+  expect(shell).not.toContain('rel="canonical"');
 });
