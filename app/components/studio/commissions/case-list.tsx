@@ -96,13 +96,13 @@ function Filters({ data }: { data: CommissionsModel }) {
 
 export function CaseList({
   data,
-  busyCaseId,
+  busyCaseIds,
   onStatus,
   headingRef,
 }: {
   data: CommissionsModel;
-  /** The case whose status change is in flight. */
-  busyCaseId: string | null;
+  /** Cases whose status change is in flight or waiting. */
+  busyCaseIds: ReadonlySet<string>;
   onStatus: (caseId: string, status: CaseStatus) => void;
   headingRef: React.Ref<HTMLHeadingElement>;
 }) {
@@ -164,7 +164,7 @@ export function CaseList({
             row={row}
             services={data.services}
             now={data.now}
-            busy={busyCaseId === row.caseId}
+            busy={busyCaseIds.has(row.caseId)}
             onStatus={onStatus}
           />
         )}

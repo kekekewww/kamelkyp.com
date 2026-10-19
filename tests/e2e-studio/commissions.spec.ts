@@ -149,6 +149,73 @@ test("changes a status with Undo, also when the row leaves a filtered list", asy
   await expect.poll(() => pendingBadge(page)).toBe(before);
 });
 
+test("a status change made while another is in flight waits, and both report", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openStudio(page, "/studio/commissions");
+  // Slow every status post down, so the second Update is clicked while the
+  // first change is still in flight on the inbox's one status fetcher.
+  await page.route("**/studio/commissions/status*", async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    await route.continue().catch(() => {});
+  });
+  const changes = [
+    {
+      caseId: ID.review,
+      next: "pending_deposit",
+      label: "Awaiting deposit",
+      seeded: "pending_review",
+      seededLabel: "Pending review",
+    },
+    {
+      caseId: ID.production,
+      next: "preview_approval",
+      label: "Preview approval",
+      seeded: "in_production",
+      seededLabel: "In production",
+    },
+  ] as const;
+  for (const change of changes) {
+    const row = caseRow(page, change.caseId);
+    await row
+      .getByRole("combobox", { name: `Status for ${change.caseId}` })
+      .selectOption(change.next);
+    await row
+      .getByRole("button", { name: `Update status of ${change.caseId}` })
+      .click();
+  }
+
+  const toasts = page.locator(".studio-toasts");
+  for (const change of changes) {
+    await expect(
+      toasts
+        .locator(".studio-toast", {
+          hasText: `${change.caseId} is now “${change.label}”`,
+        })
+        .getByRole("button", { name: "Undo" }),
+    ).toBeVisible();
+    await expect(
+      caseRow(page, change.caseId).locator(".commissions-status"),
+    ).toHaveText(change.label);
+  }
+
+  // Back to the seeded statuses for the next steps.
+  await page.unrouteAll({ behavior: "ignoreErrors" });
+  for (const change of changes) {
+    const row = caseRow(page, change.caseId);
+    await row
+      .getByRole("combobox", { name: `Status for ${change.caseId}` })
+      .selectOption(change.seeded);
+    await row
+      .getByRole("button", { name: `Update status of ${change.caseId}` })
+      .click();
+    await expect(row.locator(".commissions-status")).toHaveText(
+      change.seededLabel,
+    );
+  }
+});
+
 test("keeps the student price after an inline confirmation", async ({
   page,
 }) => {

@@ -10,7 +10,14 @@ import { describe, expect, it } from "vitest";
 import { CleanupDialog } from "../../app/components/studio/commissions/cleanup-dialog";
 import { CommissionsInbox } from "../../app/components/studio/commissions/commissions-inbox";
 import { cleanupFeedback } from "../../app/components/studio/commissions/needs-action";
-import { useCommissionAction } from "../../app/components/studio/commissions/use-commission-action";
+import {
+  EMPTY_QUEUE,
+  enqueueSubmission,
+  queuedCaseIds,
+  settleSubmission,
+  trackSubmission,
+  useCommissionAction,
+} from "../../app/components/studio/commissions/use-commission-action";
 import {
   StudioSessionProvider,
   ToastProvider,
@@ -499,6 +506,60 @@ describe("cleanupFeedback", () => {
       close: true,
       inlineError: null,
       toast: { tone: "error", message: "Cleanup is not due for this case." },
+    });
+  });
+});
+
+describe("submission queue", () => {
+  const a = { intent: "set-status", caseId: ID_1, status: "pending_deposit" };
+  const b = { intent: "set-status", caseId: ID_2, status: "preview_approval" };
+  const c = { intent: "set-status", caseId: ID_3, status: "in_production" };
+
+  it("posts at once when nothing is in flight", () => {
+    const step = enqueueSubmission(EMPTY_QUEUE, a, true);
+    expect(step.post).toBe(a);
+    expect(step.queue).toEqual({ inFlight: a, waiting: [] });
+  });
+
+  it("never posts over a submission in flight: the next one waits for it", () => {
+    // A second post on the same fetcher would abort the first one.
+    const first = enqueueSubmission(EMPTY_QUEUE, a, true);
+    const second = enqueueSubmission(first.queue, b, true);
+    expect(second.post).toBeNull();
+    const third = enqueueSubmission(second.queue, c, false);
+    expect(third.post).toBeNull();
+    expect(queuedCaseIds(third.queue)).toEqual(new Set([ID_1, ID_2, ID_3]));
+
+    const settledA = settleSubmission(third.queue);
+    expect(settledA.finished).toBe(a);
+    expect(settledA.post).toBe(b);
+    expect(queuedCaseIds(settledA.queue)).toEqual(new Set([ID_2, ID_3]));
+    const settledB = settleSubmission(settledA.queue);
+    expect(settledB.finished).toBe(b);
+    expect(settledB.post).toBe(c);
+    const settledC = settleSubmission(settledB.queue);
+    expect(settledC.finished).toBe(c);
+    expect(settledC.post).toBeNull();
+    expect(settledC.queue).toEqual(EMPTY_QUEUE);
+  });
+
+  it("waits for a busy fetcher even with nothing of its own in flight", () => {
+    const step = enqueueSubmission(EMPTY_QUEUE, a, false);
+    expect(step.post).toBeNull();
+    const settled = settleSubmission(step.queue);
+    // The finished request was not made through the queue: not reported.
+    expect(settled.finished).toBeNull();
+    expect(settled.post).toBe(a);
+  });
+
+  it("reports a form submission it was told about", () => {
+    const sent = { intent: "confirm-cleanup", caseId: ID_4 };
+    const tracked = trackSubmission(EMPTY_QUEUE, sent);
+    expect(queuedCaseIds(tracked)).toEqual(new Set([ID_4]));
+    expect(settleSubmission(tracked)).toEqual({
+      queue: EMPTY_QUEUE,
+      finished: sent,
+      post: null,
     });
   });
 });

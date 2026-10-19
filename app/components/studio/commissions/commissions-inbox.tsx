@@ -46,14 +46,15 @@ function Summary({ data }: { data: CommissionsModel }) {
 /** Toasts for a finished status change (and its Undo). */
 function useStatusFeedback(
   submitRef: { current: (fields: SentFields) => void },
-  undoing: { current: Set<string> },
+  /** The Undo submissions, by identity: a change can wait behind another. */
+  undoing: { current: Set<SentFields> },
   headingRef: { current: HTMLHeadingElement | null },
 ) {
   const toast = useToast();
   return useCallback(
     (result: CommissionResult, sent: SentFields) => {
       const caseId = sent.caseId ?? "";
-      const wasUndo = undoing.current.delete(caseId);
+      const wasUndo = undoing.current.delete(sent);
       // The row may have left a filtered list: never leave focus on <body>.
       window.requestAnimationFrame(() => {
         const active = document.activeElement;
@@ -91,12 +92,9 @@ function useStatusFeedback(
           action: {
             label: "Undo",
             onAction: () => {
-              undoing.current.add(caseId);
-              submitRef.current({
-                intent: "set-status",
-                caseId,
-                status: previous,
-              });
+              const undo = { intent: "set-status", caseId, status: previous };
+              undoing.current.add(undo);
+              submitRef.current(undo);
             },
           },
         });
@@ -108,7 +106,7 @@ function useStatusFeedback(
 
 export function CommissionsInbox({ data }: { data: CommissionsModel }) {
   const heading = useRef<HTMLHeadingElement>(null);
-  const undoing = useRef(new Set<string>());
+  const undoing = useRef(new Set<SentFields>());
   // Status changes and their Undo share one fetcher.
   const submitRef = useRef<(fields: SentFields) => void>(() => {});
   const feedback = useStatusFeedback(submitRef, undoing, heading);
@@ -116,7 +114,6 @@ export function CommissionsInbox({ data }: { data: CommissionsModel }) {
   submitRef.current = status.submit;
 
   const onStatus = (caseId: string, next: CaseStatus) => {
-    undoing.current.delete(caseId);
     status.submit({ intent: "set-status", caseId, status: next });
   };
 
@@ -131,7 +128,7 @@ export function CommissionsInbox({ data }: { data: CommissionsModel }) {
       <NeedsAction data={data} />
       <CaseList
         data={data}
-        busyCaseId={status.sent?.caseId ?? null}
+        busyCaseIds={status.pendingCaseIds}
         onStatus={onStatus}
         headingRef={heading}
       />

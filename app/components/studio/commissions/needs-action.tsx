@@ -103,7 +103,7 @@ function StudentReviews({ data }: { data: CommissionsModel }) {
                 key={item.caseId}
                 item={item}
                 services={data.services}
-                busy={decide.sent?.caseId === item.caseId}
+                busy={decide.pendingCaseIds.has(item.caseId)}
                 onDecide={(intent, caseId) => decide.submit({ intent, caseId })}
               />
             ))}
