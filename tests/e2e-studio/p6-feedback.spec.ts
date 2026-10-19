@@ -6,19 +6,34 @@
  * (toast, SAVED hh:mm, "Save and leave"). The skipped-render path itself is
  * pinned deterministically by tests/unit/studio-fetcher-settle.test.ts.
  *
- * Titles carry a per-run token because the local D1 keeps rows between runs;
- * the homepage availability message is restored in a `finally` block because
- * that section goes live immediately.
+ * Titles carry a per-run token because the local D1 keeps rows between runs.
+ * Nothing a run changes stays live: the music track ends archived (never on
+ * the homepage showreel, which is a single shared slot), and the homepage
+ * availability message, which goes live immediately, is restored in a
+ * `finally` block from a fresh copy of the page.
  */
-import type { Page } from "@playwright/test";
+import type { CDPSession, Page } from "@playwright/test";
 import { expect as baseExpect, openStudio, test } from "./harness";
 
 const token = Date.now().toString(36);
 const expect = baseExpect.configure({ timeout: 20_000 });
 
-async function throttle(page: Page) {
+async function throttle(page: Page): Promise<CDPSession> {
   const cdp = await page.context().newCDPSession(page);
   await cdp.send("Emulation.setCPUThrottlingRate", { rate: 6 });
+  return cdp;
+}
+
+/** Full speed again, for clean-up that must not depend on the slow path. */
+async function unthrottle(cdp: CDPSession) {
+  await cdp.send("Emulation.setCPUThrottlingRate", { rate: 1 }).catch(() => {});
+}
+
+/** Clean-up leaves a page whose form may still be dirty (beforeunload). */
+function acceptDialogs(page: Page) {
+  page.on("dialog", (dialog) => {
+    dialog.accept().catch(() => {});
+  });
 }
 
 function toast(page: Page, message: string | RegExp) {
@@ -39,6 +54,52 @@ async function quickCreateMusic(page: Page, title: string) {
   ).toBeVisible();
 }
 
+/** Failure path: archive the track, so it is neither public nor featured. */
+async function archiveTrack(page: Page, cdp: CDPSession, path: string) {
+  await unthrottle(cdp);
+  acceptDialogs(page);
+  await openStudio(page, path);
+  const archive = page.getByRole("button", { name: "Archive", exact: true });
+  if (await archive.isVisible()) {
+    await archive.click();
+    await expect(
+      page.getByRole("button", { name: "Restore to draft" }),
+    ).toBeVisible();
+  }
+}
+
+function availability(page: Page) {
+  const form = page.locator('form[data-section-form="availability"]');
+  return {
+    message: form.locator('input[name="availability.message.en"]'),
+    state: form.locator(".studio-homepage-form__save .studio-save-state"),
+    save: form.getByRole("button", { name: "Save availability" }),
+  };
+}
+
+/**
+ * Saves `original` from a fresh copy of the homepage screen and always
+ * submits it. The form under test cannot be trusted here: after a missed
+ * settle it stays at SAVING… or compares against a stale baseline, so typing
+ * the original value back makes it look clean while the server holds the
+ * token. A fresh page also shows SAVED before any click, so the save is
+ * awaited by its response.
+ */
+async function restoreAvailability(page: Page, original: string) {
+  acceptDialogs(page);
+  await openStudio(page, "/studio/homepage");
+  const { message, state, save } = availability(page);
+  await message.fill(original);
+  const response = page.waitForResponse(
+    (candidate) =>
+      candidate.request().method() === "POST" &&
+      new URL(candidate.url()).pathname.startsWith("/studio/homepage"),
+  );
+  await save.click();
+  expect((await response).ok()).toBe(true);
+  await expect(state).toHaveText(/^SAVED \d{2}:\d{2}$/);
+}
+
 test.describe("studio feedback on a slow CPU", () => {
   // Every step runs at a sixth of the CPU against the dev server, which
   // serves unbundled modules: a flow takes one to two minutes.
@@ -49,38 +110,60 @@ test.describe("studio feedback on a slow CPU", () => {
   }) => {
     const title = `P6 music ${token}`;
     await openStudio(page, "/studio/music/new");
-    await throttle(page);
-    await quickCreateMusic(page, title);
+    const cdp = await throttle(page);
+    let editorPath: string | null = null;
+    let archived = false;
+    try {
+      await quickCreateMusic(page, title);
+      editorPath = new URL(page.url()).pathname;
+      const backupKey = `studio:music:${editorPath.split("/").pop()}`;
+      const storedBackup = () =>
+        page.evaluate((key) => sessionStorage.getItem(key), backupKey);
 
-    // A change first, so SAVED can only come from this submission.
-    await page.locator('input[name="role.en"]').fill("Mixing");
-    await expect(topSaveState(page)).toHaveText("UNSAVED CHANGES");
-    await page.getByRole("button", { name: "Publish" }).first().click();
-    await expect(
-      toast(page, "Saved as a draft. Fix the checklist"),
-    ).toBeVisible();
-    await expect(topSaveState(page)).toHaveText(/^SAVED \d{2}:\d{2}$/);
+      // A change first, so SAVED can only come from this submission.
+      await page.locator('input[name="role.en"]').fill("Mixing");
+      await expect(topSaveState(page)).toHaveText("UNSAVED CHANGES");
+      await page.getByRole("button", { name: "Publish" }).first().click();
+      await expect(
+        toast(page, "Saved as a draft. Fix the checklist"),
+      ).toBeVisible();
+      await expect(topSaveState(page)).toHaveText(/^SAVED \d{2}:\d{2}$/);
 
-    await page.locator("#section-links > summary").click();
-    await page
-      .getByRole("textbox", { name: "YouTube" })
-      .fill("https://www.youtube.com/watch?v=p6Feedback");
-    await expect(topSaveState(page)).toHaveText("UNSAVED CHANGES");
-    await page.keyboard.press("ControlOrMeta+s");
-    await expect(topSaveState(page)).toHaveText(/^SAVED \d{2}:\d{2}$/);
+      await page.locator("#section-links > summary").click();
+      await page
+        .getByRole("textbox", { name: "YouTube" })
+        .fill("https://www.youtube.com/watch?v=p6Feedback");
+      await expect(topSaveState(page)).toHaveText("UNSAVED CHANGES");
+      // SAVED alone does not prove the save settled: the editor re-baselines
+      // on the revalidated server copy too. Only the settled save clears the
+      // local backup the editor keeps while dirty.
+      await expect.poll(storedBackup).not.toBeNull();
+      await page.keyboard.press("ControlOrMeta+s");
+      await expect(topSaveState(page)).toHaveText(/^SAVED \d{2}:\d{2}$/);
+      await expect.poll(storedBackup).toBeNull();
 
-    await page.getByRole("button", { name: "Publish" }).first().click();
-    await expect(toast(page, /^Published$/)).toBeVisible();
+      await page.getByRole("button", { name: "Publish" }).first().click();
+      await expect(toast(page, /^Published$/)).toBeVisible();
 
-    await page.getByRole("button", { name: "Make homepage showreel" }).click();
-    await expect(toast(page, /^Homepage updated$/)).toBeVisible();
-    // Leave the showreel as it was, so later runs and specs do not depend on it.
-    await page
-      .getByRole("button", { name: "Remove from homepage showreel" })
-      .click();
-    await expect(
-      page.getByRole("button", { name: "Make homepage showreel" }),
-    ).toBeVisible();
+      // Placement through this track's own flag: the single showreel slot
+      // would replace whatever showreel the local D1 holds.
+      await page.getByRole("button", { name: "Feature on homepage" }).click();
+      await expect(toast(page, /^Homepage updated$/)).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "Remove from homepage", exact: true }),
+      ).toBeVisible();
+
+      // Archiving reports its result and takes the track off the public
+      // pages and the homepage again.
+      await page.getByRole("button", { name: "Archive", exact: true }).click();
+      await expect(toast(page, /^Archived$/)).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "Restore to draft" }),
+      ).toBeVisible();
+      archived = true;
+    } finally {
+      if (editorPath && !archived) await archiveTrack(page, cdp, editorPath);
+    }
   });
 
   test("media: register, archive, restore, save and rebuild report their result", async ({
@@ -165,13 +248,8 @@ test.describe("studio feedback on a slow CPU", () => {
 
   test("homepage section: saving reaches SAVED", async ({ page }) => {
     await openStudio(page, "/studio/homepage");
-    await throttle(page);
-    const form = page.locator('form[data-section-form="availability"]');
-    const message = form.locator('input[name="availability.message.en"]');
-    const state = form.locator(
-      ".studio-homepage-form__save .studio-save-state",
-    );
-    const save = form.getByRole("button", { name: "Save availability" });
+    const cdp = await throttle(page);
+    const { message, state, save } = availability(page);
     const original = await message.inputValue();
     try {
       await message.fill(`P6 availability ${token}`);
@@ -179,15 +257,17 @@ test.describe("studio feedback on a slow CPU", () => {
       await save.click();
       await expect(state).toHaveText(/^SAVED \d{2}:\d{2}$/);
     } finally {
-      // The section goes live immediately: never leave the token behind.
-      await expect(state).not.toHaveText("SAVING…");
-      await message.fill(original);
-      if ((await state.textContent()) === "UNSAVED CHANGES") {
-        await save.click();
-        await expect(state).toHaveText(/^SAVED \d{2}:\d{2}$/);
-      }
+      // The section goes live immediately: never leave the token behind,
+      // whatever the save state under test shows.
+      await unthrottle(cdp);
+      await expect(state)
+        .not.toHaveText("SAVING…")
+        .catch(() => {});
+      await restoreAvailability(page, original);
     }
-    await expect(message).toHaveValue(original);
+    // The server copy, not only this form, holds the original value again.
+    await openStudio(page, "/studio/homepage");
+    await expect(availability(page).message).toHaveValue(original);
   });
 
   test("localized fields keep their spacing and locale grid", async ({
