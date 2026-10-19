@@ -50,6 +50,8 @@ type Seed = {
   student?: { standard: number; student: number };
   /** `false`: no case_runtime row (a case created before 0003). */
   runtime?: boolean;
+  /** `false`: no submission_attempts row (as after a confirmed cleanup). */
+  attempt?: boolean;
 };
 
 async function seedCase(seed: Seed): Promise<string> {
@@ -65,10 +67,14 @@ async function seedCase(seed: Seed): Promise<string> {
       seed.submittedAt,
       seed.status ?? "pending_review",
     ),
-    env.DB.prepare(
-      "INSERT INTO submission_attempts (case_id, state, payload_hash, terms_versions_json, terms_accepted_at, google_response_id, last_error_code, updated_at) VALUES (?, 'complete', 'sentinel-payload-hash', '[\"sentinel-terms\"]', ?, 'sentinel-google-id', 'sentinel-error', ?)",
-    ).bind(caseId, seed.submittedAt, seed.submittedAt),
   ];
+  if (seed.attempt !== false) {
+    statements.push(
+      env.DB.prepare(
+        "INSERT INTO submission_attempts (case_id, state, payload_hash, terms_versions_json, terms_accepted_at, google_response_id, last_error_code, updated_at) VALUES (?, 'complete', 'sentinel-payload-hash', '[\"sentinel-terms\"]', ?, 'sentinel-google-id', 'sentinel-error', ?)",
+      ).bind(caseId, seed.submittedAt, seed.submittedAt),
+    );
+  }
   if (seed.runtime !== false) {
     statements.push(
       env.DB.prepare(
@@ -716,18 +722,20 @@ describe("handleCommissionCleanup", () => {
     expect(await runtimeOf(caseId)).toBeNull();
   });
 
+  /** A prepared statement whose reads fail. */
+  const broken = {
+    bind: () => broken,
+    first: async () => {
+      throw new Error("d1_unavailable");
+    },
+    all: async () => {
+      throw new Error("d1_unavailable");
+    },
+  };
+
   /** `env.DB` whose matching reads fail once the delete batch has committed. */
   function failingAfterCommit(fails: (query: string) => boolean): D1Database {
     let committed = false;
-    const broken = {
-      bind: () => broken,
-      first: async () => {
-        throw new Error("d1_unavailable");
-      },
-      all: async () => {
-        throw new Error("d1_unavailable");
-      },
-    };
     return {
       prepare: (query: string) =>
         committed && fails(query) ? broken : env.DB.prepare(query),
@@ -775,6 +783,94 @@ describe("handleCommissionCleanup", () => {
     // The delete did commit.
     expect(await runtimeOf(caseId)).toBeNull();
     expect(await attemptOf(caseId)).toBeNull();
+  });
+
+  /** Wraps a D1 stand-in and records every query prepared on it. */
+  function recording(db: D1Database) {
+    const queries: string[] = [];
+    const wrapped = {
+      prepare: (query: string) => {
+        queries.push(query);
+        return db.prepare(query);
+      },
+      batch: (statements: D1PreparedStatement[]) => db.batch(statements),
+    } as unknown as D1Database;
+    return { db: wrapped, queries };
+  }
+
+  /** Reads of submission_attempts (the reused service's delete aside). */
+  const attemptReads = (queries: string[]) =>
+    queries.filter(
+      (query) =>
+        query.includes("submission_attempts") &&
+        !query.startsWith("DELETE FROM submission_attempts"),
+    );
+
+  it("decides a failed cleanup without reading submission_attempts", async () => {
+    const { gateway } = okGateway();
+    const failedCase = await dueCase("2026-02-01T09:00:00.000Z");
+    const failedBatch = recording({
+      prepare: (query: string) => env.DB.prepare(query),
+      batch: async () => {
+        throw new Error("d1_unavailable");
+      },
+    } as unknown as D1Database);
+    const failed = await cleanup(
+      { intent: "confirm-cleanup", caseId: failedCase, ...CHECKLIST },
+      gateway,
+      failedBatch.db,
+    );
+    expect(failed.status).toBe(503);
+    expect(failed.body.code).toBe("cleanup_failed");
+    expect(attemptReads(failedBatch.queries)).toEqual([]);
+
+    const doneCase = await dueCase("2026-02-01T10:00:00.000Z");
+    const afterCommit = recording(
+      failingAfterCommit(
+        (query) => query === "SELECT case_id FROM cases WHERE case_id = ?",
+      ),
+    );
+    const done = await cleanup(
+      { intent: "confirm-cleanup", caseId: doneCase, ...CHECKLIST },
+      gateway,
+      afterCommit.db,
+    );
+    expect(done.status).toBe(200);
+    expect(attemptReads(afterCommit.queries)).toEqual([]);
+  });
+
+  it("answers a failure before the ledger the same, whatever attempt rows exist", async () => {
+    // No runtime row (cleaned in another tab, or a case from before 0003)
+    // and the due check itself fails: nothing was deleted, and the answer
+    // must not tell whether a submission_attempts row exists.
+    const withAttempt = await seedCase({
+      submittedAt: "2026-02-01T11:00:00.000Z",
+      status: "delivered",
+      runtime: false,
+    });
+    const withoutAttempt = await seedCase({
+      submittedAt: "2026-02-01T12:00:00.000Z",
+      status: "delivered",
+      runtime: false,
+      attempt: false,
+    });
+    const dueCheckFails = {
+      prepare: (query: string) =>
+        query.includes("JOIN case_runtime") ? broken : env.DB.prepare(query),
+      batch: (statements: D1PreparedStatement[]) => env.DB.batch(statements),
+    } as unknown as D1Database;
+    const { gateway, cleanupLedger } = okGateway();
+    for (const caseId of [withAttempt, withoutAttempt]) {
+      const result = await cleanup(
+        { intent: "confirm-cleanup", caseId, ...CHECKLIST },
+        gateway,
+        dueCheckFails,
+      );
+      expect(result.status, caseId).toBe(503);
+      expect(result.body.code, caseId).toBe("cleanup_failed");
+    }
+    expect(cleanupLedger).not.toHaveBeenCalled();
+    expect(await attemptOf(withAttempt)).toBe(withAttempt);
   });
 
   it("removes the temporary records after the ledger confirms and keeps the case", async () => {

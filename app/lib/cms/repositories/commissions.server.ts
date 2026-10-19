@@ -183,6 +183,9 @@ export async function loadCommissions(input: {
       status: row.status,
       cleanupDueAt: fact?.cleanupDueAt ?? null,
       studentReviewPending: fact?.studentReviewPending ?? false,
+      // Derived from case_runtime only (wp1 §4.4, §4.7). A terminal case
+      // from before migration 0003 whose status never changed since would
+      // match too, but 0003 predates every deploy.
       temporaryRecords:
         fact && !fact.hasRuntime && isTerminal(row.status) ? "removed" : "kept",
     };
@@ -309,6 +312,8 @@ const ERRORS = new Map<string, { status: number; message: string }>([
         "Temporary records were removed, but the case record is missing. Check the database before anything else.",
     },
   ],
+  // Not in the wp1 §4.4 table: the outcome of a cleanup whose state could
+  // not be read back after the ledger confirmed (see cleanupAfterFailure).
   [
     "cleanup_unverified",
     {
@@ -522,6 +527,9 @@ export async function handleCommissionCleanup({
           : errorResult("cleanup_checklist_incomplete", issues);
       }
       const { caseId } = parsed.data;
+      // The service deletes only after the ledger confirmed, so this tells
+      // where an uncoded error came from.
+      let ledgerConfirmed = false;
       try {
         await confirmVerifiedCleanup({
           db,
@@ -531,13 +539,21 @@ export async function handleCommissionCleanup({
             gmailDeleted: true,
             otherSensitiveCopiesDeleted: true,
           },
-          gateway,
+          gateway: {
+            cleanupLedger: async (input) => {
+              await gateway.cleanupLedger(input);
+              ledgerConfirmed = true;
+            },
+          },
           now,
         });
       } catch (error) {
         const code = errorCode(error);
         if (code) return errorResult(code);
-        // An uncoded (D1) error can come before the delete batch or after it
+        // An uncoded (D1) error before the ledger confirmed: nothing was
+        // deleted (wp1 §4.4).
+        if (!ledgerConfirmed) return errorResult("cleanup_failed");
+        // After it, the error can come before the delete batch or after it
         // committed: what is left decides what the owner is told.
         return cleanupAfterFailure(db, intent, caseId);
       }
@@ -549,28 +565,29 @@ export async function handleCommissionCleanup({
 }
 
 /**
- * The cleanup failed without a coded error. The delete batch is atomic, so a
- * remaining runtime or attempt row means nothing was removed (a retry is
- * safe: the ledger write is idempotent), and none left means the cleanup
- * went through and only a later read failed. If even this read fails, the
- * outcome is unknown and the answer says so.
+ * The cleanup failed without a coded error after the ledger confirmed, so
+ * the due check had found the case's runtime row. The delete batch removes
+ * the attempt and runtime rows atomically: a runtime row still there means
+ * nothing was removed (a retry is safe: the ledger write is idempotent),
+ * none left means the cleanup went through and only a later read failed.
+ * If even this read fails, the outcome is unknown and the answer says so.
+ *
+ * Deliberate deviation from wp1 §4.4 (which maps every uncoded cleanup
+ * error to 503 `cleanup_failed`): that message says nothing was marked as
+ * done, which is false once the batch has committed. Like all new SQL here,
+ * this never reads `submission_attempts` (§4.7).
  */
 async function cleanupAfterFailure(
   db: D1Database,
   intent: string,
   caseId: string,
 ) {
-  let left: {
-    has_case: number;
-    has_runtime: number;
-    has_attempt: number;
-  } | null;
+  let left: { has_case: number; has_runtime: number } | null;
   try {
     left = await db
       .prepare(
         `SELECT EXISTS (SELECT 1 FROM cases WHERE case_id = ?1) AS has_case,
-                EXISTS (SELECT 1 FROM case_runtime WHERE case_id = ?1) AS has_runtime,
-                EXISTS (SELECT 1 FROM submission_attempts WHERE case_id = ?1) AS has_attempt`,
+                EXISTS (SELECT 1 FROM case_runtime WHERE case_id = ?1) AS has_runtime`,
       )
       .bind(caseId)
       .first();
@@ -578,9 +595,7 @@ async function cleanupAfterFailure(
     return errorResult("cleanup_unverified");
   }
   if (!left) return errorResult("cleanup_unverified");
-  if (left.has_runtime || left.has_attempt) {
-    return errorResult("cleanup_failed");
-  }
+  if (left.has_runtime) return errorResult("cleanup_failed");
   if (!left.has_case) return errorResult("case_record_missing");
   return actionOk({ intent, caseId });
 }
