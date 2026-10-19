@@ -151,13 +151,17 @@ function AddGroup({
   const baseline = useRef<string | null>(null);
   const handled = useRef<unknown>(null);
   const [epoch, setEpoch] = useState(0);
+  const full = customCount >= FOOTER_LIMITS.customGroups;
 
+  // Each fresh form is the baseline: the first one, the one after an add and
+  // the one that comes back when a deletion brings the footer under the cap.
+  // Without a form (at the cap) nothing here is unsaved.
   // biome-ignore lint/correctness/useExhaustiveDependencies: re-baseline each fresh form
   useEffect(() => {
-    baseline.current = formRef.current
-      ? serializeForm(new FormData(formRef.current))
-      : null;
-  }, [epoch]);
+    const form = full ? null : formRef.current;
+    baseline.current = form ? serializeForm(new FormData(form)) : null;
+    if (!form) onDirty("new", false);
+  }, [epoch, full, onDirty]);
 
   useEffect(() => {
     const result = fetcher.data;
@@ -187,7 +191,6 @@ function AddGroup({
           ...(issueFor("en") ? { en: issueFor("en") } : {}),
         }
       : undefined;
-  const full = customCount >= FOOTER_LIMITS.customGroups;
   const adding = fetcher.state !== "idle";
 
   return (

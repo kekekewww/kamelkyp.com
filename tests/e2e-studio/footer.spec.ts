@@ -1,15 +1,17 @@
 /**
  * Settings → Footer on the dev-server Studio harness (wp3 spec §6.4). Group
  * names carry a per-run token because the local D1 keeps rows between runs;
- * every group this spec adds is deleted again through the UI (and a failed
- * run's leftovers are deleted at the start of the next one).
+ * every group this spec adds is deleted again (through the UI, or with the
+ * screen's own delete intent when there are many), and a failed run's
+ * leftovers are deleted at the start of the next one.
  */
 import type { Locator, Page } from "@playwright/test";
-import { expect, openStudio, test } from "./harness";
+import { expect, openStudio, STUDIO_E2E_ORIGIN, test } from "./harness";
 
 const token = Date.now().toString(36);
 const NAME = `WP3 e2e ${token}`;
 const STALE = `WP3 e2e stale ${token}`;
+const CAP = `WP3 e2e cap ${token}`;
 const ADDRESS = `https://example.com/wp3-${token}`;
 const FOOTER = "/studio/settings/footer";
 
@@ -43,20 +45,6 @@ async function deleteGroup(page: Page, group: Locator) {
   await expect(toasts(page)).toContainText("Deleted “");
 }
 
-/** Deletes every group a previous run of this spec left behind. */
-async function deleteLeftovers(page: Page) {
-  const leftovers = page.locator(".studio-footer__row").filter({
-    has: page.locator(".studio-footer__name > span:first-child", {
-      hasText: /^WP3 e2e /,
-    }),
-  });
-  while ((await leftovers.count()) > 0) {
-    const before = await leftovers.count();
-    await deleteGroup(page, leftovers.first());
-    await expect(leftovers).toHaveCount(before - 1);
-  }
-}
-
 async function addGroup(page: Page, zh: string, en: string) {
   const form = page.locator('form[aria-label="New footer group"]');
   await form.locator('input[name="label.zh"]').fill(zh);
@@ -65,6 +53,44 @@ async function addGroup(page: Page, zh: string, en: string) {
   await expect(toasts(page)).toContainText(`Added “${en}”`);
   await expect(row(page, en)).toHaveCount(1);
 }
+
+/** Posts one footer intent as the screen's forms do (CSRF token, same origin). */
+async function postFooter(page: Page, fields: Record<string, string>) {
+  const csrfToken = await page
+    .locator('input[name="csrfToken"]')
+    .first()
+    .inputValue();
+  const response = await page.request.post(FOOTER, {
+    headers: { Origin: STUDIO_E2E_ORIGIN },
+    form: { csrfToken, ...fields },
+  });
+  expect(response.status()).toBe(200);
+}
+
+/**
+ * Deletes the groups whose name matches with the screen's own delete intent
+ * (a failed run can leave many), then reloads the screen.
+ */
+async function deleteNamed(page: Page, name: RegExp) {
+  const named = page.locator(".studio-footer__row").filter({
+    has: page.locator(".studio-footer__name > span:first-child", {
+      hasText: name,
+    }),
+  });
+  const ids = await named
+    .locator('input[name="id"]')
+    .evaluateAll((inputs) =>
+      inputs.map((input) => (input as HTMLInputElement).value),
+    );
+  for (const id of ids) {
+    await postFooter(page, { intent: "delete-group", id });
+  }
+  await openStudio(page, FOOTER);
+  await expect(named).toHaveCount(0);
+}
+
+/** Deletes every group a previous run of this spec left behind. */
+const deleteLeftovers = (page: Page) => deleteNamed(page, /^WP3 e2e /);
 
 async function publicFooterHtml(page: Page): Promise<string> {
   const response = await page.request.get("/en");
@@ -299,5 +325,55 @@ test.describe("footer settings", () => {
     await openStudio(page, FOOTER);
     await deleteGroup(page, row(page, STALE));
     await expect(row(page, STALE)).toHaveCount(0);
+  });
+
+  test("the add form that comes back under the 20-group cap starts clean", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await openStudio(page, FOOTER);
+    await deleteLeftovers(page);
+    await openStudio(page, FOOTER);
+
+    // Fill the footer up to 20 custom groups with the screen's own intent.
+    const custom = page.locator(".studio-footer__row").filter({
+      has: page.locator(".studio-footer__kind", { hasText: /^Custom links/ }),
+    });
+    const missing = 20 - (await custom.count());
+    expect(missing).toBeGreaterThan(0);
+    for (let index = 0; index < missing; index += 1) {
+      await postFooter(page, {
+        intent: "save-group",
+        "label.zh": `上限 ${token} ${index}`,
+        "label.en": `${CAP} ${index}`,
+      });
+    }
+    await openStudio(page, FOOTER);
+    const add = page.locator("section.studio-footer__add");
+    await expect(add).toContainText(
+      "The footer holds at most 20 custom groups.",
+    );
+    await expect(add.locator("form")).toHaveCount(0);
+
+    // Deleting one brings the form back. Typing and clearing it again
+    // leaves nothing unsaved, so leaving the screen asks nothing.
+    await deleteGroup(page, row(page, `${CAP} 0`));
+    const form = page.locator('form[aria-label="New footer group"]');
+    await expect(form).toBeVisible();
+    const zh = form.locator('input[name="label.zh"]');
+    await zh.fill("暫時");
+    await zh.fill("");
+    await page
+      .locator('nav[aria-label="Studio sections"]')
+      .getByRole("link", { name: "Social links" })
+      .click();
+    await expect(page).toHaveURL(/\/studio\/social$/);
+    await expect(
+      page.getByRole("dialog", { name: "Leave without saving?" }),
+    ).toHaveCount(0);
+
+    // Clean up: delete the rest with the screen's own intent.
+    await openStudio(page, FOOTER);
+    await deleteNamed(page, new RegExp(`^${CAP} `));
   });
 });
