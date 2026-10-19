@@ -39,11 +39,14 @@ const SAFE_CODES = new Set([
   "case_payload_mismatch",
 ]);
 
-// A closed service (no active price or terms) is not the visitor's mistake:
-// the public code stays `service_unavailable` while the log names the cause.
+// A closed service (no active price or terms) or no usable exchange rate for
+// an English quote is not the visitor's mistake: the public code stays
+// `service_unavailable` while the log names the cause.
 const UNAVAILABLE_CODES = new Set([
   "active_price_rule_not_found",
   "active_terms_unavailable",
+  "fx_rate_missing",
+  "fx_rate_stale",
 ]);
 
 function safeCode(error: unknown): string {
@@ -59,6 +62,12 @@ function localizedMessage(locale: Locale, code: string): string {
     return locale === "zh"
       ? "嘗試次數過多，請稍後再試。"
       : "Too many attempts. Try again later.";
+  }
+  if (code === "fx_rate_missing" || code === "fx_rate_stale") {
+    // Same words as the prepare route.
+    return locale === "zh"
+      ? "目前無法鎖定美金價格，請稍後再試。"
+      : "The USD price cannot be locked right now. Try again later.";
   }
   if (code.startsWith("turnstile_")) {
     return locale === "zh"

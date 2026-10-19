@@ -173,7 +173,13 @@ describe("closed-service safe codes", () => {
     direction: "Clear vocal",
   };
 
-  function args(path: string): ActionFunctionArgs {
+  function args(
+    path: string,
+    payload: { draft: Record<string, unknown>; termVersionIds: string[] } = {
+      draft,
+      termVersionIds: ["stale"],
+    },
+  ): ActionFunctionArgs {
     const testEnv = {
       ...createTestEnv({ TURNSTILE_SITE_KEY: "1x00000000000000000000AA" }),
       DB: env.DB,
@@ -188,8 +194,8 @@ describe("closed-service safe codes", () => {
         },
         body: JSON.stringify({
           locale: "en",
-          draft,
-          termVersionIds: ["stale"],
+          draft: payload.draft,
+          termVersionIds: payload.termVersionIds,
           termsAccepted: true,
           turnstileToken: "token",
         }),
@@ -222,6 +228,45 @@ describe("closed-service safe codes", () => {
     expect(
       ((await prepare.json()) as { error: { code: string } }).error.code,
     ).toBe("active_terms_unavailable");
+    error.mockRestore();
+  });
+
+  it("tells an English visitor that the USD price cannot be locked without FX", async () => {
+    // full_mix is open in English (terms published above); no FX rate exists.
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const payload = {
+      draft: { ...draft, serviceId: "full_mix" },
+      termVersionIds: [
+        "avail-common-en",
+        "avail-full-mix-en",
+        "avail-privacy-en",
+      ],
+    };
+    const submit = (await submitAction(
+      args("/api/commission/submit", payload),
+    )) as Response;
+    expect(submit.status).toBe(400);
+    expect(
+      ((await submit.json()) as { error: { code: string; message: string } })
+        .error,
+    ).toEqual({
+      code: "service_unavailable",
+      message: "The USD price cannot be locked right now. Try again later.",
+    });
+    expect(String(error.mock.calls.at(-1)?.[0])).toContain(
+      '"code":"fx_rate_missing"',
+    );
+
+    const prepare = (await prepareAction(
+      args("/api/commission/prepare", payload),
+    )) as Response;
+    expect(
+      ((await prepare.json()) as { error: { code: string; message: string } })
+        .error,
+    ).toEqual({
+      code: "fx_rate_missing",
+      message: "The USD price cannot be locked right now. Try again later.",
+    });
     error.mockRestore();
   });
 });
