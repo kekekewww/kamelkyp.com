@@ -271,6 +271,34 @@ describe("PriceVersionEditor", () => {
     );
   });
 
+  it("names a cancelled change and its cancellation, with no actions on them", () => {
+    const cancelled: StudioPriceVersion = {
+      ...SCHEDULED,
+      id: "v-cancelled",
+      baseTwd: 9000,
+      state: "cancelled",
+    };
+    const cancellation: StudioPriceVersion = {
+      ...SCHEDULED,
+      id: "v-cancellation",
+      publishedAt: "2026-10-12T01:00:00.000Z",
+      action: "cancel",
+      replacesVersionId: "v-cancelled",
+      state: "cancelled",
+    };
+    const html = render(
+      <PriceVersionEditor
+        data={editorData("full_mix", [cancellation, cancelled])}
+      />,
+    );
+    expect(html).toContain("Cancellation");
+    expect(html).toContain("Cancels the change of 2099-01-01 00:00");
+    expect(html).toContain("Cancelled (never active)");
+    expect(html).not.toContain("Cancel scheduled change");
+    expect(html).not.toContain("Replace…");
+    expect(html).not.toContain("Scheduled:");
+  });
+
   it("shows every input for simple transitions", () => {
     const html = render(
       <PriceVersionEditor data={editorData("simple_transition")} />,

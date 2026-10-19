@@ -247,9 +247,11 @@ student, rush, consultation and source-prep fields that a single amount cannot e
 - Publish metadata (WP2, `0009_pricing_terms_studio.sql`): each publish also inserts an immutable
   `price_version_publications` row (`published_at`, `action` publish/replace/cancel). The active rule breaks ties at
   the same `effective_from` by the latest `published_at` (seeds, without metadata, sort last), which makes
-  "replace a scheduled change" (publish again at the same instant) and "cancel it" (publish a copy of the baseline
-  rule at that instant) deterministic without updating or deleting a `price_versions` row. Studio → Pricing
-  publishes now or at a Taipei time at least 5 minutes ahead; backdating is refused.
+  "replace a scheduled change" (publish again at the same instant) and "cancel it" (a cancellation row at that
+  instant, carrying the baseline values for the record) deterministic without updating or deleting a
+  `price_versions` row. An instant whose latest publish is a cancellation is no change at all: the active rule
+  skips it, so the rule in force before it stays in force whatever is published or cancelled later. Studio →
+  Pricing publishes now or at a Taipei time at least 5 minutes ahead; backdating is refused.
 
 ### 3.6 Public read path
 

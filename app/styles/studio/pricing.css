@@ -277,6 +277,7 @@
 
 .studio .studio-price-history__row--superseded,
 .studio .studio-price-history__row--replaced,
+.studio .studio-price-history__row--cancelled,
 .studio .studio-price-history__row--retired {
   color: var(--color-text-secondary);
 }

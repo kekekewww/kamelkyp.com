@@ -1,6 +1,7 @@
 /**
  * Price history of one service (wp2 §4.3, §4.9): every immutable version
- * with its state in words. A scheduled change can be replaced (the editor
+ * with its state in words. A cancelled change and its cancellation row are
+ * never active. A scheduled change can be replaced (the editor
  * fills its form with that version) or cancelled; each cancel is its own
  * small form outside the price form, so no form is nested and a cancel
  * never posts the unsaved price fields.
@@ -19,8 +20,18 @@ const STATE_WORD: Record<PriceVersionState, string> = {
   scheduled: "Scheduled",
   superseded: "Superseded",
   replaced: "Replaced (never active)",
+  cancelled: "Cancelled (never active)",
   retired: "Retired",
 };
+
+/** A cancellation row is a marker: the rule before its instant applies. */
+function stateWord(
+  version: Pick<StudioPriceVersion, "state" | "action">,
+): string {
+  return version.action === "cancel" && version.state === "cancelled"
+    ? "Cancellation"
+    : STATE_WORD[version.state];
+}
 
 export function PriceStateBadge({
   version,
@@ -32,7 +43,7 @@ export function PriceStateBadge({
       <span
         className={`studio-badge studio-price-state__badge studio-price-state__badge--${version.state}`}
       >
-        {STATE_WORD[version.state]}
+        {stateWord(version)}
       </span>
       {version.action === "cancel" ? (
         <span className="studio-price-state__note">

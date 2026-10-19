@@ -404,7 +404,8 @@ describe("price editor", () => {
       (await getActivePriceRule(env.DB, "edit_transition", at)).baseTwd,
     ).toBe(4300);
 
-    // Cancel: a copy of the baseline at the exact same instant.
+    // Cancel: a cancellation row (a copy of the baseline, for the record) at
+    // the exact same instant; the rule before that instant stays in force.
     const day3 = new Date("2026-12-03T00:00:00.000Z");
     const before = await versionCount("edit_transition");
     const cancelForm = new FormData();
@@ -419,20 +420,31 @@ describe("price editor", () => {
     });
     expect(status(cancelled)).toBe(200);
     expect(await versionCount("edit_transition")).toBe(before + 1);
-    const atRule = await getActivePriceRule(env.DB, "edit_transition", at);
-    expect(atRule.baseTwd).toBe(4000);
-    expect(atRule.perSongAfterIncludedTwd).toBe(800);
-    expect(await metadata(atRule.versionId)).toMatchObject({
+    const cancelId = body(cancelled).versionId as string;
+    expect(await metadata(cancelId)).toMatchObject({
       action: "cancel",
       replaces_version_id: second,
     });
     expect(
       await env.DB.prepare(
-        "SELECT effective_from FROM price_versions WHERE id = ?",
+        "SELECT effective_from, base_twd, per_song_after_five_twd FROM price_versions WHERE id = ?",
       )
-        .bind(atRule.versionId)
-        .first("effective_from"),
-    ).toBe(at);
+        .bind(cancelId)
+        .first(),
+    ).toEqual({
+      effective_from: at,
+      base_twd: 4000,
+      per_song_after_five_twd: 800,
+    });
+    const atRule = await getActivePriceRule(env.DB, "edit_transition", at);
+    expect(atRule.versionId).toBe("edit-2026-08-10");
+    data = await loadPriceEditor(env.DB, "edit_transition", day3);
+    expect(data.service.next).toBeNull();
+    expect(
+      data.history
+        .filter((row) => row.effectiveFrom === at)
+        .map((row) => row.state),
+    ).toEqual(["cancelled", "cancelled", "cancelled"]);
     // Seeds and earlier versions are untouched.
     expect(
       await env.DB.prepare(
@@ -453,6 +465,82 @@ describe("price editor", () => {
     });
     expect(status(refused)).toBe(409);
     expect(body(refused).code).toBe("invalid_state");
+  });
+
+  it("keeps cancelled changes cancelled, whatever the cancel order and later publishes", async () => {
+    const cancel = async (versionId: string, now: Date) => {
+      const form = new FormData();
+      form.append("versionId", versionId);
+      form.append(
+        "expectedVersionCount",
+        String(await versionCount("vocal_mix")),
+      );
+      return handlePriceEditorAction({
+        db: env.DB,
+        serviceId: "vocal_mix",
+        formData: form,
+        intent: "cancel-scheduled",
+        now,
+      });
+    };
+    const day1 = new Date("2027-05-01T00:00:00.000Z");
+    const active = (await loadPriceEditor(env.DB, "vocal_mix", day1)).service
+      .active;
+    // S0 for 2027-06-01 00:00, S for 2027-07-01 00:00 (Taipei).
+    for (const [base, effectiveAt] of [
+      ["5000", "2027-06-01T00:00"],
+      ["6000", "2027-07-01T00:00"],
+    ] as const) {
+      const result = await publish("vocal_mix", day1, {
+        "baseTwd:number": base,
+        effectiveMode: "scheduled",
+        effectiveAt,
+      });
+      expect(status(result)).toBe(200);
+    }
+    let data = await loadPriceEditor(env.DB, "vocal_mix", day1);
+    const s0 = data.history.find((row) => row.baseTwd === 5000)?.id as string;
+    const s = data.history.find((row) => row.baseTwd === 6000)?.id as string;
+
+    // Cancel the later change first, then the earlier one (later publishes
+    // win their instant's group).
+    expect(status(await cancel(s, new Date("2027-05-01T01:00:00.000Z")))).toBe(
+      200,
+    );
+    expect(status(await cancel(s0, new Date("2027-05-01T02:00:00.000Z")))).toBe(
+      200,
+    );
+    for (const at of ["2027-06-15T00:00:00.000Z", "2027-07-05T00:00:00.000Z"]) {
+      expect(
+        (await getActivePriceRule(env.DB, "vocal_mix", at)).versionId,
+        at,
+      ).toBe(active?.id);
+    }
+    data = await loadPriceEditor(env.DB, "vocal_mix", day1);
+    expect(data.service.next).toBeNull();
+
+    // A change scheduled before a cancelled instant is not reverted there.
+    const day2 = new Date("2027-05-02T00:00:00.000Z");
+    const d = await publish("vocal_mix", day2, {
+      "baseTwd:number": "7000",
+      effectiveMode: "scheduled",
+      effectiveAt: "2027-05-20T00:00",
+    });
+    expect(status(d)).toBe(200);
+    for (const at of ["2027-06-15T00:00:00.000Z", "2027-07-05T00:00:00.000Z"]) {
+      expect(
+        (await getActivePriceRule(env.DB, "vocal_mix", at)).baseTwd,
+        at,
+      ).toBe(7000);
+    }
+    data = await loadPriceEditor(env.DB, "vocal_mix", day2);
+    expect(data.service.next?.baseTwd).toBe(7000);
+    // A cancellation is never offered for cancelling again.
+    expect(
+      data.history
+        .filter((row) => row.action === "cancel")
+        .map((row) => row.state),
+    ).toEqual(["cancelled", "cancelled"]);
   });
 
   it("refuses stale pages (409) and inserts nothing", async () => {
@@ -560,6 +648,9 @@ describe("price editor", () => {
       "2026-12-31T15:59:59.999Z",
       "2026-12-31T16:00:00.000Z",
       "2027-03-01T00:00:00.000Z",
+      "2027-05-31T16:00:00.000Z",
+      "2027-06-15T00:00:00.000Z",
+      "2027-07-05T00:00:00.000Z",
       "2099-01-01T00:00:00.000Z",
     ];
     for (const serviceId of SERVICE_IDS) {

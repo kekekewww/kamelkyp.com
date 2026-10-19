@@ -304,10 +304,12 @@ read D1).
 **Publish metadata and the tie-break (WP2).** Every Studio (and legacy `/admin/services`) publish writes, in the same
 batch as the `price_versions` row, one immutable `price_version_publications` row: `version_id` (PK, NOT NULL),
 `published_at`, `action` (`publish` | `replace` | `cancel`) and `replaces_version_id` (NULL exactly for
-`publish`). `getActivePriceRule` orders `effective_from DESC, published_at DESC, id DESC` (seed rows have no
-metadata and sort last at the same instant), so a later publish at the same effective time wins: that is how a
-scheduled change is replaced, and a cancellation is a copy of the baseline rule at the scheduled instant. No
-`price_versions` row is ever updated or deleted. Legal drafts live in `term_drafts` (one mutable working copy per
+`publish`). The versions at one `effective_from` form a group won by the latest `published_at`, then `id`
+(seed rows have no metadata and sort last at the same instant), so a later publish at the same effective time
+wins: that is how a scheduled change is replaced. A cancellation is a row at the scheduled instant (`action =
+'cancel'`, a copy of the baseline values for the record); `getActivePriceRule` skips a group won by a
+cancellation and returns the winner of the newest other group, so a cancelled change never takes effect and
+never reverts a price published later. No `price_versions` row is ever updated or deleted. Legal drafts live in `term_drafts` (one mutable working copy per
 document and locale, `revision`-checked, never read by a public route); publishing copies the draft into the next
 `term_versions` row and moves the `term_publications` pointer with `effective_from = now` in one batch. Both tables
 come from `0009_pricing_terms_studio.sql` (§3.5).

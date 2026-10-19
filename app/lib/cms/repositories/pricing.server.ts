@@ -5,8 +5,10 @@
  * price is a new row, published now or scheduled, through the reused
  * `publishPriceVersion` (which also writes the publish metadata that breaks
  * ties at the same effective time). A scheduled change is replaced by a
- * later publish at the same instant and cancelled by a copy of the baseline
- * rule at that instant; no row is ever updated or deleted.
+ * later publish at the same instant and cancelled by a cancellation row at
+ * that instant (the baseline values, for the record), which the active rule
+ * skips, so the rule before it stays in force; no row is ever updated or
+ * deleted.
  *
  * Never invent pricing: the form prefills from the active rule, the fields
  * a service's quote does not use are copied from the baseline rule, and
@@ -600,6 +602,8 @@ export async function handlePriceEditorAction({
         message: "Only a scheduled change can be cancelled.",
       });
     }
+    // The cancellation row records the baseline values; the active rule
+    // skips its instant, so the rule before it stays in force (price-history).
     const baseline = ruleActiveAt(history, target.effectiveFrom, {
       before: true,
     });

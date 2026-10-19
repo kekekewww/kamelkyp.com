@@ -115,3 +115,88 @@ describe("price version states", () => {
     ]);
   });
 });
+
+/** A Studio publish with its metadata action (`cancel` = a cancellation). */
+function published(
+  id: string,
+  effectiveFrom: string,
+  publishedAt: string,
+  action: "publish" | "replace" | "cancel" = "publish",
+): PriceHistoryRow {
+  return { id, effectiveFrom, publishedAt, retiredAt: null, action };
+}
+
+describe("cancelled changes", () => {
+  const JAN = "2026-12-31T16:00:00.000Z"; // 2027-01-01 00:00 Taipei
+  const FEB = "2027-01-31T16:00:00.000Z"; // 2027-02-01 00:00 Taipei
+
+  it("leaves the rule before a cancelled instant in force, whatever the cancel order", () => {
+    // Active A; S0 scheduled for Jan, S for Feb; S cancelled first, then S0.
+    const rows = [
+      row("a", "2026-08-10T00:00:00Z"),
+      published("s0", JAN, "2026-10-01T00:00:00.000Z"),
+      published("s", FEB, "2026-10-02T00:00:00.000Z"),
+      published("c", FEB, "2026-10-03T00:00:00.000Z", "cancel"),
+      published("c0", JAN, "2026-10-04T00:00:00.000Z", "cancel"),
+    ];
+    expect(ruleActiveAt(rows, "2027-01-15T00:00:00.000Z")?.id).toBe("a");
+    expect(ruleActiveAt(rows, "2027-02-05T00:00:00.000Z")?.id).toBe("a");
+    expect(ruleActiveAt(rows, FEB, { before: true })?.id).toBe("a");
+  });
+
+  it("never reverts a later publish at the cancelled instant", () => {
+    // B scheduled for Jan and cancelled; D then scheduled before it.
+    const rows = [
+      row("a", "2026-08-10T00:00:00Z"),
+      published("b", JAN, "2026-10-01T00:00:00.000Z"),
+      published("c", JAN, "2026-10-02T00:00:00.000Z", "cancel"),
+      published("d", "2026-12-14T16:00:00.000Z", "2026-10-03T00:00:00.000Z"),
+    ];
+    expect(ruleActiveAt(rows, "2027-01-02T00:00:00.000Z")?.id).toBe("d");
+  });
+
+  it("lets a new publish at a cancelled instant take effect again", () => {
+    const rows = [
+      row("a", "2026-08-10T00:00:00Z"),
+      published("b", JAN, "2026-10-01T00:00:00.000Z"),
+      published("c", JAN, "2026-10-02T00:00:00.000Z", "cancel"),
+      published("r", JAN, "2026-10-03T00:00:00.000Z"),
+    ];
+    expect(ruleActiveAt(rows, "2027-01-02T00:00:00.000Z")?.id).toBe("r");
+    const states = Object.fromEntries(
+      classifyPriceVersions(rows, NOW).map((item) => [item.id, item.state]),
+    );
+    expect(states).toEqual({
+      a: "active",
+      b: "replaced",
+      c: "replaced",
+      r: "scheduled",
+    });
+  });
+
+  it("classifies a cancelled group as cancelled, never scheduled or active", () => {
+    const rows = [
+      row("a", "2026-08-10T00:00:00Z"),
+      published("s0", JAN, "2026-10-01T00:00:00.000Z"),
+      published("c0", JAN, "2026-10-04T00:00:00.000Z", "cancel"),
+      published("later", FEB, "2026-10-05T00:00:00.000Z"),
+    ];
+    const states = (at: string) =>
+      Object.fromEntries(
+        classifyPriceVersions(rows, at).map((item) => [item.id, item.state]),
+      );
+    expect(states(NOW)).toEqual({
+      a: "active",
+      s0: "cancelled",
+      c0: "cancelled",
+      later: "scheduled",
+    });
+    // Once the cancelled instant has passed, the group never became active.
+    expect(states("2027-01-15T00:00:00.000Z")).toEqual({
+      a: "active",
+      s0: "cancelled",
+      c0: "cancelled",
+      later: "scheduled",
+    });
+  });
+});
