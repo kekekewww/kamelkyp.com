@@ -53,6 +53,7 @@ import {
   unknownIntent,
 } from "../studio/responses";
 import type { Locale, LocalizedText, ValidationIssue } from "../types";
+import { type FxStatus, loadFxStatus } from "./pricing.server";
 
 export type { TermDocumentId } from "../../commission/term-outline";
 
@@ -97,6 +98,8 @@ export type TermsIndexData = {
   >;
   readiness: CommissionReadiness[];
   serviceNames: Partial<Record<ServiceId, LocalizedText>>;
+  /** Open English forms still refuse submission without a usable rate. */
+  fx: FxStatus;
   now: string;
 };
 
@@ -259,7 +262,7 @@ export async function loadTermsIndex(
   now: Date,
 ): Promise<TermsIndexData> {
   const at = now.toISOString();
-  const [names, pointers, drafts, readiness] = await Promise.all([
+  const [names, pointers, drafts, readiness, fx] = await Promise.all([
     serviceNamesOf(db),
     db
       .prepare(
@@ -277,6 +280,7 @@ export async function loadTermsIndex(
       )
       .all<Omit<DraftRow, "body_json"> & { clause_count: number }>(),
     getCommissionReadiness(db, now),
+    loadFxStatus(db, now),
   ]);
   const pointerOf = new Map(
     pointers.results.map((row) => [`${row.document_id}:${row.locale}`, row]),
@@ -313,7 +317,7 @@ export async function loadTermsIndex(
     }
     return { ...termDocumentInfo(id, names), locales };
   });
-  return { documents, readiness, serviceNames: names, now: at };
+  return { documents, readiness, serviceNames: names, fx, now: at };
 }
 
 async function activeAmountsFor(

@@ -126,6 +126,13 @@ describe("terms index", () => {
     expect(data.documents[1]?.publicPath).toBe("/privacy");
     expect(data.documents[2]?.serviceId).toBe("full_mix");
     expect(data.readiness).toHaveLength(4);
+    // The English availability cells state the FX state, as on Pricing.
+    expect(data.fx).toEqual({
+      state: "missing",
+      rateDate: null,
+      rateScaled: null,
+      fetchedAt: null,
+    });
   });
 });
 

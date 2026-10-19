@@ -98,7 +98,11 @@ export function TermsIndex({ data }: { data: TermsIndexData }) {
           </tbody>
         </table>
       </ScrollRegion>
-      <CommissionReadinessTable readiness={data.readiness} names={names} />
+      <CommissionReadinessTable
+        readiness={data.readiness}
+        names={names}
+        fx={data.fx}
+      />
     </StudioPage>
   );
 }

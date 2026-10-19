@@ -110,6 +110,12 @@ function indexData(): TermsIndexData {
       },
     ],
     serviceNames: { full_mix: { zh: "完整歌曲混音", en: "Full Song Mixing" } },
+    fx: {
+      state: "ok",
+      rateDate: "2026-10-12",
+      rateScaled: 3250000,
+      fetchedAt: "2026-10-13T01:15:00.000Z",
+    },
     now: NOW,
   };
 }
@@ -130,6 +136,23 @@ describe("TermsIndex", () => {
     expect(html).toContain("Commission form availability");
     expect(html).toContain(
       "terms missing: Privacy notice (ZH), Service terms (ZH)",
+    );
+    expect(html).not.toContain("USD unavailable");
+  });
+
+  it("states a stale FX rate on open English cells, as Pricing does", () => {
+    const data = indexData();
+    const item = data.readiness[0];
+    if (!item) throw new Error("no readiness row");
+    data.readiness[0] = {
+      ...item,
+      terms: { ...item.terms, en: { ready: true, missing: [] } },
+      open: { zh: false, en: true },
+    };
+    data.fx = { ...data.fx, state: "stale" };
+    const html = render(<TermsIndex data={data} />);
+    expect(html).toMatch(
+      /Open<\/span><span[^>]*> · USD unavailable \(FX stale\): English commissions cannot be submitted/,
     );
   });
 });
