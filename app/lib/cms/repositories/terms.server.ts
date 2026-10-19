@@ -696,6 +696,9 @@ function blockedMessage(count: number): string {
   return `Saved. Publishing is blocked by ${count} ${count === 1 ? "issue" : "issues"}.`;
 }
 
+const BRAND_REVIEW_MESSAGE =
+  "Saved, not published: the text contains a personal-name variant. Review the warning, then publish again.";
+
 export async function handleTermEditorAction({
   db,
   documentId,
@@ -762,11 +765,13 @@ export async function handleTermEditorAction({
       });
     }
 
-    // 3. Validate the stored draft.
+    // 3. Validate the stored draft: exactly the revision this request saved
+    // (another tab's save in between is not what the owner confirmed).
     const [draft, check] = await Promise.all([
       readTermDraft(db, documentId, locale),
       publishCheck(db, documentId, locale, now),
     ]);
+    if ((draft?.revision ?? 0) !== saved.revision) return staleDraft();
     if (!draft) {
       const message = "Nothing to publish: this matches the live version.";
       return actionOk({
@@ -790,6 +795,17 @@ export async function handleTermEditorAction({
         revision: draft.revision,
         issues,
         message: blockedMessage(blocking.length),
+      });
+    }
+    // The editor checks edits as they are typed, but the personal-name list
+    // is server-only: text this request changed has not been shown with that
+    // warning yet. Save it and let the owner publish again after reviewing.
+    if (saved.changed && issues.some((issue) => issue.code === "brand_name")) {
+      return actionOk({
+        published: false,
+        revision: draft.revision,
+        issues,
+        message: BRAND_REVIEW_MESSAGE,
       });
     }
 

@@ -16,6 +16,7 @@ import {
   loadTermEditor,
   loadTermsIndex,
   publishTermDraft,
+  saveTermDraft,
 } from "../../app/lib/cms/repositories/terms.server";
 import { listPublishedTerms } from "../../app/lib/content/public-content.server";
 
@@ -338,6 +339,70 @@ describe("term drafts", () => {
     expect((await draftRow("vocal-mix", "zh"))?.revision).toBe(2);
   });
 
+  it("answers 409 when another save lands between this publish's save and its read", async () => {
+    const now = new Date("2026-10-13T05:30:00.000Z");
+    const key = { documentId: "privacy", locale: "zh" } as const;
+    await act(
+      key.documentId,
+      key.locale,
+      "save",
+      termForm([CLAUSE], { expectedRevision: "0" }),
+      now,
+    );
+    const other = { ...CLAUSE, title: "Written in another tab" };
+    let draftReads = 0;
+    // The second draft read is the publish's re-read after its own save.
+    const racing = new Proxy(env.DB, {
+      get(target, prop) {
+        if (prop === "prepare") {
+          return (sql: string) => {
+            const statement = target.prepare(sql);
+            if (!/^\s*SELECT[\s\S]*FROM term_drafts WHERE/.test(sql)) {
+              return statement;
+            }
+            draftReads += 1;
+            if (draftReads !== 2) return statement;
+            return {
+              bind: (...values: unknown[]) => {
+                const bound = statement.bind(...values);
+                return {
+                  first: async (column?: string) => {
+                    await saveTermDraft(env.DB, {
+                      ...key,
+                      clauses: [other],
+                      expectedRevision: 2,
+                      now,
+                    });
+                    return column ? bound.first(column) : bound.first();
+                  },
+                };
+              },
+            };
+          };
+        }
+        const value = Reflect.get(target, prop, target);
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    });
+    const result = await handleTermEditorAction({
+      db: racing,
+      ...key,
+      formData: termForm([{ ...CLAUSE, text: "Confirmed text." }], {
+        expectedRevision: "1",
+        legalReviewConfirmed: "on",
+      }),
+      intent: "publish-term-version",
+      now,
+    });
+    expect(draftReads).toBeGreaterThanOrEqual(2);
+    expect(status(result)).toBe(409);
+    expect(body(result).code).toBe("stale_revision");
+    expect(await versionCount(key.documentId, key.locale)).toBe(0);
+    const stored = await draftRow(key.documentId, key.locale);
+    expect(stored?.revision).toBe(3);
+    expect(JSON.parse(stored?.body_json ?? "[]")).toEqual([other]);
+  });
+
   it("takes the next number after a legacy publish in between", async () => {
     const now = new Date("2026-10-13T06:00:00.000Z");
     await act(
@@ -421,16 +486,38 @@ describe("term drafts", () => {
     expect(await draftRow("simple-transition", "zh")).toBeNull();
   });
 
-  it("warns about personal names (terms are exempt from the blocking guard)", async () => {
+  it("warns about personal names before publishing them (terms are exempt from the blocking guard)", async () => {
     const now = new Date("2026-10-13T10:00:00.000Z");
+    const clauses = [
+      { ...CLAUSE, text: "Provided by Kevin as the operator of Kamel." },
+    ];
+    // Edited text the owner has not seen checked yet: saved, not published.
+    const first = await act(
+      "simple-transition",
+      "en",
+      "publish-term-version",
+      termForm(clauses, { expectedRevision: "0", legalReviewConfirmed: "on" }),
+      now,
+    );
+    expect(status(first)).toBe(200);
+    expect(body(first).published).toBe(false);
+    expect(String(body(first).message)).toContain("personal-name");
+    expect(body(first).issues).toContainEqual(
+      expect.objectContaining({ code: "brand_name", severity: "warning" }),
+    );
+    expect(await versionCount("simple-transition", "en")).toBe(0);
+    expect((await draftRow("simple-transition", "en"))?.revision).toBe(1);
+    const editor = await loadTermEditor(env.DB, "simple-transition", "en", now);
+    expect(editor.issues).toContainEqual(
+      expect.objectContaining({ code: "brand_name", severity: "warning" }),
+    );
+
+    // Publishing the same, already checked text again goes through.
     const result = await act(
       "simple-transition",
       "en",
       "publish-term-version",
-      termForm(
-        [{ ...CLAUSE, text: "Provided by Kevin as the operator of Kamel." }],
-        { expectedRevision: "0", legalReviewConfirmed: "on" },
-      ),
+      termForm(clauses, { expectedRevision: "1", legalReviewConfirmed: "on" }),
       now,
     );
     expect(body(result).published).toBe(true);
