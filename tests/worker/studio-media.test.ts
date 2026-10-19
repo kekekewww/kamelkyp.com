@@ -26,6 +26,7 @@ import {
   DraftUsageError,
   deleteAsset,
   getAssetWithUsages,
+  handleMediaDetailAction,
   handleMediaLibraryAction,
   listLibrary,
   loadMediaLibrary,
@@ -1054,26 +1055,45 @@ describe("media library actions", () => {
 
   it("archives and restores assets", async () => {
     const asset = await insertAsset();
-    await handleMediaLibraryAction({
+    const archived = (await handleMediaLibraryAction({
       db: env.DB,
       env: libraryEnv(),
       formData: form({ id: asset.id }),
       intent: "archive",
       now,
-    });
+    })) as unknown as Result;
+    expect(archived.data).toMatchObject({ ok: true, intent: "archive" });
     expect(
       (await getAssetWithUsages(env.DB, asset.id))?.asset.archivedAt,
     ).not.toBeNull();
-    await handleMediaLibraryAction({
+    const restored = (await handleMediaLibraryAction({
       db: env.DB,
       env: libraryEnv(),
       formData: form({ id: asset.id }),
       intent: "restore",
       now,
-    });
+    })) as unknown as Result;
+    expect(restored.data).toMatchObject({ ok: true, intent: "restore" });
     expect(
       (await getAssetWithUsages(env.DB, asset.id))?.asset.archivedAt,
     ).toBeNull();
+
+    // The detail page (/studio/media/:id) posts to its own action, which
+    // delegates both intents: the echo is what DangerZone's toast reads.
+    for (const intent of ["archive", "restore"] as const) {
+      const result = (await handleMediaDetailAction({
+        db: env.DB,
+        env: libraryEnv(),
+        formData: form({ id: asset.id }),
+        intent,
+        now,
+      })) as unknown as Result;
+      expect(result.data).toMatchObject({ ok: true, intent });
+      const archivedAt = (await getAssetWithUsages(env.DB, asset.id))?.asset
+        .archivedAt;
+      if (intent === "archive") expect(archivedAt).not.toBeNull();
+      else expect(archivedAt).toBeNull();
+    }
   });
 
   it("loads the library with upload availability and the analysis status", async () => {

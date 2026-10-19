@@ -1,3 +1,7 @@
+// Vitest strips CSS modules (even `?raw`) in this config, so stylesheets are
+// read from disk (as in motion-tokens.test.ts).
+// @ts-expect-error Node types are not installed; Vitest runs these tests in Node.
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 /**
@@ -18,18 +22,35 @@ const DENY: ReadonlyArray<{ label: string; pattern: RegExp }> = [
   { label: "Yang", pattern: /\byang\b/i },
 ];
 
-// Source text of every app and Worker module, keyed by repository path.
-const sources: Record<string, string> = Object.fromEntries(
-  Object.entries(
-    import.meta.glob<string>(
-      [
-        "../../app/**/*.{ts,tsx,js,css,json,svg}",
-        "../../workers/**/*.{ts,tsx,js}",
-      ],
-      { query: "?raw", import: "default", eager: true },
-    ),
-  ).map(([path, source]) => [path.replace(/^(\.\.\/)+/, ""), source]),
-);
+const repoPath = (path: string) => path.replace(/^(\.\.\/)+/, "");
+
+/** File text read from disk, for sources Vitest would blank (CSS). */
+function readText(path: string): string {
+  return readFileSync(new URL(path, import.meta.url), "utf8");
+}
+
+// Source text of every app and Worker module and stylesheet, keyed by
+// repository path. Only the keys of the CSS glob are used (nothing is
+// imported); the stylesheet text comes from disk.
+const sources: Record<string, string> = {
+  ...Object.fromEntries(
+    Object.entries(
+      import.meta.glob<string>(
+        [
+          "../../app/**/*.{ts,tsx,js,json,svg}",
+          "../../workers/**/*.{ts,tsx,js}",
+        ],
+        { query: "?raw", import: "default", eager: true },
+      ),
+    ).map(([path, source]) => [repoPath(path), source]),
+  ),
+  ...Object.fromEntries(
+    Object.keys(import.meta.glob("../../app/**/*.css")).map((path) => [
+      repoPath(path),
+      readText(path),
+    ]),
+  ),
+};
 
 function scan(): string[] {
   const hits: string[] = [];
@@ -48,10 +69,25 @@ describe("brand audit", () => {
     expect(Object.keys(sources).length).toBeGreaterThan(100);
     expect(Object.keys(sources)).toContain("app/routes/public/home.tsx");
     expect(Object.keys(sources)).toContain("workers/app.ts");
+    // Stylesheets are really read: a blanked CSS source would scan nothing.
+    expect(sources["app/styles/global.css"]?.length).toBeGreaterThan(1000);
   });
 
   it("finds no personal-name variant in app or Worker sources", () => {
     expect(scan()).toEqual([]);
+  });
+
+  it("no stylesheet keeps a real-name hook", () => {
+    const hooks = Object.entries(sources)
+      .filter(([path]) => path.endsWith(".css"))
+      .flatMap(([path, source]) =>
+        source
+          .split("\n")
+          .flatMap((line, index) =>
+            /real-name/.test(line) ? [`${path}:${index + 1}`] : [],
+          ),
+      );
+    expect(hooks).toEqual([]);
   });
 
   it("detects a planted variant (the scanner is live)", () => {

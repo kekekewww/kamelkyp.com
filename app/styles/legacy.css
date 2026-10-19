@@ -146,20 +146,6 @@
   border-block: 1px solid var(--color-line);
 }
 
-.landing-console__real-name,
-.landing-updates__items article > span,
-.landing-services__number {
-  color: var(--color-coral);
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.landing-console__real-name {
-  margin-bottom: 1rem;
-}
-
 .landing-console__identity h1 {
   margin-bottom: 1.5rem;
   font-size: clamp(5rem, 9vw, 8.5rem);

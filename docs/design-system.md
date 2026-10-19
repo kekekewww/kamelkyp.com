@@ -195,16 +195,16 @@ The document language is `zh-Hant`, so target these with `:lang(zh)`.
 - zh body line-height is `1.85` (vs `1.65` en), with `line-break: strict` and, as progressive enhancement, `text-autospace: ideograph-alpha ideograph-numeric` (inserts the ¼-em gap between Han and Latin/digits). Never insert manual spaces for that purpose.
 - Display layouts must not depend on a Latin word breaking at a fixed place. zh headings wrap freely, and `overflow-wrap: anywhere` stays on `body` for the 320px floor.
 
-### 3.5 Hero wordmark and the real-name line
+### 3.5 Hero wordmark: the only public identity
 
 ```
-SOUND × SOFTWARE × INTERACTION          ← Metadata, --color-text-meta
-Kevin Yang / 楊子賢                      ← real-name line
-KAMEL                                   ← h1, wordmark
+SOUND × SOFTWARE × INTERACTION          ← eyebrow, Metadata, --color-text-meta
+KAMEL                                   ← h1, wordmark (DOM text "Kamel" from brand.brandName)
+Music Producer | Software Developer | … ← roles line (brand.roles)
 ```
 
-- **Wordmark** `h1.home-hero__wordmark`: the DOM text is `Kamel` (e2e asserts the heading name "Kamel"), rendered `text-transform: uppercase`. Archivo `font-stretch: 125%`, `font-weight: 780`, `--text-wordmark`, `line-height: 0.86`, `letter-spacing: -0.035em`, `--color-text`. It starts on column 1, aligned to the grid line with `margin-inline-start: -0.04em` to cancel the K sidebearing, and at 1440 it runs to about column 9. The hero canvas carrier line sits exactly on its baseline. The wordmark keeps the Latin face in zh too, because the name is Latin.
-- **Real-name line** `p.home-hero__real-name`: `Kevin Yang` (en) is set in Archivo 400 at `font-stretch: 100%`, `--text-h2` size, `letter-spacing: 0.01em`, sentence case (a person's name is never uppercased). `楊子賢` (zh) is set in Noto Sans TC 500 at `--text-h2` zh size with `letter-spacing: 0.02em`. Color `--color-text-secondary`. It sits directly above the wordmark, left-aligned to the wordmark's stem, with a gap of `var(--space-3)`. It appears only here (IA §0).
+- **Wordmark** `h1.home-hero__wordmark`: the DOM text is `Kamel` (e2e asserts the heading name "Kamel"), rendered `text-transform: uppercase`. Archivo `font-stretch: 125%`, `font-weight: 780`, `--text-wordmark`, `line-height: 0.86`, `letter-spacing: -0.035em`, `--color-text`. It starts on column 1, aligned to the grid line with `margin-inline-start: -0.04em` to cancel the K sidebearing, and at 1440 it runs to about column 9. The hero canvas carrier line sits exactly on its baseline. The wordmark keeps the Latin face in zh too, because the name is Latin. The text comes from `brand.brandName` (fallback "Kamel"). The eyebrow sits `var(--space-5)` above it (`margin-block-start` on the wordmark), one step further than a plain heading, because the wordmark is the only identity line (`app/styles/pages/home.css:95-112`).
+- **No personal-name line.** The only public identity is Kamel (Studio brief, Brand; content-architecture §6). No personal-name variant appears in the hero or anywhere public: pages, `<title>`, meta, OpenGraph, JSON-LD, footer, accessibility labels, seeds. Publish validation and settings saves refuse them (`app/lib/cms/brand-guard.server.ts`). `tests/e2e/home.spec.ts` asserts it for `/zh` and `/en`.
 - **Roles line**: Body · Lede in `--color-text-secondary`. Split the authored string on ` · ` and render a `<ul>` whose items are separated by a 1px × 0.8em vertical `--color-rule-strong` bar (a CSS pseudo-element), not by middle dots.
 - **Statement**: Heading · 1 in `--color-text`, max `18ch` en / `14em` zh.
 
@@ -288,7 +288,7 @@ The label rail becomes an inline eyebrow above the heading (`margin-block-end: v
 
 | Home section | Mobile composition |
 | --- | --- |
-| Hero | Eyebrow → real name → KAMEL (≈78px at 412) → roles as a vertical list → statement (Heading · 1) → CTAs in a row at `sm+`, stacked full-width below 480 → stage (showreel) full-width. The canvas is a band behind the wordmark and upper half only, at 18 lines. `min-block-size: auto`: no forced 100svh. |
+| Hero | Eyebrow → KAMEL (≈78px at 412) → roles as a vertical list → statement (Heading · 1) → CTAs in a row at `sm+`, stacked full-width below 480 → stage (showreel) full-width. The canvas is a band behind the wordmark and upper half only, at 18 lines. `min-block-size: auto`: no forced 100svh. |
 | Selected Work | Feature: cover full-bleed 4:5, then metadata row, title, description. Rows: metadata line (index / categories / year) above the title, inline 4:3 thumbnail (5.5rem wide) at the row end, no hover preview. |
 | Capabilities | Each group: index + title on one line, description, items as a plain list. Rules between groups. |
 | Recognition | Year on its own metadata line, event below, result below in secondary. |
@@ -871,6 +871,6 @@ Companion changes for the Foundation agent (listed here, not made here):
 2. Accent pixels ≤ 5% per viewport. At most one accent-filled button per viewport, and the header CTA is inverse neutral.
 3. No readable text uses `--color-trace`, `--color-rule*` or any color below 4.5:1. Axe is clean.
 4. No `border` around a section. No radius above 2px except the play button.
-5. KAMEL renders from the DOM text "Kamel". The real name appears once and only on the landing page.
+5. KAMEL renders from the DOM text "Kamel" (`brand.brandName`). No personal-name variant appears on any public page, meta tag, JSON-LD or accessibility label.
 6. zh headings use Noto weight 700/800 at the zh sizes, and no Chinese is tracked beyond 0.02em.
 7. Every interactive element has the idle/hover/pressed/focus(/disabled) states in §6 and a ≥ 44px target.

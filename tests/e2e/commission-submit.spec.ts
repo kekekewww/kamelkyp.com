@@ -28,6 +28,18 @@ test("successful submit clears draft and shows limited confirmation", async ({
   await submit.click();
 
   await expect(page.getByText("KAM-20260810-0000000001")).toBeVisible();
+  // Review rows (`dl.review-list > div`, wp6 g): two tracks from 480 px.
+  const caseRows = page.locator(".commission-success__case > div");
+  expect(await caseRows.count()).toBeGreaterThan(0);
+  const wide = (page.viewportSize()?.width ?? 0) >= 480;
+  for (const row of await caseRows.all()) {
+    await expect(row).toHaveCSS("display", "grid");
+    await expect(row).toHaveCSS("border-top-style", "solid");
+    const columns = await row.evaluate(
+      (element) => getComputedStyle(element).gridTemplateColumns,
+    );
+    expect(columns.trim().split(/\s+/).length).toBe(wide ? 2 : 1);
+  }
   await expect(
     page.getByRole("main").getByText("Full Song Mixing"),
   ).toBeVisible();

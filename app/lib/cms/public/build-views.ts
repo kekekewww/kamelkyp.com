@@ -57,7 +57,7 @@ export function imageView(
 ): PublicImage | null {
   if (!assetId) return null;
   const asset = context.assets.get(assetId);
-  if (!asset || asset.state !== "ready" || asset.kind !== "image") return null;
+  if (asset?.state !== "ready" || asset.kind !== "image") return null;
   const sources = imageSources(asset, context.mediaConfig, options);
   if (!sources) return null;
   return {
@@ -97,7 +97,7 @@ function playableAsset(
 ): MediaItem | null {
   if (!assetId) return null;
   const asset = context.assets.get(assetId);
-  if (!asset || asset.state !== "ready") return null;
+  if (asset?.state !== "ready") return null;
   if (!kinds.includes(asset.kind)) return null;
   return toPlayableMedia(asset, context.mediaConfig, locale, override);
 }

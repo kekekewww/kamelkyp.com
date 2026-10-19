@@ -20,6 +20,7 @@ import {
   SaveStateIndicator,
   saveStateReducer,
   serializeForm,
+  useFetcherSettled,
 } from "../ui";
 
 export function SectionForm({
@@ -71,13 +72,9 @@ export function SectionForm({
     dispatch({ type: "change", dirty: isDirty });
   }, [snapshot]);
 
-  const previous = useRef(fetcher.state);
-  useEffect(() => {
-    if (previous.current === "idle" && fetcher.state === "submitting") {
-      dispatch({ type: "submit" });
-    }
-    if (previous.current !== "idle" && fetcher.state === "idle") {
-      const result = fetcher.data;
+  useFetcherSettled(fetcher, {
+    onStart: () => dispatch({ type: "submit" }),
+    onSettled: (result) => {
       if (result && result.ok === false) {
         dispatch({
           type: "failure",
@@ -88,9 +85,8 @@ export function SectionForm({
         setDirty(false);
         dispatch({ type: "success", at: new Date().toISOString() });
       }
-    }
-    previous.current = fetcher.state;
-  }, [fetcher.state, fetcher.data, snapshot]);
+    },
+  });
 
   const errors = fieldErrors(
     fetcher.state === "idle" ? fetcher.data?.issues : undefined,

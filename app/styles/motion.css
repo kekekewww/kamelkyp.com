@@ -183,11 +183,13 @@
 }
 
 @media print {
+  /* biome-ignore-start lint/complexity/noImportantStyles: print shows every revealed element, whatever its runtime state */
   [data-reveal-state] {
     clip-path: none !important;
     opacity: 1 !important;
     transform: none !important;
   }
+  /* biome-ignore-end lint/complexity/noImportantStyles: print reveal reset */
 }
 
 /* ---- Hero intro: CSS-only, first document load only (§2.1) ---- */
