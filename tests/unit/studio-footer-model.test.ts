@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import {
   isLeftOut,
   localizeRecords,
+  placeLinkIssues,
   shownLinksSummary,
 } from "../../app/components/studio/footer/footer-model";
 import { composeFooterGroups } from "../../app/lib/cms/public/footer";
@@ -496,5 +497,42 @@ describe("footerGroupKind", () => {
     expect(footerGroupKind("social")).toBe("social");
     expect(footerGroupKind("work_resources")).toBe("custom");
     expect(footerGroupKind("custom-1234")).toBe("custom");
+  });
+});
+
+describe("placeLinkIssues", () => {
+  const issue = (field: string, locale?: "zh" | "en") => ({
+    field,
+    code: "invalid_url" as const,
+    severity: "error" as const,
+    message: field,
+    ...(locale ? { locale } : {}),
+  });
+
+  it("files each link issue under the link that was at that place when saved", () => {
+    const placed = placeLinkIssues(
+      [
+        issue("label", "en"),
+        issue("links"),
+        issue("links.0.url"),
+        issue("links.1.label", "zh"),
+        issue("links.1.url"),
+        issue("links.7.url"),
+      ],
+      ["key-a", "key-b"],
+    );
+    expect([...placed.keys()]).toEqual(["key-a", "key-b"]);
+    expect(placed.get("key-a")).toEqual([
+      { ...issue("links.0.url"), field: "url" },
+    ]);
+    expect(placed.get("key-b")).toEqual([
+      { ...issue("links.1.label", "zh"), field: "label" },
+      { ...issue("links.1.url"), field: "url" },
+    ]);
+  });
+
+  it("files nothing without issues or without the saved order", () => {
+    expect(placeLinkIssues(undefined, ["key-a"]).size).toBe(0);
+    expect(placeLinkIssues([issue("links.0.url")], []).size).toBe(0);
   });
 });

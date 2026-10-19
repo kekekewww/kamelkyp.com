@@ -4,9 +4,17 @@
  * groups edit their links (bilingual labels, one address, shown or not).
  * Keyed by the group's fingerprint and its count of successful saves, so
  * every save (even one that normalizes to the stored values) and "Reload
- * latest" remount it with the stored, normalized values.
+ * latest" remount it with the stored, normalized values. A failed save keeps
+ * the editor: each link error stays with its link when links move.
  */
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { type FetcherWithComponents, Link, useRevalidator } from "react-router";
 import {
   type FooterSystemKey,
@@ -30,7 +38,15 @@ import {
   defaultLabelHint,
   FOOTER_SOURCE_NOTES,
   footerGroupName,
+  placeLinkIssues,
 } from "./footer-model";
+
+let newLinkCount = 0;
+/** Client key of an added link (stored links use their first row id). */
+const newLinkKey = () => {
+  newLinkCount += 1;
+  return `new:${newLinkCount}`;
+};
 
 export type FooterFailure = {
   ok: false;
@@ -116,18 +132,18 @@ function LinkFields({
   link: StudioFooterLink;
   index: number;
   field: (key: string) => string;
+  /** This link's issues from the last failed save (fields `label`, `url`). */
   issues?: readonly ValidationIssue[];
   /** Keeps error ids unique across group editors. */
   idPrefix: string;
 }) {
   const number = index + 1;
-  const base = `links.${index}`;
-  const zhError = issueFor(issues, `${base}.label`, "zh");
-  const enError = issueFor(issues, `${base}.label`, "en");
-  const urlError = issueFor(issues, `${base}.url`);
+  const zhError = issueFor(issues, "label", "zh");
+  const enError = issueFor(issues, "label", "en");
+  const urlError = issueFor(issues, "url");
   const errorId = (name: string) => `${idPrefix}-${field(name)}-error`;
   return (
-    <div className="studio-footer__link">
+    <div className="studio-footer__link" data-link-key={link.key}>
       <label className="studio-footer__link-cell">
         <span className="studio-footer__locale-tag">ZH</span>
         <input
@@ -234,6 +250,10 @@ export function FooterGroupEditor({
   const idPrefix = useId();
   const formRef = useRef<HTMLFormElement>(null);
   const baseline = useRef<string | null>(null);
+  // The links' keys in the order of the last submit: the server names link
+  // errors by position (`links.1.url`), and the owner may move or remove
+  // links before the answer is read or the next save.
+  const submittedKeys = useRef<string[]>([]);
   const [dirty, setDirty] = useState(false);
   const name = footerGroupName(group);
   const builtIn = isFooterSystemKey(group.key) ? group.key : null;
@@ -268,6 +288,11 @@ export function FooterGroupEditor({
         ? "Unsaved changes"
         : "Saved";
   const issues = failed?.issues;
+  // Placed once per failure, from the order that failed.
+  const linkIssues = useMemo(
+    () => placeLinkIssues(failed?.issues, submittedKeys.current),
+    [failed],
+  );
 
   return (
     <StudioForm
@@ -278,6 +303,12 @@ export function FooterGroupEditor({
       aria-label={`Group: ${name}`}
       onInput={recompute}
       onChange={recompute}
+      onSubmit={(event) => {
+        submittedKeys.current = Array.from(
+          event.currentTarget.querySelectorAll<HTMLElement>("[data-link-key]"),
+          (element) => element.dataset.linkKey ?? "",
+        );
+      }}
       // ListEditor add/remove/move fire no input event.
       onClick={() => requestAnimationFrame(recompute)}
       noValidate
@@ -315,7 +346,7 @@ export function FooterGroupEditor({
             addLabel="Add link"
             itemLabel={(index) => `link ${index + 1}`}
             create={() => ({
-              key: "",
+              key: newLinkKey(),
               rows: {},
               label: { zh: "", en: "" },
               url: "",
@@ -327,7 +358,7 @@ export function FooterGroupEditor({
                 link={link}
                 index={index}
                 field={field}
-                issues={issues}
+                issues={linkIssues.get(link.key)}
                 idPrefix={idPrefix}
               />
             )}

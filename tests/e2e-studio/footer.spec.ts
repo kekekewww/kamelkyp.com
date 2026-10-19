@@ -158,6 +158,33 @@ test.describe("footer settings", () => {
     await expect(state).toHaveText("Saved");
     await expect(group).not.toContainText("Footer links never show prices.");
 
+    // 5b. A link error stays with its link when links move or go: a second
+    // link with an address the footer refuses, then moved above the first.
+    await group.getByRole("button", { name: "Add link" }).click();
+    await group.getByLabel("Link 2 label ZH", { exact: true }).fill("第二連結");
+    await group
+      .getByLabel("Link 2 label EN", { exact: true })
+      .fill("Second link");
+    await group
+      .getByLabel("Link 2 address", { exact: true })
+      .fill("ftp://example.com/refused");
+    await group.getByRole("button", { name: "Save group" }).click();
+    await expect(state).toHaveText("Not saved");
+    const firstAddress = group.getByLabel("Link 1 address", { exact: true });
+    const secondAddress = group.getByLabel("Link 2 address", { exact: true });
+    await expect(secondAddress).toHaveAttribute("aria-invalid", "true");
+    await expect(firstAddress).not.toHaveAttribute("aria-invalid");
+    await group.getByRole("button", { name: "Move link 2 up" }).click();
+    await expect(firstAddress).toHaveValue("ftp://example.com/refused");
+    await expect(firstAddress).toHaveAttribute("aria-invalid", "true");
+    await expect(secondAddress).toHaveValue(ADDRESS);
+    await expect(secondAddress).not.toHaveAttribute("aria-invalid");
+    await group.getByRole("button", { name: "Remove link 1" }).click();
+    await expect(firstAddress).toHaveValue(ADDRESS);
+    await expect(group.locator('[aria-invalid="true"]')).toHaveCount(0);
+    await group.getByRole("button", { name: "Save group" }).click();
+    await expect(state).toHaveText("Saved");
+
     // 6. The public footer shows the group between Services and Legal.
     const site = await context.newPage();
     await site.setViewportSize({ width: 1440, height: 900 });

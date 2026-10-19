@@ -1,8 +1,9 @@
 /**
  * Studio footer screen helpers (client-safe; wp3 spec §4.5, §4.6): display
- * names, kind tags, where each built-in group's links come from, and the
- * preview's input for `composeFooterGroups`, built exactly as the public read
- * builds it (so the preview and the live footer cannot disagree).
+ * names, kind tags, where each built-in group's links come from, where a
+ * failed save's link errors belong, and the preview's input for
+ * `composeFooterGroups`, built exactly as the public read builds it (so the
+ * preview and the live footer cannot disagree).
  */
 import {
   FOOTER_SYSTEM_GROUPS,
@@ -17,7 +18,7 @@ import type {
   StudioFooterGroup,
   StudioFooterLink,
 } from "../../../lib/cms/schemas/footer";
-import type { Locale } from "../../../lib/cms/types";
+import type { Locale, ValidationIssue } from "../../../lib/cms/types";
 
 /** The group's name in Studio copy: EN label, else ZH, else the default. */
 export function footerGroupName(group: StudioFooterGroup): string {
@@ -83,6 +84,32 @@ export function defaultLabelHint(key: string): string {
   if (!isFooterSystemKey(key)) return "";
   const { zh, en } = FOOTER_SYSTEM_GROUPS[key].label;
   return ` Default: ${zh} / ${en}.`;
+}
+
+const LINK_FIELD = /^links\.(\d+)\.(.+)$/;
+
+/**
+ * A failed save's link issues (`links.N.url`, `links.N.label`) filed under
+ * the link that was N-th when the group was saved, with the field relative to
+ * the link (`url`, `label`). `savedKeys` lists the links' client keys in the
+ * saved order, so an error stays with its link when links are moved or
+ * removed before the next save. Other issues are not link issues.
+ */
+export function placeLinkIssues(
+  issues: readonly ValidationIssue[] | undefined,
+  savedKeys: readonly string[],
+): Map<string, ValidationIssue[]> {
+  const placed = new Map<string, ValidationIssue[]>();
+  for (const issue of issues ?? []) {
+    const match = LINK_FIELD.exec(issue.field);
+    const key = match ? savedKeys[Number(match[1])] : undefined;
+    if (!match || key === undefined) continue;
+    placed.set(key, [
+      ...(placed.get(key) ?? []),
+      { ...issue, field: match[2] ?? "" },
+    ]);
+  }
+  return placed;
 }
 
 /**
