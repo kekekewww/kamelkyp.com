@@ -121,7 +121,14 @@ export function CaseList({
   const { query } = data;
   const filtered = Boolean(query.status || query.service);
 
-  const empty = filtered ? (
+  // An older page can be empty (its last cases were removed meanwhile):
+  // newer cases exist, so neither "no commissions" nor "no matches".
+  const empty = query.cursor ? (
+    <EmptyState
+      title="No older cases"
+      body="Nothing is older than the previous page. Go back to the newest cases."
+    />
+  ) : filtered ? (
     <EmptyState
       title="No cases match these filters"
       body="Try another status or service, or show every case."

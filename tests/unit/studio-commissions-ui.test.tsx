@@ -395,6 +395,26 @@ describe("CommissionsInbox", () => {
     expect(filtered).toContain("No cases match these filters");
     expect(filtered).toContain("Clear filters");
   });
+
+  it("says an empty older page has no older cases, not that there are none", () => {
+    for (const status of [null, "cancelled"] as const) {
+      const html = render(
+        <CommissionsInbox
+          data={model({
+            cases: [],
+            query: { status, service: null, cursor: "a.b" },
+          })}
+        />,
+      );
+      const cases = html.slice(html.indexOf('class="commissions-cases"'));
+      expect(cases, String(status)).toContain("No older cases");
+      expect(cases, String(status)).not.toContain("No commissions yet");
+      expect(cases, String(status)).not.toContain(
+        "No cases match these filters",
+      );
+      expect(cases, String(status)).toContain("Newest cases");
+    }
+  });
 });
 
 function DialogHarness({ item }: { item: CleanupDueItem }) {
