@@ -1,13 +1,14 @@
 /**
  * Public site context (content-architecture §3.6): brand, site settings,
- * navigation, footer groups, social links and media config for one locale,
- * read with one `db.batch` plus one asset lookup.
+ * navigation, footer groups and media config for one locale, read with one
+ * `db.batch` plus one asset lookup.
  *
  * Footer: `composeFooterGroups` (`footer.ts`) builds it from the
  * `link_groups` rows (order, visibility, labels; custom groups' `links`), the
  * site navigation and service areas, the enabled social links and
- * `brand.contactEmail`. Only the composed groups enter the loader data, so
- * hidden groups and links never reach the served HTML.
+ * `brand.contactEmail`. Only the composed groups enter the loader data (the
+ * social links too: they reach the page only as Find Me links), so hidden
+ * groups and links never reach the served HTML.
  */
 import type { Env } from "../../env.server";
 import { localize } from "../localized";
@@ -46,13 +47,7 @@ type FooterRow = {
   link_url: string | null;
 };
 
-type SocialRow = {
-  id: string;
-  platform: string;
-  label_i18n: string;
-  url: string;
-  username: string | null;
-};
+type SocialRow = { id: string; label_i18n: string; url: string };
 
 function cta(
   value: BrandSettings["primaryCta"] | null,
@@ -240,7 +235,6 @@ export function fallbackSiteContext(
       socialLinks: [],
       contactEmail: brand.value.contactEmail,
     }),
-    socialLinks: [],
     mediaConfig: context.mediaConfig,
   };
 }
@@ -256,7 +250,7 @@ export async function getPublicSiteContext(
       settingsStatement(db),
       termsStatement(db),
       db.prepare(
-        "SELECT id, platform, label_i18n, url, username FROM social_links WHERE enabled = 1 ORDER BY sort_order, id",
+        "SELECT id, label_i18n, url FROM social_links WHERE enabled = 1 ORDER BY sort_order, id",
       ),
       db
         .prepare(
@@ -293,13 +287,12 @@ export async function getPublicSiteContext(
   };
 
   const brandPublic = brandView(brand.value, locale, context);
+  // Only the Find Me group's links carry them to the page.
   const socialLinks = ((socialResult?.results ?? []) as SocialRow[])
     .map((row) => ({
       id: row.id,
-      platform: row.platform,
       label: localize(JSON.parse(row.label_i18n), locale),
       url: row.url,
-      username: row.username,
     }))
     .filter((link) => link.label && isSafeFooterUrl(link.url));
 
@@ -319,14 +312,9 @@ export async function getPublicSiteContext(
       groups: footerRecords((footerResult?.results ?? []) as FooterRow[]),
       navigation: site.value.navigation.items,
       serviceAreas: site.value.serviceAreas,
-      socialLinks: socialLinks.map(({ id, label, url }) => ({
-        id,
-        label,
-        url,
-      })),
+      socialLinks,
       contactEmail: brand.value.contactEmail,
     }),
-    socialLinks,
     mediaConfig: context.mediaConfig,
   };
 }

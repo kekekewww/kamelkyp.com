@@ -213,8 +213,8 @@ describe("cms e2e fixture", () => {
 
   it("shows only the enabled social link in the footer", async () => {
     const site = await getPublicSiteContext(env.DB, testEnv, "en");
-    expect(site.socialLinks.map((link) => link.label)).toEqual(["Instagram"]);
-    expect(site.footerGroups.map((group) => group.id)).toContain("find_me");
+    const findMe = site.footerGroups.find((group) => group.id === "find_me");
+    expect(findMe?.links.map((link) => link.label)).toEqual(["Instagram"]);
   });
 
   it("keeps the hidden fixture footer group out of the footer", async () => {

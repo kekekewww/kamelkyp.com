@@ -858,4 +858,40 @@ describe("other intents and sources", () => {
       expect(serialized).not.toContain("example.com/secret");
     }
   });
+
+  it("never sends the social links of a hidden Find Me group to the page", async () => {
+    await env.DB.prepare(
+      "INSERT INTO social_links (id, platform, label_i18n, url, username, enabled, sort_order, created_at, updated_at) VALUES ('s-secret', 'instagram', ?1, 'https://instagram.com/hidden-handle', 'hidden-handle', 1, 0, ?2, ?2)",
+    )
+      .bind(
+        JSON.stringify({ zh: "祕密社群", en: "Secret social" }),
+        now.toISOString(),
+      )
+      .run();
+    const shown = await getPublicSiteContext(env.DB, testEnv, "en");
+    expect(
+      shown.footerGroups.find((item) => item.id === "find_me")?.links,
+    ).toEqual([
+      {
+        id: "s-secret",
+        label: "Secret social",
+        url: "https://instagram.com/hidden-handle",
+      },
+    ]);
+
+    const hidden = await act([
+      ["intent", "toggle-group"],
+      ["id", "seed-footer-find-me"],
+      ["enabled:bool", "false"],
+    ]);
+    expect(hidden.status).toBe(200);
+    for (const locale of ["zh", "en"] as const) {
+      const site = await getPublicSiteContext(env.DB, testEnv, locale);
+      expect(site.footerGroups.map((item) => item.id)).not.toContain("find_me");
+      const serialized = JSON.stringify(site);
+      expect(serialized).not.toContain("祕密社群");
+      expect(serialized).not.toContain("Secret social");
+      expect(serialized).not.toContain("hidden-handle");
+    }
+  });
 });
