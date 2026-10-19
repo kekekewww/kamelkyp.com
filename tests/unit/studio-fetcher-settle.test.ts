@@ -95,6 +95,66 @@ describe("fetcher settle tracker", () => {
       ),
     ).toEqual(["start", "settled", null]);
   });
+
+  it("does not report a submission again when its busy state commits late", () => {
+    // React Router keeps fetcher data outside the router state, so an urgent
+    // render (typing during a save) can read the action's data while the
+    // transition that carries the "loading" state has not committed yet. The
+    // submission settles on that render; the late loading and idle renders
+    // belong to it. Reporting them again showed two toasts and SAVED →
+    // SAVING… → SAVED.
+    expect(
+      observeAll(
+        ["idle", A],
+        [
+          ["idle", B],
+          ["loading", B],
+          ["idle", B],
+          ["idle", B],
+        ],
+      ),
+    ).toEqual(["settled", null, null, null]);
+  });
+
+  it("a new submission after a settle still starts and settles", () => {
+    // "submitting" keeps the previous data, so it always starts.
+    expect(
+      observeAll(
+        ["idle", A],
+        [
+          ["idle", B],
+          ["submitting", B],
+          ["loading", C],
+          ["idle", C],
+        ],
+      ),
+    ).toEqual(["settled", "start", null, "settled"]);
+    // Submitting render skipped: "loading" already carries the new data.
+    expect(
+      observeAll(
+        ["idle", A],
+        [
+          ["idle", B],
+          ["loading", C],
+          ["idle", C],
+        ],
+      ),
+    ).toEqual(["settled", "start", "settled"]);
+  });
+
+  it("an observed cycle without new data after a settle still settles", () => {
+    expect(
+      observeAll(
+        ["idle", A],
+        [
+          ["idle", B],
+          ["submitting", B],
+          ["idle", B],
+          ["idle", B],
+        ],
+      ),
+    ).toEqual(["settled", "start", "settled", null]);
+  });
 });
 
 // Source text of every Studio component and route module, keyed by repository path.
