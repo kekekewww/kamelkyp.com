@@ -420,11 +420,22 @@ describe("loadCommissions", () => {
       submittedAt: "2026-05-01T01:00:00.000Z",
       runtime: false,
     });
+    // The state a confirmed cleanup leaves: no runtime and no attempt row.
     const cleaned = await seedCase({
       submittedAt: "2026-05-01T02:00:00.000Z",
       status: "delivered",
-      runtime: false,
+      cleanupDueAt: "2026-10-08T00:00:00.000Z",
     });
+    const { gateway } = okGateway();
+    expect(
+      (
+        await cleanup(
+          { intent: "confirm-cleanup", caseId: cleaned, ...CHECKLIST },
+          gateway,
+        )
+      ).status,
+    ).toBe(200);
+    expect(await attemptOf(cleaned)).toBeNull();
     const model = await load();
     expect(
       model.cases.find((row) => row.caseId === legacy)?.temporaryRecords,
