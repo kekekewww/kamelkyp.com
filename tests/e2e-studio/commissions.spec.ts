@@ -307,6 +307,44 @@ test("keeps the student price after an inline confirmation", async ({
   await expect(caseRow(page, ID.student)).not.toContainText("STUDENT PRICE");
 });
 
+test("a decided student price leaves focus where the owner moved it", async ({
+  page,
+}) => {
+  // A fresh seed: case 3 has its pending student price again.
+  runLocalD1File("tests/fixtures/commissions-studio-e2e.sql");
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openStudio(page, "/studio/commissions");
+  // Slow the decision down, so focus can move on while it is in flight.
+  await page.route("**/studio/commissions/student-discount*", async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    await route.continue().catch(() => {});
+  });
+  const item = page.locator("#student-reviews").getByRole("listitem", {
+    name: `Student price, case ${ID.student}`,
+  });
+  await item
+    .getByRole("button", { name: `Charge standard price for ${ID.student}` })
+    .click();
+  await item
+    .getByRole("button", {
+      name: `Confirm decision for ${ID.student}`,
+      exact: true,
+    })
+    .click();
+  const select = caseRow(page, ID.review).getByRole("combobox", {
+    name: `Status for ${ID.review}`,
+  });
+  await select.focus();
+
+  await expect(page.locator(".studio-toasts")).toContainText(
+    `Standard price set for ${ID.student}: NT$8,000. Email the client with the result.`,
+  );
+  await expect(item).toHaveCount(0);
+  // The decided item had no focus any more: nothing pulls focus away.
+  await expect(select).toBeFocused();
+  await page.unrouteAll({ behavior: "ignoreErrors" });
+});
+
 test("the cleanup checklist needs all three confirmations", async ({
   page,
 }) => {

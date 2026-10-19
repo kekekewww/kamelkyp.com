@@ -4,7 +4,8 @@
  * home deep links land on `#student-reviews` and `#cleanup-due`). This
  * component owns the student-decision fetcher and the single cleanup dialog
  * with its fetcher, so a result is still reported after its item has left
- * the queue; focus then moves to the queue heading.
+ * the queue; if the item took focus with it, focus moves to the queue
+ * heading (never to `<body>`, and never away from where the owner moved it).
  */
 import { useRef, useState } from "react";
 import type {
@@ -54,12 +55,15 @@ function QueueHeading({
 function StudentReviews({ data }: { data: CommissionsModel }) {
   const toast = useToast();
   const heading = useRef<HTMLHeadingElement>(null);
+  // Focus moves to the heading only when the decided (or stale) item took
+  // it along; focus the owner has moved elsewhere meanwhile stays there.
+  const rescueFocus = useFocusFallback(data, heading);
   const decide = useCommissionAction(
     "/studio/commissions/student-discount",
     (result: CommissionResult, sent: SentFields) => {
+      rescueFocus(result);
       if (!result.ok) {
         toast.show({ tone: "error", message: result.message });
-        if (STALE_PAGE_CODES.has(result.code)) heading.current?.focus();
         return;
       }
       const price = formatCaseMoney(
@@ -72,8 +76,6 @@ function StudentReviews({ data }: { data: CommissionsModel }) {
             ? `Student price kept for ${sent.caseId}: ${price}. Email the client with the result.`
             : `Standard price set for ${sent.caseId}: ${price}. Email the client with the result.`,
       });
-      // The decided item has left the queue.
-      heading.current?.focus();
     },
   );
   const items = data.studentReviews;
