@@ -25,6 +25,14 @@ const sources = Object.values(
   ),
 );
 
+/**
+ * Unused runtime dependencies whose removal from package.json waits for the
+ * "Refresh lockfile" workflow (it lands together with the bot's lockfile
+ * commit). They must stay unused meanwhile. Drop an entry in the commit that
+ * removes the package from package.json.
+ */
+const AWAITING_REMOVAL: readonly string[] = ["wavesurfer.js"];
+
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -52,12 +60,23 @@ describe("dependency contract", () => {
     expect(loose).toEqual([]);
   });
 
-  it("imports every runtime dependency", () => {
-    const unused = Object.keys(manifest.dependencies).filter((name) => {
+  const unused = () =>
+    Object.keys(manifest.dependencies).filter((name) => {
       const pattern = importPattern(name);
       return !sources.some((source) => pattern.test(source));
     });
-    expect(unused).toEqual([]);
+
+  it("imports every runtime dependency", () => {
+    expect(unused().filter((name) => !AWAITING_REMOVAL.includes(name))).toEqual(
+      [],
+    );
+  });
+
+  it("keeps a dependency awaiting removal unused", () => {
+    const listed = AWAITING_REMOVAL.filter(
+      (name) => name in manifest.dependencies,
+    );
+    expect(unused().filter((name) => listed.includes(name))).toEqual(listed);
   });
 
   it("does not let a longer package name satisfy a shorter one", () => {
