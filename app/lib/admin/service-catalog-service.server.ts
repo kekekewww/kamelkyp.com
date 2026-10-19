@@ -79,6 +79,12 @@ export async function publishPriceVersion(input: {
   /** `replace` / `cancel` supersede a scheduled version at the same time. */
   action?: PublishAction;
   replacesVersionId?: string | null;
+  /**
+   * Concurrency token: insert only while the service has exactly this many
+   * versions (checked inside the batch); otherwise nothing is inserted and
+   * `price_history_changed` is thrown.
+   */
+  expectedVersionCount?: number;
 }): Promise<AdminPriceVersion> {
   if (!isServiceId(input.serviceId)) throw new Error("invalid_service_id");
   const values = PriceInputSchema.parse(input);
@@ -89,12 +95,14 @@ export async function publishPriceVersion(input: {
   }
   const id = crypto.randomUUID();
   // One batch (a D1 transaction): the version and its publish metadata.
-  await input.db.batch([
+  const [inserted] = await input.db.batch([
     input.db
       .prepare(
         "INSERT INTO price_versions (id, service_id, base_twd, per_song_after_five_twd, " +
           "student_discount_bps, rush_bps, consultation_bps, source_prep_bps, effective_from) " +
-          "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          "SELECT ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9 " +
+          "WHERE ?10 IS NULL OR " +
+          "(SELECT COUNT(*) FROM price_versions WHERE service_id = ?2) = ?10",
       )
       .bind(
         id,
@@ -106,11 +114,13 @@ export async function publishPriceVersion(input: {
         values.consultationBps,
         values.sourcePrepBps,
         values.effectiveFrom,
+        input.expectedVersionCount ?? null,
       ),
     input.db
       .prepare(
         "INSERT INTO price_version_publications " +
-          "(version_id, published_at, action, replaces_version_id) VALUES (?, ?, ?, ?)",
+          "(version_id, published_at, action, replaces_version_id) " +
+          "SELECT ?1, ?2, ?3, ?4 WHERE EXISTS (SELECT 1 FROM price_versions WHERE id = ?1)",
       )
       .bind(
         id,
@@ -119,6 +129,7 @@ export async function publishPriceVersion(input: {
         replacesVersionId,
       ),
   ]);
+  if (!inserted?.meta.changes) throw new Error("price_history_changed");
   return {
     id,
     serviceId: input.serviceId,

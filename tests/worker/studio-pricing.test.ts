@@ -5,6 +5,7 @@
  */
 import { env } from "cloudflare:workers";
 import { describe, expect, it, vi } from "vitest";
+import { publishPriceVersion } from "../../app/lib/admin/service-catalog-service.server";
 import {
   handlePriceEditorAction,
   handlePricingIndexAction,
@@ -541,6 +542,56 @@ describe("price editor", () => {
         .filter((row) => row.action === "cancel")
         .map((row) => row.state),
     ).toEqual(["cancelled", "cancelled"]);
+  });
+
+  it("refuses a publish when another insert lands before its batch (atomic count, 409)", async () => {
+    const now = new Date("2027-04-01T00:00:00.000Z");
+    const data = await loadPriceEditor(env.DB, "full_mix", now);
+    const active = data.service.active;
+    if (!active) throw new Error("full_mix has no active price");
+    const before = await versionCount("full_mix");
+    let raced = false;
+    // Another tab inserts a version after this request counted the rows.
+    const racing = new Proxy(env.DB, {
+      get(target, prop) {
+        if (prop === "batch") {
+          return async (statements: D1PreparedStatement[]) => {
+            if (!raced) {
+              raced = true;
+              await publishPriceVersion({
+                db: env.DB,
+                serviceId: "full_mix",
+                baseTwd: active.baseTwd,
+                perSongAfterFiveTwd: active.perSongAfterFiveTwd,
+                studentDiscountBps: active.studentDiscountBps,
+                rushBps: active.rushBps,
+                consultationBps: active.consultationBps,
+                sourcePrepBps: active.sourcePrepBps,
+                effectiveFrom: "2098-12-31T16:00:00.000Z",
+                publishedAt: now.toISOString(),
+              });
+            }
+            return target.batch(statements);
+          };
+        }
+        const value = Reflect.get(target, prop, target);
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    });
+    const result = await handlePriceEditorAction({
+      db: racing,
+      serviceId: "full_mix",
+      formData: priceForm(data, {
+        effectiveMode: "scheduled",
+        effectiveAt: "2098-01-01T00:00",
+      }),
+      intent: "publish-price-version",
+      now,
+    });
+    expect(raced).toBe(true);
+    expect(status(result)).toBe(409);
+    expect(body(result).code).toBe("stale_revision");
+    expect(await versionCount("full_mix")).toBe(before + 1);
   });
 
   it("refuses stale pages (409) and inserts nothing", async () => {

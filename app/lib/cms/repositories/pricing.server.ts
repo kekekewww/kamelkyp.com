@@ -569,6 +569,23 @@ const noBaseline = () =>
     message: "There is no price to base this version on.",
   });
 
+/**
+ * `publishPriceVersion` with the count token checked inside its batch: null
+ * when another request inserted a version since the history was read.
+ */
+async function insertVersion(
+  input: Parameters<typeof publishPriceVersion>[0],
+): Promise<Awaited<ReturnType<typeof publishPriceVersion>> | null> {
+  try {
+    return await publishPriceVersion(input);
+  } catch (caught) {
+    if (caught instanceof Error && caught.message === "price_history_changed") {
+      return null;
+    }
+    throw caught;
+  }
+}
+
 export async function handlePriceEditorAction({
   db,
   serviceId,
@@ -590,7 +607,8 @@ export async function handlePriceEditorAction({
   }
   const data = formData ?? new FormData();
   const history = await listPriceHistory(db, serviceId, now);
-  // Concurrency token: rows are insert-only, so the count only grows.
+  // Concurrency token: rows are insert-only, so the count only grows. The
+  // insert re-checks it atomically (a request that lands in between).
   if (readCount(data) !== history.length) return staleHistory();
 
   if (intent === "cancel-scheduled") {
@@ -608,7 +626,7 @@ export async function handlePriceEditorAction({
       before: true,
     });
     if (!baseline) return noBaseline();
-    const version = await publishPriceVersion({
+    const version = await insertVersion({
       db,
       serviceId,
       ...valuesOf(baseline),
@@ -616,7 +634,9 @@ export async function handlePriceEditorAction({
       publishedAt: now.toISOString(),
       action: "cancel",
       replacesVersionId: target.id,
+      expectedVersionCount: history.length,
     });
+    if (!version) return staleHistory();
     return actionOk({
       versionId: version.id,
       message: `Cancelled the change of ${formatTaipei(target.effectiveFrom)}.`,
@@ -638,7 +658,7 @@ export async function handlePriceEditorAction({
       issues: parsed.issues,
     });
   }
-  const version = await publishPriceVersion({
+  const version = await insertVersion({
     db,
     serviceId,
     ...parsed.values,
@@ -646,7 +666,9 @@ export async function handlePriceEditorAction({
     publishedAt: now.toISOString(),
     action: parsed.action,
     replacesVersionId: parsed.replacesVersionId,
+    expectedVersionCount: history.length,
   });
+  if (!version) return staleHistory();
   const immediate = parsed.effectiveFrom === now.toISOString();
   const message = immediate
     ? "Published. The new price is active now."
