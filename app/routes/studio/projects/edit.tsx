@@ -1,5 +1,5 @@
 /** `/studio/projects/:id`: the project editor (P1). */
-import { useState } from "react";
+import { startTransition, useState } from "react";
 import { type ShouldRevalidateFunctionArgs, useLoaderData } from "react-router";
 import { ProjectEditor } from "../../../components/studio/projects/project-editor";
 import {
@@ -49,7 +49,14 @@ export default function EditProjectRoute() {
     <ProjectEditor
       key={`${data.meta.id}:${current.epoch}`}
       data={data}
-      onReload={(target) => setReload((state) => requestReload(state, target))}
+      onReload={(target) =>
+        // A transition, like the router's own updates: "Reload latest" asks
+        // right after the revalidation, before React rendered its loader
+        // data, and an urgent update would remount with the stale copy.
+        startTransition(() =>
+          setReload((state) => requestReload(state, target)),
+        )
+      }
     />
   );
 }

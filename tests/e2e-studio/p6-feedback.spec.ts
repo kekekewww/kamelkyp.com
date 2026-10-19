@@ -359,6 +359,41 @@ test.describe("studio feedback on a slow CPU", () => {
     }
   });
 
+  test("project: Reload latest after a conflict shows the server copy", async ({
+    page,
+  }) => {
+    // At full speed: "Reload latest" awaits the revalidation, then remounts.
+    // The remount must render the revalidated data, not the copy it replaced.
+    await openStudio(page, "/studio/projects/new");
+    const path = await createProjectDraft(page, `P6 Reload ${token}`);
+    const role = page.locator('input[name="role.en"]');
+    // Non-empty before the conflict: a field remounted from a stale copy
+    // keeps that text even after the newer copy arrives.
+    await role.fill(`First role ${token}`);
+    expect((await saveProject(page, path)).ok()).toBe(true);
+
+    // Another tab saves a newer copy.
+    const other = await page.context().newPage();
+    await openStudio(other, path);
+    const otherRole = `Other tab role ${token}`;
+    await other.locator('input[name="role.en"]').fill(otherRole);
+    expect((await saveProject(other, path)).ok()).toBe(true);
+    await other.close();
+
+    // This tab's save is refused as stale; Reload latest shows the newer copy.
+    await role.fill(`This tab role ${token}`);
+    expect((await saveProject(page, path)).ok()).toBe(false);
+    await page.getByRole("button", { name: "Reload latest" }).click();
+    await expect(role).toHaveValue(otherRole);
+    await expect(topSaveState(page)).not.toHaveText("UNSAVED CHANGES");
+
+    // Saving from the reloaded editor is accepted and keeps the newer copy.
+    await page.locator('textarea[name="description.en"]').fill("Reloaded");
+    expect((await saveProject(page, path)).ok()).toBe(true);
+    await openStudio(page, path);
+    await expect(page.locator('input[name="role.en"]')).toHaveValue(otherRole);
+  });
+
   test("homepage section: saving reaches SAVED", async ({ page }) => {
     await openStudio(page, "/studio/homepage");
     const cdp = await throttle(page);
