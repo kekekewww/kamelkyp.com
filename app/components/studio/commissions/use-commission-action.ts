@@ -4,9 +4,8 @@
  * (the inbox or the queues), so a result still reaches its toast after the
  * row or queue item that started it has left the page.
  *
- * `submit` posts the fields with the CSRF token; a `fetcher.Form` posting
- * the same route calls `track` first. `onResult` runs once per finished
- * submission with the fields that were sent. React Router does not
+ * `submit` posts the fields with the CSRF token. `onResult` runs once per
+ * finished submission with the fields that were sent. React Router does not
  * revalidate after a 4xx action, so the "stale page" codes revalidate here:
  * the list, the queues and the sidebar count then match D1 again.
  *
@@ -74,14 +73,6 @@ export function enqueueSubmission(
   return { queue: { inFlight: fields, waiting: queue.waiting }, post: fields };
 }
 
-/** A `fetcher.Form` is posting `fields` itself. */
-export function trackSubmission(
-  queue: SubmissionQueue,
-  fields: SentFields,
-): SubmissionQueue {
-  return { inFlight: fields, waiting: queue.waiting };
-}
-
 /**
  * The fetcher settled: `finished` is the submission to report (null when
  * the request was not made through the queue), `post` the next one.
@@ -115,8 +106,6 @@ export type CommissionAction = {
    * the submission in flight has settled.
    */
   submit: (fields: SentFields) => void;
-  /** Records the fields a `fetcher.Form` is about to post. */
-  track: (fields: SentFields) => void;
   /** A submission is in flight or waiting. */
   busy: boolean;
   /** The fields in flight. */
@@ -166,11 +155,6 @@ export function useCommissionAction(
     },
   });
 
-  const track = useCallback(
-    (fields: SentFields) => apply(trackSubmission(queue.current, fields), null),
-    [apply],
-  );
-
   const submit = useCallback(
     (fields: SentFields) => {
       const step = enqueueSubmission(
@@ -191,7 +175,6 @@ export function useCommissionAction(
   return {
     fetcher,
     submit,
-    track,
     busy,
     sent: shown.inFlight,
     pendingCaseIds,
