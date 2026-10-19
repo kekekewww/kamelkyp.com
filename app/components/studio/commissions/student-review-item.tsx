@@ -106,6 +106,10 @@ export function StudentReviewItem({
               }}
             >
               {busy ? "Saving…" : "Confirm"}
+              <span className="visually-hidden">
+                {" "}
+                decision for {item.caseId}
+              </span>
             </button>
             <button
               type="button"
@@ -113,6 +117,10 @@ export function StudentReviewItem({
               onClick={cancel}
             >
               Cancel
+              <span className="visually-hidden">
+                {" "}
+                decision for {item.caseId}
+              </span>
             </button>
           </div>
         </fieldset>

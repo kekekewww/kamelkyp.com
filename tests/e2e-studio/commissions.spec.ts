@@ -280,8 +280,18 @@ test("keeps the student price after an inline confirmation", async ({
   await item
     .getByRole("button", { name: `Accept student price for ${ID.student}` })
     .click();
-  const confirm = item.getByRole("button", { name: "Confirm" });
+  // Both buttons of the confirmation name their case (wp1 §4.10).
+  const confirm = item.getByRole("button", {
+    name: `Confirm decision for ${ID.student}`,
+    exact: true,
+  });
   await expect(confirm).toBeFocused();
+  await expect(
+    item.getByRole("button", {
+      name: `Cancel decision for ${ID.student}`,
+      exact: true,
+    }),
+  ).toBeVisible();
   await expect(item).toContainText(
     `Keep the student price NT$5,600 for ${ID.student}? This cannot be undone.`,
   );
