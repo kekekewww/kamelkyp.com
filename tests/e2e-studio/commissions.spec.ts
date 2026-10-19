@@ -335,3 +335,29 @@ test("stacks rows on a phone without horizontal scrolling", async ({
   );
   expect(fits).toBe(true);
 });
+
+// Last: it removes the seeded cases (afterAll removes them again).
+test("a change to a case removed meanwhile moves focus to the list heading", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openStudio(page, "/studio/commissions");
+  const row = caseRow(page, ID.production);
+  await expect(row).toBeVisible();
+  // The case disappears behind the page's back (as an orphan cleanup can).
+  runLocalD1File("tests/fixtures/commissions-studio-e2e-cleanup.sql");
+  await row
+    .getByRole("combobox", { name: `Status for ${ID.production}` })
+    .selectOption("preview_approval");
+  await row
+    .getByRole("button", { name: `Update status of ${ID.production}` })
+    .click();
+  await expect(page.locator(".studio-toasts")).toContainText(
+    "This case no longer exists. The list has been refreshed.",
+  );
+  await expect(row).toHaveCount(0);
+  // The reload removed the focused row: focus is on the heading, not <body>.
+  await expect(
+    page.getByRole("heading", { level: 2, name: "Cases", exact: true }),
+  ).toBeFocused();
+});

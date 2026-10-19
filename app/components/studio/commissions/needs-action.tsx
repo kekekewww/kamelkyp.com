@@ -23,6 +23,7 @@ import {
   STALE_PAGE_CODES,
   useCommissionAction,
 } from "./use-commission-action";
+import { useFocusFallback } from "./use-focus-fallback";
 
 export const STUDENT_REVIEWS_ID = "student-reviews";
 export const CLEANUP_DUE_ID = "cleanup-due";
@@ -220,6 +221,10 @@ function CleanupQueue({ data }: { data: CommissionsModel }) {
   const [error, setError] = useState<string | null>(null);
   // Where focus goes once the dialog has closed (its opener may be gone).
   const focusAfterClose = useRef<HTMLElement | null>(null);
+  // A result can also remove the item whose opener has focus after the
+  // dialog was closed during the request, or with the reload a stale code
+  // asks for (the dialog then returned focus to that opener).
+  const rescueFocus = useFocusFallback(data, heading);
 
   const close = () => {
     setDialog((current) => (current ? { ...current, open: false } : null));
@@ -241,6 +246,7 @@ function CleanupQueue({ data }: { data: CommissionsModel }) {
       }
       if (feedback.inlineError) setError(feedback.inlineError);
       if (feedback.toast) toast.show(feedback.toast);
+      rescueFocus(result);
     },
   );
 

@@ -26,6 +26,7 @@ import {
   type SentFields,
   useCommissionAction,
 } from "./use-commission-action";
+import { useFocusFallback } from "./use-focus-fallback";
 
 function plural(count: number, one: string, many: string) {
   return `${count} ${count === 1 ? one : many}`;
@@ -48,18 +49,16 @@ function useStatusFeedback(
   submitRef: { current: (fields: SentFields) => void },
   /** The Undo submissions, by identity: a change can wait behind another. */
   undoing: { current: Set<SentFields> },
-  headingRef: { current: HTMLHeadingElement | null },
+  rescueFocus: (result: CommissionResult) => void,
 ) {
   const toast = useToast();
   return useCallback(
     (result: CommissionResult, sent: SentFields) => {
       const caseId = sent.caseId ?? "";
       const wasUndo = undoing.current.delete(sent);
-      // The row may have left a filtered list: never leave focus on <body>.
-      window.requestAnimationFrame(() => {
-        const active = document.activeElement;
-        if (!active || active === document.body) headingRef.current?.focus();
-      });
+      // The row may leave a filtered list, now or with the reload a stale
+      // code asks for: never leave focus on <body>.
+      rescueFocus(result);
       if (!result.ok) {
         toast.show({ tone: "error", message: result.message });
         return;
@@ -100,7 +99,7 @@ function useStatusFeedback(
         });
       }
     },
-    [toast, submitRef, undoing, headingRef],
+    [toast, submitRef, undoing, rescueFocus],
   );
 }
 
@@ -109,7 +108,8 @@ export function CommissionsInbox({ data }: { data: CommissionsModel }) {
   const undoing = useRef(new Set<SentFields>());
   // Status changes and their Undo share one fetcher.
   const submitRef = useRef<(fields: SentFields) => void>(() => {});
-  const feedback = useStatusFeedback(submitRef, undoing, heading);
+  const rescueFocus = useFocusFallback(data, heading);
+  const feedback = useStatusFeedback(submitRef, undoing, rescueFocus);
   const status = useCommissionAction("/studio/commissions/status", feedback);
   submitRef.current = status.submit;
 

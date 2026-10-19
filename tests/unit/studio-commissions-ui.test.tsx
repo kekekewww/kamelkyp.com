@@ -14,10 +14,12 @@ import {
   EMPTY_QUEUE,
   enqueueSubmission,
   queuedCaseIds,
+  STALE_PAGE_CODES,
   settleSubmission,
   trackSubmission,
   useCommissionAction,
 } from "../../app/components/studio/commissions/use-commission-action";
+import { focusFallbackAfter } from "../../app/components/studio/commissions/use-focus-fallback";
 import {
   StudioSessionProvider,
   ToastProvider,
@@ -561,5 +563,30 @@ describe("submission queue", () => {
       finished: sent,
       post: null,
     });
+  });
+});
+
+describe("focusFallbackAfter", () => {
+  it("checks focus at once after a success: its revalidation already ran", () => {
+    expect(
+      focusFallbackAfter({ ok: true, intent: "set-status", caseId: ID_1 }),
+    ).toBe("now");
+  });
+
+  it("waits for the reload that a stale-page code asks for", () => {
+    for (const code of STALE_PAGE_CODES) {
+      expect(focusFallbackAfter({ ok: false, code, message: "m" }), code).toBe(
+        "after-reload",
+      );
+    }
+  });
+
+  it("leaves focus alone when nothing leaves the page", () => {
+    for (const code of ["cleanup_gateway_failed", "no_answer"]) {
+      expect(
+        focusFallbackAfter({ ok: false, code, message: "m" }),
+        code,
+      ).toBeNull();
+    }
   });
 });
