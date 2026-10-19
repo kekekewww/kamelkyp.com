@@ -476,7 +476,9 @@ Built-in groups (one row each, seeded by `0010`, see its §3 subsection); their 
   Leftovers (legacy one-locale rows) become one-locale links with a load note. When a legacy pair disagrees, the editor
   shows the ZH address and flag, while the preview and the "N of M links shown" count read each locale's own row, as
   the public footer does. Saving replaces a group's links with complete pairs (`sort_order` = index × 10, fresh ids).
-  A save from an older version (SHA-256 fingerprint of the stored labels and link rows) answers 409.
+  A save from an older version (SHA-256 fingerprint of the stored labels and link rows) answers 409. A built-in group's
+  missing label row, or missing row, counts as its default label: reorder, create and toggle recreate missing built-in
+  rows with exactly that label, so they never invalidate an open editor.
 - **Addresses.** Stored after normalization: a bare email → `mailto:`, a bare host → `https://`, `/zh/…` or `/en/…`
   → the locale-less path, `HTTPS:`/`MAILTO:` → lower case. Allowed: a site path (`/…`, not `//…`, no backslash,
   whitespace, control character or `.`/`..` segment (`%2e` included, since `/en/../studio` resolves to `/studio`), not

@@ -647,6 +647,73 @@ describe("reorder", () => {
       "The new order could not be read. Reload and try again.",
     );
   });
+
+  // Reorder, create and toggling a missing built-in group recreate every
+  // missing built-in row with its default labels (spec §4.7). An editor open
+  // on such a group must survive that (spec §4.6), so its fingerprint stays.
+  it("keeps a missing built-in group's fingerprint when a write recreates its row", async () => {
+    const removeContact = () =>
+      env.DB.prepare(
+        "DELETE FROM link_groups WHERE id = 'seed-footer-contact'",
+      ).run();
+    const writes: Array<[string, () => Promise<Unwrapped>]> = [
+      [
+        "reorder",
+        async () => reorder((await screen()).groups.map((item) => item.id)),
+      ],
+      [
+        "create",
+        () => act(saveEntries({ label: { zh: "新群組", en: "New group" } })),
+      ],
+      [
+        "toggle of another missing group",
+        async () => {
+          await env.DB.prepare(
+            "DELETE FROM link_groups WHERE id = 'seed-footer-find-me'",
+          ).run();
+          return act([
+            ["intent", "toggle-group"],
+            ["id", "seed-footer-find-me"],
+            ["enabled:bool", "false"],
+          ]);
+        },
+      ],
+    ];
+    for (const [name, write] of writes) {
+      await restore(seeded);
+      await removeContact();
+      const before = await group("contact");
+      expect(before.stored, name).toBe(false);
+      expect((await write()).status, name).toBe(200);
+      const after = await group("contact");
+      expect(after.stored, name).toBe(true);
+      expect(after.fingerprint, name).toBe(before.fingerprint);
+      // A save from the editor opened before the write still lands.
+      const saved = await act(
+        saveEntries({
+          id: before.id,
+          fingerprint: before.fingerprint,
+          label: { zh: "聯絡我", en: "Reach me" },
+        }),
+      );
+      expect(saved.status, name).toBe(200);
+    }
+
+    // A stored built-in row that lost a label row: the write restores the
+    // default label, which the fingerprint already counted.
+    await restore(seeded);
+    await env.DB.prepare(
+      "DELETE FROM link_group_labels WHERE group_id = 'seed-footer-navigate' AND locale = 'en'",
+    ).run();
+    const navigate = await group("navigate");
+    expect(navigate.label).toEqual({ zh: "導覽", en: "" });
+    await reorder((await screen()).groups.map((item) => item.id));
+    expect((await group("navigate")).label).toEqual({
+      zh: "導覽",
+      en: "Navigate",
+    });
+    expect((await group("navigate")).fingerprint).toBe(navigate.fingerprint);
+  });
 });
 
 describe("other intents and sources", () => {

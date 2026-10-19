@@ -137,9 +137,9 @@ function groupStatements(db: D1Database): D1PreparedStatement[] {
 }
 
 /**
- * SHA-256 hex of the STORED labels and link rows of a group (never the UI
- * defaults; not the group's visibility or position, so toggling or moving a
- * group does not invalidate an open editor).
+ * SHA-256 hex of the labels and link rows of a group (see
+ * {@link fingerprintLabel} for the labels; not the group's visibility or
+ * position, so toggling or moving a group does not invalidate an open editor).
  */
 export async function footerGroupFingerprint(
   label: LocalizedText,
@@ -175,18 +175,36 @@ function compare(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0;
 }
 
+/**
+ * The labels a fingerprint covers: the stored label rows. For a built-in
+ * group a missing label row (or a missing group row) counts as the default
+ * label, because every batch that recreates built-in rows
+ * ({@link ensureFooterSystemGroupStatements}: reorder, create, and toggle or
+ * save of a missing group) writes exactly that default. Those writes then
+ * leave the fingerprint, and an editor open on the group, unchanged.
+ */
+function fingerprintLabel(
+  kind: FooterGroupKind,
+  stored: Partial<LocalizedText>,
+): LocalizedText {
+  const fallback =
+    kind === "custom" ? { zh: "", en: "" } : FOOTER_SYSTEM_GROUPS[kind].label;
+  return { zh: stored.zh ?? fallback.zh, en: stored.en ?? fallback.en };
+}
+
 async function buildGroups(
   groupRows: readonly GroupRow[],
   labelRows: readonly LabelRow[],
   linkRows: readonly LinkRowDb[],
 ): Promise<StudioFooterGroup[]> {
-  const labels = new Map<string, LocalizedText>();
+  // Stored label rows per group (a locale without a row stays undefined).
+  const labels = new Map<string, Partial<LocalizedText>>();
   for (const row of labelRows) {
-    const current = labels.get(row.group_id) ?? { zh: "", en: "" };
-    if (row.locale === "zh" || row.locale === "en") {
-      current[row.locale] = row.label;
-    }
-    labels.set(row.group_id, current);
+    if (row.locale !== "zh" && row.locale !== "en") continue;
+    labels.set(row.group_id, {
+      ...labels.get(row.group_id),
+      [row.locale]: row.label,
+    });
   }
   const rowsByGroup = new Map<string, FooterLinkRow[]>();
   for (const row of linkRows) {
@@ -211,14 +229,18 @@ async function buildGroups(
   const stored: Ordered[] = groupRows.flatMap((row) => {
     const kind = footerGroupKind(row.stable_key);
     if (kind === "social") return [];
-    const label = labels.get(row.id) ?? { zh: "", en: "" };
+    const storedLabel = labels.get(row.id) ?? {};
+    const label = { zh: storedLabel.zh ?? "", en: storedLabel.en ?? "" };
     const rows = rowsByGroup.get(row.id) ?? [];
     return [
       {
         id: row.id,
         key: row.stable_key,
         sortOrder: row.sort_order,
-        group: footerGroupFingerprint(label, rows).then((fingerprint) => ({
+        group: footerGroupFingerprint(
+          fingerprintLabel(kind, storedLabel),
+          rows,
+        ).then((fingerprint) => ({
           id: row.id,
           key: row.stable_key,
           kind,
@@ -238,17 +260,19 @@ async function buildGroups(
       id: FOOTER_SYSTEM_GROUPS[key].seedId,
       key,
       sortOrder: 0,
-      group: footerGroupFingerprint(label, []).then((fingerprint) => ({
-        id: FOOTER_SYSTEM_GROUPS[key].seedId,
-        key,
-        kind: key,
-        stored: false,
-        label,
-        enabled: true,
-        hideable: hideable(key),
-        links: [],
-        fingerprint,
-      })),
+      group: footerGroupFingerprint(fingerprintLabel(key, {}), []).then(
+        (fingerprint) => ({
+          id: FOOTER_SYSTEM_GROUPS[key].seedId,
+          key,
+          kind: key,
+          stored: false,
+          label,
+          enabled: true,
+          hideable: hideable(key),
+          links: [],
+          fingerprint,
+        }),
+      ),
     };
   });
   return Promise.all(ordered.map((item) => item.group));
