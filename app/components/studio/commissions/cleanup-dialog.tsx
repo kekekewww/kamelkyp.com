@@ -7,6 +7,11 @@
  * `ConfirmDialog` renders its actions outside the body, so the confirm
  * button reaches the checklist form through `form={formId}` and carries the
  * intent itself.
+ *
+ * The form posts through the queue's `submit`, not natively: Cancel stays
+ * usable while a cleanup runs, so the owner can confirm another case before
+ * the first has answered, and a second post on the one fetcher would abort
+ * the first. The queue sends it once the first has settled.
  */
 import { useEffect, useId, useState } from "react";
 import type {
@@ -17,7 +22,7 @@ import { ConfirmDialog, StudioForm } from "../ui";
 import { CaseIdText, ServiceNameText } from "./case-row";
 import { CaseStatusBadge } from "./case-status-badge";
 import { formatCaseDate } from "./format";
-import type { CommissionAction } from "./use-commission-action";
+import type { CommissionAction, SentFields } from "./use-commission-action";
 
 const CHECKLIST = [
   {
@@ -38,6 +43,22 @@ const CHECKLIST = [
 type ChecklistName = (typeof CHECKLIST)[number]["name"];
 
 export const CLEANUP_ACTION = "/studio/commissions/cleanup";
+
+/**
+ * The fields to post for a confirmed checklist, or null: nothing before all
+ * three are checked, and nothing twice for a case already in flight or
+ * waiting. Another case in flight is no reason to refuse, the queue holds it.
+ */
+export function cleanupSubmission(
+  caseId: string,
+  allChecked: boolean,
+  pendingCaseIds: ReadonlySet<string>,
+): SentFields | null {
+  if (!allChecked || pendingCaseIds.has(caseId)) return null;
+  const fields: SentFields = { intent: "confirm-cleanup", caseId };
+  for (const entry of CHECKLIST) fields[entry.name] = "on";
+  return fields;
+}
 
 function Checklist({
   item,
@@ -65,11 +86,13 @@ function Checklist({
       action={CLEANUP_ACTION}
       className="commissions-cleanup"
       onSubmit={(event) => {
-        if (!all || action.busy) {
-          event.preventDefault();
-          return;
-        }
-        action.track({ intent: "confirm-cleanup", caseId: item.caseId });
+        event.preventDefault();
+        const fields = cleanupSubmission(
+          item.caseId,
+          all,
+          action.pendingCaseIds,
+        );
+        if (fields) action.submit(fields);
       }}
     >
       <input type="hidden" name="caseId" value={item.caseId} />
@@ -132,6 +155,8 @@ export function CleanupDialog({
   const hintId = useId();
   const [ready, setReady] = useState(false);
   const shown = open && item !== null;
+  // Only this case's own cleanup: another case may be in flight meanwhile.
+  const confirming = item !== null && action.pendingCaseIds.has(item.caseId);
 
   // Every opening starts from an empty checklist.
   useEffect(() => {
@@ -161,9 +186,9 @@ export function CleanupDialog({
             className="studio-btn studio-btn--danger-filled"
             disabled={!ready}
             aria-describedby={ready ? undefined : hintId}
-            aria-busy={action.busy || undefined}
+            aria-busy={confirming || undefined}
           >
-            {action.busy ? "Confirming…" : "Confirm cleanup"}
+            {confirming ? "Confirming…" : "Confirm cleanup"}
           </button>
         </>
       }

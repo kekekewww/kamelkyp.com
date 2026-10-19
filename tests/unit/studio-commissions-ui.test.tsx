@@ -7,7 +7,10 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { createRoutesStub } from "react-router";
 import { describe, expect, it } from "vitest";
-import { CleanupDialog } from "../../app/components/studio/commissions/cleanup-dialog";
+import {
+  CleanupDialog,
+  cleanupSubmission,
+} from "../../app/components/studio/commissions/cleanup-dialog";
 import { CommissionsInbox } from "../../app/components/studio/commissions/commissions-inbox";
 import { cleanupFeedback } from "../../app/components/studio/commissions/needs-action";
 import {
@@ -417,8 +420,19 @@ describe("CommissionsInbox", () => {
   });
 });
 
-function DialogHarness({ item }: { item: CleanupDueItem }) {
-  const action = useCommissionAction("/studio/commissions/cleanup", () => {});
+function DialogHarness({
+  item,
+  pending = [],
+}: {
+  item: CleanupDueItem;
+  /** Cases whose cleanup is in flight or waiting on the queue's fetcher. */
+  pending?: readonly string[];
+}) {
+  const real = useCommissionAction("/studio/commissions/cleanup", () => {});
+  const action =
+    pending.length > 0
+      ? { ...real, busy: true, pendingCaseIds: new Set(pending) }
+      : real;
   return (
     <CleanupDialog
       item={item}
@@ -468,6 +482,46 @@ describe("CleanupDialog", () => {
     expect(html).toContain("Check all three to continue.");
     expect(html).toContain("The permanent record stays");
     expect(html).not.toMatch(/href="https?:\/\//);
+  });
+
+  it("says Confirming only while this case's cleanup is in flight", () => {
+    const confirmButton = (html: string) =>
+      html.match(/<button[^>]*form="[^"]+"[^>]*>[\s\S]*?<\/button>/)?.[0] ?? "";
+    // Another case's cleanup is in flight: this dialog has sent nothing.
+    const other = confirmButton(
+      render(<DialogHarness item={DUE} pending={[ID_5]} />),
+    );
+    expect(other).toContain("Confirm cleanup");
+    expect(other).not.toContain("Confirming");
+    expect(other).not.toContain("aria-busy");
+    const own = confirmButton(
+      render(<DialogHarness item={DUE} pending={[ID_5, ID_4]} />),
+    );
+    expect(own).toContain("Confirming…");
+    expect(own).toContain('aria-busy="true"');
+  });
+});
+
+describe("cleanupSubmission", () => {
+  const fields = {
+    intent: "confirm-cleanup",
+    caseId: ID_4,
+    googleRecordsDeleted: "on",
+    gmailDeleted: "on",
+    otherSensitiveCopiesDeleted: "on",
+  };
+
+  it("posts the confirmed checklist", () => {
+    expect(cleanupSubmission(ID_4, true, new Set())).toEqual(fields);
+  });
+
+  it("still posts while another case's cleanup is in flight: the queue holds it", () => {
+    expect(cleanupSubmission(ID_4, true, new Set([ID_5]))).toEqual(fields);
+  });
+
+  it("posts nothing twice for one case, nor before all three are checked", () => {
+    expect(cleanupSubmission(ID_4, true, new Set([ID_4]))).toBeNull();
+    expect(cleanupSubmission(ID_4, false, new Set())).toBeNull();
   });
 });
 
