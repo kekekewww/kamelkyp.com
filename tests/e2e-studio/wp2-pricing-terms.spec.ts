@@ -161,10 +161,18 @@ test.describe("pricing", () => {
     );
 
     // 3. Schedule at the fixed 2099 instant with the active values.
-    await page
-      .getByLabel("Date and time (Taipei, UTC+8)")
-      .fill("2099-01-01T00:00");
+    const when = page.getByLabel("Date and time (Taipei, UTC+8)");
+    await when.fill("2099-01-01T00:00");
     await expect(base).toHaveValue(recorded.base);
+
+    // Enter in a field never publishes: only a click does (R18). Safe even
+    // if it did: this form holds the allowed 2099 schedule.
+    const postsBeforeEnter = posts.length;
+    await base.press("Enter");
+    await when.press("Enter");
+    await page.waitForTimeout(1000);
+    expect(posts.length).toBe(postsBeforeEnter);
+
     await form
       .getByRole("button", { name: "Schedule for 2099-01-01 00:00" })
       .click();
@@ -186,6 +194,43 @@ test.describe("pricing", () => {
     await expect(page.locator('input[name="basedOnVersionId"]')).toHaveValue(
       recorded.versionId,
     );
+
+    // 4. Nothing below is sent: any cancel request is aborted, so a
+    // regression fails here instead of cancelling the 2099 change.
+    await page.route("**/studio/services/pricing/full_mix**", (route) =>
+      route.request().method() === "POST" &&
+      (route.request().postData() ?? "").includes("cancel-scheduled")
+        ? route.abort()
+        : route.continue(),
+    );
+
+    // An earlier schedule warns that the 2099 change still follows.
+    await page.getByLabel("At a scheduled time").check();
+    await when.fill("2098-12-31T00:00");
+    await expect(page.locator(".studio-quote-check")).toContainText(
+      "from 2099-01-01 00:00) will still take effect after this one.",
+    );
+
+    // Cancelling a scheduled change asks first while the form has edits.
+    await base.fill(String(Number(recorded.base) + 1));
+    const scheduledRow = history
+      .locator("tbody tr")
+      .filter({ hasText: "2099-01-01 00:00" })
+      .filter({ has: page.locator(".studio-price-state__badge--scheduled") });
+    const postsBeforeCancel = posts.length;
+    await scheduledRow
+      .getByRole("button", { name: /^Cancel scheduled change/ })
+      .click();
+    const cancelDialog = page.getByRole("dialog", {
+      name: "Cancel the scheduled change?",
+    });
+    await expect(cancelDialog).toBeVisible();
+    await cancelDialog.getByRole("button", { name: "Keep editing" }).click();
+    await expect(cancelDialog).toBeHidden();
+    await page.waitForTimeout(500);
+    expect(posts.length).toBe(postsBeforeCancel);
+    await expect(base).toHaveValue(String(Number(recorded.base) + 1));
+    await page.unrouteAll({ behavior: "ignoreErrors" });
   });
 });
 

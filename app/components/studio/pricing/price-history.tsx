@@ -61,6 +61,7 @@ export function PriceHistoryTable({
   history,
   versionCount,
   cancelFetcher,
+  onCancelClick,
   onReplace,
 }: {
   /** English service name. */
@@ -68,6 +69,11 @@ export function PriceHistoryTable({
   history: readonly StudioPriceVersion[];
   versionCount: number;
   cancelFetcher: FetcherWithComponents<unknown>;
+  /** Runs before a cancel is sent; `preventDefault()` holds it back. */
+  onCancelClick?: (
+    event: React.MouseEvent<HTMLButtonElement>,
+    version: StudioPriceVersion,
+  ) => void;
   onReplace: (version: StudioPriceVersion) => void;
 }) {
   const pendingCancel =
@@ -136,6 +142,7 @@ export function PriceHistoryTable({
                           compact
                           pending={pendingCancel === version.id}
                           pendingLabel="Cancelling…"
+                          onClick={(event) => onCancelClick?.(event, version)}
                         >
                           Cancel scheduled change
                           <span className="visually-hidden">{` of ${when}`}</span>

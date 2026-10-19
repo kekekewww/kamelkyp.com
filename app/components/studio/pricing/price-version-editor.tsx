@@ -6,10 +6,11 @@
  *   does not use are shown as text and copied by the server from the
  *   baseline rule. No placeholder ever shows a number.
  * - Publishing is always a deliberate click (no dialog: the Check section is
- *   the review step). Mod+S submits nothing here, and leaving never
- *   publishes: the leave guard offers Stay or Discard only.
+ *   the review step). Mod+S and Enter in a field submit nothing here, and
+ *   leaving never publishes: the leave guard offers Stay or Discard only.
  * - HISTORY sits outside the price form; each "Cancel scheduled change" is
- *   its own small form.
+ *   its own small form, confirmed first while the price form has edits
+ *   (the form resets after the cancel).
  */
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -62,6 +63,7 @@ import {
   StudioForm,
   TextInput,
   useEditorForm,
+  useStudioSession,
 } from "../ui";
 import { PriceHistoryTable } from "./price-history";
 import { priceFigure, rateLine } from "./pricing-index";
@@ -124,6 +126,15 @@ function pickEditable(
 
 function same(a: PriceValues, b: PriceValues): boolean {
   return PRICE_VALUE_FIELDS.every((field) => a[field] === b[field]);
+}
+
+/**
+ * Enter in a field would submit the form through its only submit button,
+ * Publish. Publishing is always a deliberate click (R18), so it does not.
+ */
+function blockImplicitSubmit(event: React.KeyboardEvent<HTMLFormElement>) {
+  if (event.key !== "Enter" || event.nativeEvent.isComposing) return;
+  if (event.target instanceof HTMLInputElement) event.preventDefault();
 }
 
 /** Latest publish time, else the active rule's time (backup freshness). */
@@ -266,6 +277,21 @@ function PriceForm({
       `A scheduled change (${priceFigure(service, service.next)} from ${formatTaipei(service.next.effectiveFrom)}) will still take effect after this publish.`,
     );
   }
+  if (mode === "scheduled" && instant) {
+    // History is newest first: the earliest later change is the last one.
+    const later = history
+      .filter(
+        (version) =>
+          version.state === "scheduled" &&
+          Date.parse(version.effectiveFrom) > Date.parse(instant),
+      )
+      .at(-1);
+    if (later) {
+      warnings.push(
+        `A scheduled change (${priceFigure(service, later)} from ${formatTaipei(later.effectiveFrom)}) will still take effect after this one.`,
+      );
+    }
+  }
 
   const laterBaseline =
     mode === "scheduled" &&
@@ -335,6 +361,7 @@ function PriceForm({
       ref={editor.formRef}
       onInput={onChange}
       onChange={onChange}
+      onKeyDown={blockImplicitSubmit}
       className="studio-price-form"
       aria-label={`New price version for ${name}`}
     >
@@ -497,6 +524,7 @@ export function PriceVersionEditor({ data }: { data: PriceEditorData }) {
   const fetcher = useFetcher<PriceActionData>();
   const cancelFetcher = useFetcher<ActionData>();
   const revalidator = useRevalidator();
+  const { csrfToken } = useStudioSession();
   const editor = useEditorForm({
     type: "price-version",
     id: service.serviceId,
@@ -510,6 +538,13 @@ export function PriceVersionEditor({ data }: { data: PriceEditorData }) {
   const [stored, setStored] = useState<StoredPrefill | null>(null);
   const [prefillCount, setPrefillCount] = useState(0);
   const [confirmPrefill, setConfirmPrefill] = useState<Prefill | null>(null);
+  const [confirmCancel, setConfirmCancel] = useState<StudioPriceVersion | null>(
+    null,
+  );
+  // 409 results whose "Reload" was clicked (fetcher data outlives a reload).
+  const [dismissed, setDismissed] = useState<ReadonlySet<unknown>>(
+    () => new Set(),
+  );
   // The form remounts (and resets) whenever the history changes.
   const baseKey = `${service.active?.id ?? "none"}:${service.next?.id ?? "none"}:${versionCount}`;
   // A publish or cancel changes the history: an older prefill no longer applies.
@@ -531,13 +566,36 @@ export function PriceVersionEditor({ data }: { data: PriceEditorData }) {
   );
 
   const result = fetcher.state === "idle" ? fetcher.data : null;
+  const cancelResult =
+    cancelFetcher.state === "idle" ? cancelFetcher.data : null;
   const errors = fieldErrors(
     result && result.ok === false ? (result.issues as ValidationIssue[]) : [],
   );
-  const stale =
-    result && result.ok === false && result.code === "stale_revision"
-      ? result.message
-      : null;
+  // A publish or a cancel answered 409: the history changed since loading.
+  const staleResult = [result, cancelResult].find(
+    (item) =>
+      item?.ok === false &&
+      item.code === "stale_revision" &&
+      !dismissed.has(item),
+  );
+  const stale = staleResult?.message ?? null;
+  const reload = () => {
+    setDismissed(
+      (previous) =>
+        new Set([...previous, result, cancelResult].filter(Boolean)),
+    );
+    revalidator.revalidate();
+  };
+
+  /** The cancel form's own submission, after the owner confirmed it. */
+  const submitCancel = (version: StudioPriceVersion) => {
+    const formData = new FormData();
+    formData.set("csrfToken", csrfToken);
+    formData.set("intent", "cancel-scheduled");
+    formData.set("versionId", version.id);
+    formData.set("expectedVersionCount", String(versionCount));
+    cancelFetcher.submit(formData, { method: "post" });
+  };
 
   const defaults =
     prefill?.values ?? (service.active ? valuesOf(service.active) : null);
@@ -563,7 +621,7 @@ export function PriceVersionEditor({ data }: { data: PriceEditorData }) {
           <button
             type="button"
             className="studio-btn studio-btn--secondary studio-btn--compact"
-            onClick={() => revalidator.revalidate()}
+            onClick={reload}
           >
             Reload
           </button>
@@ -613,6 +671,12 @@ export function PriceVersionEditor({ data }: { data: PriceEditorData }) {
             history={history}
             versionCount={versionCount}
             cancelFetcher={cancelFetcher as FetcherWithComponents<unknown>}
+            onCancelClick={(event, version) => {
+              // A cancel resets the price form: confirm while it has edits.
+              if (!editor.dirty) return;
+              event.preventDefault();
+              setConfirmCancel(version);
+            }}
             onReplace={(version: StudioPriceVersion) =>
               requestPrefill({
                 values: valuesOf(version),
@@ -649,6 +713,40 @@ export function PriceVersionEditor({ data }: { data: PriceEditorData }) {
         }
       >
         <p>Unsaved edits are lost.</p>
+      </ConfirmDialog>
+      <ConfirmDialog
+        open={confirmCancel !== null}
+        title="Cancel the scheduled change?"
+        tone="danger"
+        onClose={() => setConfirmCancel(null)}
+        actions={
+          <>
+            <button
+              type="button"
+              className="studio-btn studio-btn--ghost studio-btn--compact"
+              onClick={() => setConfirmCancel(null)}
+            >
+              Keep editing
+            </button>
+            <button
+              type="button"
+              className="studio-btn studio-btn--danger studio-btn--compact"
+              onClick={() => {
+                if (confirmCancel) submitCancel(confirmCancel);
+                setConfirmCancel(null);
+              }}
+            >
+              Cancel the change
+            </button>
+          </>
+        }
+      >
+        <p>
+          {confirmCancel
+            ? `The change of ${formatTaipei(confirmCancel.effectiveFrom)} will not take effect. `
+            : null}
+          Unsaved values in New version are lost.
+        </p>
       </ConfirmDialog>
       <LeaveGuard blocker={editor.blocker} />
     </StudioPage>
