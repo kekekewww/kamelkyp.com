@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 import {
   pageMeta,
   previewMeta,
@@ -144,23 +144,11 @@ describe("public meta", () => {
     expect(siteFromMatches([{ id: "root", loaderData: null }])).toBeNull();
   });
 
-  it("still renders a route on the (matches, page) call shape, without a canonical", () => {
-    const tags = pageMeta(
-      [
-        {
-          id: "routes/public/layout",
-          loaderData: {
-            locale: "en",
-            site: fixtureSiteContext({ locale: "en" }),
-            seo: { origin: "https://kamelkyp.com" },
-          },
-        },
-      ],
-      { title: "Terms" },
-    ) as Descriptor[];
-    expect(tags[0]).toEqual({ title: "Terms — Kamel" });
-    expect(tags.some((tag) => tag.rel === "canonical")).toBe(false);
-    expect(find(tags, "property", "og:url")).toBeUndefined();
+  it("no longer accepts the (matches, page) call shape (WP4 K10)", () => {
+    // Checked by the typecheck: a bare matches array is not a pageMeta input.
+    expectTypeOf<Parameters<typeof siteFromMatches>[0]>().not.toExtend<
+      Parameters<typeof pageMeta>[0]
+    >();
   });
 });
 

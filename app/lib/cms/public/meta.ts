@@ -77,24 +77,18 @@ type MetaInput = {
  * Route `meta` helper: the page's head built on the layout's site and seo
  * context. The canonical comes from `location.pathname`, never from a match
  * (a layout match would give the layout's path).
- *
- * A bare `matches` array (the pre-WP4 call shape) is still accepted until the
- * four wp2-shared routes move over in their own commit (plan §3.1); it has no
- * location, so it renders without a canonical, as before.
  */
 export function pageMeta(
-  input: MetaInput | MetaMatches,
+  { matches, location }: MetaInput,
   page: PageMeta,
 ): MetaDescriptor[] {
-  const { matches, location } =
-    "matches" in input ? input : { matches: input, location: null };
   const site = siteFromMatches(matches);
   if (!site) return [{ title: page.title ?? "" }];
   const seo = seoFromMatches(matches);
   return publicMeta({
     site,
     ...page,
-    seo: seo && location ? { ...seo, pathname: location.pathname } : null,
+    seo: seo ? { ...seo, pathname: location.pathname } : null,
   });
 }
 
