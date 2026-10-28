@@ -1,20 +1,8 @@
 import type { Env } from "../env.server";
-import {
-  type AdminIdentity,
-  type JwtVerifier,
-  verifyAccessRequest,
-} from "./access-jwt.server";
+import type { AdminIdentity } from "./access-jwt.server";
 import { verifyCsrfToken } from "./csrf.server";
 
 export const MUTATION_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
-
-export async function requireAdmin(
-  request: Request,
-  env: Env,
-  verifier?: JwtVerifier,
-): Promise<AdminIdentity> {
-  return verifyAccessRequest(request, env, verifier);
-}
 
 export function assertMutationMethod(request: Request): void {
   if (!MUTATION_METHODS.has(request.method.toUpperCase())) {
@@ -47,35 +35,4 @@ export async function verifyMutationToken(
   } catch {
     throw new Response("Forbidden", { status: 403 });
   }
-}
-
-export async function requireAdminMutation(
-  request: Request,
-  env: Env,
-  formData: FormData,
-  verifier?: JwtVerifier,
-): Promise<AdminIdentity> {
-  assertMutationMethod(request);
-  const identity = await requireAdmin(request, env, verifier);
-  const token = formData.get("csrfToken");
-  await verifyMutationToken(
-    request,
-    env,
-    identity,
-    typeof token === "string" ? token : null,
-  );
-  return identity;
-}
-
-/** Header-token variant (JSON and streamed-upload requests). */
-export async function requireAdminMutationWithToken(
-  request: Request,
-  env: Env,
-  token: string | null,
-  verifier?: JwtVerifier,
-): Promise<AdminIdentity> {
-  assertMutationMethod(request);
-  const identity = await requireAdmin(request, env, verifier);
-  await verifyMutationToken(request, env, identity, token);
-  return identity;
 }

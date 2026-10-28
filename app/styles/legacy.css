@@ -95,7 +95,6 @@
 .commission-entry,
 .service-overview,
 .content-index-page,
-.content-detail-page,
 .legal-page {
   width: min(100% - 2.5rem, 78rem);
   min-height: 65vh;
@@ -106,7 +105,6 @@
 .service-page__header,
 .commission-entry > header,
 .content-index-page__header,
-.content-detail-page article > header,
 .legal-page > header {
   max-width: 48rem;
   margin-bottom: clamp(2.5rem, 5vw, 5rem);
@@ -129,7 +127,6 @@
   border-top: 1px solid var(--color-line);
 }
 
-.content-detail-page article,
 .legal-page__documents {
   max-width: 54rem;
 }
@@ -362,7 +359,6 @@
 .commission-entry > header > p:last-child,
 .service-overview > p,
 .content-index-page__header > p:last-child,
-.content-detail-page article > header > p:last-child,
 .legal-page > header > p:last-child {
   max-width: 45rem;
   color: var(--color-cool-gray);
@@ -370,7 +366,6 @@
 }
 
 .content-index-page__header h1,
-.content-detail-page article > header h1,
 .legal-page > header h1 {
   margin-bottom: 1.5rem;
   font-size: clamp(3.5rem, 8vw, 7rem);
@@ -397,17 +392,11 @@
   color: var(--color-cool-gray);
 }
 
-.content-index article > a,
-.content-detail-page__back {
+.content-index article > a {
   display: inline-flex;
   min-height: 44px;
   align-items: center;
   text-underline-offset: 0.35rem;
-}
-
-.content-detail-page__back {
-  margin-bottom: 3rem;
-  color: var(--color-cool-gray);
 }
 
 .legal-page__document-header h2 {

@@ -73,24 +73,35 @@ export default [
   route("api/studio/media-register", "routes/api/studio/media-register.ts"),
   route("api/studio/media", "routes/api/studio/media.ts"),
   route("api/studio/media/:id/content", "routes/api/studio/media-content.ts"),
-  // `routes/admin-legacy-redirect.ts` replaces the block below once the
-  // integration package has ported every legacy panel (§2.3).
-  route("admin", "routes/admin/layout.tsx", [
-    index("routes/admin/index.tsx"),
-    route("content", "routes/admin/content-index.tsx"),
-    route("content/:versionId/edit", "routes/admin/content-edit.tsx"),
-    route("content/:versionId/preview", "routes/admin/content-preview.tsx"),
-    route("services", "routes/admin/services.tsx"),
-    route("terms", "routes/admin/terms.tsx"),
-    route("works", "routes/admin/works.tsx"),
-    route("links", "routes/admin/links.tsx"),
-    route("posts", "routes/admin/posts.tsx"),
-    route("posts/:versionId/edit", "routes/admin/post-edit.tsx"),
-    route("cases", "routes/admin/cases.tsx"),
-    route("cases/status", "routes/admin/case-status.ts"),
-    route("cases/student-discount", "routes/admin/student-discount.ts"),
-    route("cases/cleanup", "routes/admin/cleanup-confirm.ts"),
-  ]),
+  // Legacy /admin, retired (docs/admin-architecture.md §2.3). Every former admin
+  // URL is owner-checked, then GET/HEAD → 301 to its Studio equivalent and any
+  // other method → 410. The legacy paths are registered one by one: a lone
+  // `admin/*` splat ranks below the public `:lang/<child>` routes, so
+  // /admin/services, /admin/terms and /admin/works would otherwise reach the
+  // public layout (404) instead of the redirect.
+  ...[
+    "admin",
+    "admin/content",
+    "admin/content/:versionId/edit",
+    "admin/content/:versionId/preview",
+    "admin/services",
+    "admin/terms",
+    "admin/works",
+    "admin/links",
+    "admin/posts",
+    "admin/posts/:versionId/edit",
+    "admin/cases",
+    "admin/cases/status",
+    "admin/cases/student-discount",
+    "admin/cases/cleanup",
+  ].map((path) =>
+    route(path, "routes/admin-legacy-redirect.ts", {
+      id: `legacy-${path.replace(/[/:]+/g, "-")}`,
+    }),
+  ),
+  route("admin/*", "routes/admin-legacy-redirect.ts", {
+    id: "legacy-admin-splat",
+  }),
   index("routes/language-redirect.tsx"),
   route(":lang", "routes/public/layout.tsx", [
     index("routes/public/home.tsx"),

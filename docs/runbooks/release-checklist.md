@@ -16,7 +16,8 @@
 - [ ] 四步委託表單、local draft、統一條款、review、Turnstile、成功頁有限資訊。
 - [ ] YouTube／Drive click-to-load、外部下載連結、單一音訊播放與錯誤降級。
 - [ ] Cloudflare Access：未登入阻擋、正確 email OTP 可登入、錯誤 email 不能登入、8 小時 session。
-- [ ] `/admin` 無上傳、無 audit page；Studio → Commissions（`/studio/commissions`；切換前仍有 `/admin/cases`）案件只顯示六項有限欄位，不顯示證明或完整表單，清理只能透過三項確認清單。
+- [ ] Studio → Commissions（`/studio/commissions`）案件只顯示六項有限欄位，不顯示證明或完整表單，清理只能透過三項確認清單。
+- [ ] `/admin` 登入後 301 到 `/studio`；舊 `/admin` 表單 POST 回 410。
 
 ## C. 外部設定 gate
 
@@ -25,6 +26,7 @@
 - [ ] Production Turnstile 不是測試 key，hostname 僅限正式網域。
 - [ ] Google Form、Sheet、Gmail 小額／匿名測試案件通過，之後已刪除全部測試資料。
 - [ ] Cloudflare Access 無 Bypass policy，Audience／team domain／admin email 正確。
+- [ ] Access 沿用既有 application（不另建）：path 含 `/studio`、`/studio/*`、`/api/studio/*`，Production 另含 `/studio.data`，並保留 `/admin`、`/admin/*`、`/api/admin/*`。
 - [ ] 法務專業審查完成，`LEGAL_REVIEW_CONFIRMED=true`。
 - [ ] GitHub `production` Environment 限制 `main` 且設 required reviewer。
 
@@ -37,6 +39,7 @@
 - [ ] 記錄 deployment ID、commit SHA、D1 bookmark 與發布時間。
 - [ ] 驗收 `https://kamelkyp.com/health`、`/zh`、`/en`、四服務、表單、Footer、Blog、Access、CSP/HSTS。
 - [ ] 不用真實委託資料執行 smoke test。
+- [ ] 舊 `/admin` 退場（WP5）：Production 從未以舊 `/admin` 營運、也沒有其中的資料，因此不需先部署一次含舊 `/admin` 的版本；部署後確認 `/admin` 登入後落在 `/studio`、舊 `/admin/cases` 書籤落在 `/studio/commissions`、從 `/studio/projects` 按側欄 Home 會顯示 Studio 首頁（`/studio.data` 在 Access path 內）、在 Studio → Commissions 改一筆測試案件的狀態（不用真實委託資料），並開啟 Studio 的 Pricing（`/studio/services/pricing`）、Terms（`/studio/services/terms`）與 Footer（`/studio/settings/footer`）。這是 Production 唯一一次確認 Operations 畫面，失敗就回到上一個 deployment。
 
 ## E. 發生重大問題
 

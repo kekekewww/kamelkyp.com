@@ -17,8 +17,8 @@ Fixed decisions this document builds on (spec section 1):
   About, meta tags, OpenGraph, JSON-LD, accessibility labels). The deny list is
   in `app/lib/cms/brand-guard.server.ts`.
 - The commission wizard (details → terms → review → verify), D1 pricing,
-  Turnstile, the Google submission gateway and the admin CMS are kept and
-  reskinned.
+  Turnstile and the Google submission gateway are kept and reskinned; the
+  admin CMS is replaced by the Content Studio at `/studio`.
 - Software / AI / interactive inquiries **do not enter the wizard**. They go
   to the contact block at `/services/software#contact` (email).
 - Placeholder projects, recognition and writing entries are allowed, flagged
@@ -56,7 +56,8 @@ URLs with separately authored copy.
 | `/:lang/terms`, `/:lang/privacy` | reskinned | Legal documents in the new document style | Read the terms | Back to commission / home |
 | `/language/:locale` | unchanged | Sets `kamel_locale` cookie, redirects to `returnTo` | Switch language | — |
 | `/health`, `/api/commission/*` | unchanged | Infrastructure | — | — |
-| `/admin/**` (index, content, services, terms, works, links, posts, cases …) | **unchanged, tokens only** | Admin CMS. Imports the shared `tokens.css`; layout, routes and behaviour untouched | — | — |
+| `/studio/**` | Content Studio (KAMEL STUDIO) | Owner-only CMS behind Cloudflare Access, noindex, `no-store` (admin-architecture) | Manage content, settings and commissions | — |
+| `/admin/**` | retired | Owner check, then GET → 301 to the Studio equivalent, other methods → 410 (admin-architecture §2.3) | — | `/studio` |
 | any unmatched path | redesigned | Error page (404 vs generic) | Recover | Home; Work; START A PROJECT |
 
 Notes:
@@ -66,7 +67,7 @@ Notes:
   redirect helper (`/zh/other?x=1 → /zh/writing?x=1`, `/en/other/abc →
   /en/writing/abc`).
 - Production D1 `links` rows that still point to `/other` keep working via the
-  301; the admin should update them, but it is not a blocker.
+  301; update them in Studio → Settings → Footer, but it is not a blocker.
 - `?category=` with an unknown value renders the "All" view (no 404) and the
   canonical link points to `/:lang/works`.
 

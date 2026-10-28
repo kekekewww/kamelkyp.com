@@ -22,7 +22,10 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
       - run: npm ci
-      - run: npm run test:worker -- tests/worker/migrations.test.ts tests/worker/content-repository.test.ts
+      # Only these two files: `npm run test:worker` adds the whole tests/worker
+      # directory (the ci worker job runs it). tests/unit/config-contract.test.ts
+      # checks both files exist, since Vitest fails only when no filter matches.
+      - run: npx vitest run --config vitest.worker.config.ts tests/worker/migrations.test.ts tests/worker/public-terms.test.ts
       - run: npm run test:unit
       - run: npm run typecheck
       - run: npm run build

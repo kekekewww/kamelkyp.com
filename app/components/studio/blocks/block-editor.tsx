@@ -1,9 +1,9 @@
 /**
  * Content block editor for internal articles (admin-architecture §4.4:
- * "CONTENT block editor with ZH/EN tabs"). Ported from the legacy
- * `app/components/admin/BlockEditor.tsx` and extended to every block type of
- * `block-schema.ts`. Each locale posts one hidden `<name>.<locale>:json`
- * field; the block fields themselves have no `name`.
+ * "CONTENT block editor with ZH/EN tabs"). Ported from the retired /admin
+ * block editor and extended to every block type of `block-schema.ts`. Each
+ * locale posts one hidden `<name>.<locale>:json` field; the block fields
+ * themselves have no `name`.
  */
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { MediaSummary } from "../../../lib/cms/media/summary";

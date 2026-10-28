@@ -6,7 +6,6 @@ import {
   GO_TO_SHORTCUTS,
   STUDIO_NAV,
 } from "../../app/components/studio/shell/nav";
-import { StubPanel } from "../../app/components/studio/shell/stub-panel";
 import { StudioShell } from "../../app/components/studio/shell/studio-shell";
 
 function renderShell(path: string) {
@@ -68,16 +67,5 @@ describe("Studio shell", () => {
     expect(GO_TO_SHORTCUTS.get("p")).toBe("/studio/projects");
     expect(GO_TO_SHORTCUTS.get("h")).toBe("/studio");
     expect(GO_TO_SHORTCUTS.get(",")).toBe("/studio/settings/brand");
-  });
-
-  it("renders not-yet-built panels that point to the legacy admin", () => {
-    const html = renderToStaticMarkup(
-      <MemoryRouter>
-        <StubPanel title="Projects" legacyHref="/admin/works" />
-      </MemoryRouter>,
-    );
-    expect(html).toContain("Projects");
-    expect(html).toContain("Not built yet");
-    expect(html).toContain('href="/admin/works"');
   });
 });

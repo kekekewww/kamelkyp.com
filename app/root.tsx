@@ -17,7 +17,6 @@ import { RevealRoot } from "./components/motion/reveal-root";
 import { getSiteCopy } from "./lib/i18n/copy";
 import { localePath } from "./lib/i18n/path";
 import { MotionTierSync } from "./lib/motion/reduced-motion";
-import adminStyles from "./styles/admin.css?url";
 import commissionStyles from "./styles/commission.css?url";
 import componentStyles from "./styles/components.css?url";
 import globalStyles from "./styles/global.css?url";
@@ -50,7 +49,6 @@ export const links: Route.LinksFunction = () => [
   { rel: "stylesheet", href: commissionStyles },
   { rel: "stylesheet", href: mediaStyles },
   { rel: "stylesheet", href: motionStyles },
-  { rel: "stylesheet", href: adminStyles },
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {

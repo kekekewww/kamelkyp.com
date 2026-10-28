@@ -1,10 +1,5 @@
 import type { ServiceId } from "./service-id";
 
-export interface LocalizedText {
-  zh: string;
-  en: string;
-}
-
 /**
  * Commission service structure (content-architecture §3.5): id, category and
  * the slug of its fixed public route. Names, copy and deliverables live in the
@@ -15,11 +10,6 @@ export interface ServiceDefinition {
   id: ServiceId;
   category: "mixing" | "song_transition";
   slug: string;
-  /**
-   * @deprecated Internal label for the legacy `/admin` screens only (never
-   * rendered publicly); removed together with `app/routes/admin/**`.
-   */
-  name: LocalizedText;
 }
 
 export const SERVICE_CATALOG: readonly ServiceDefinition[] = [
@@ -27,25 +17,21 @@ export const SERVICE_CATALOG: readonly ServiceDefinition[] = [
     id: "full_mix",
     category: "mixing",
     slug: "full",
-    name: { zh: "完整歌曲混音", en: "Full Song Mixing" },
   },
   {
     id: "vocal_mix",
     category: "mixing",
     slug: "vocal",
-    name: { zh: "Vocal 混音", en: "Vocal Mixing" },
   },
   {
     id: "simple_transition",
     category: "song_transition",
     slug: "simple",
-    name: { zh: "單純歌曲銜接", en: "Simple Song Transition" },
   },
   {
     id: "edit_transition",
     category: "song_transition",
     slug: "edit",
-    name: { zh: "編輯／剪輯歌曲銜接", en: "Edited Song Transition" },
   },
 ] as const;
 

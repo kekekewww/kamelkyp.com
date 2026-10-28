@@ -38,6 +38,8 @@ describe("service catalog (structure only)", () => {
       expect(service).not.toHaveProperty("shortDescription");
       expect(service).not.toHaveProperty("standardDays");
       expect(service).not.toHaveProperty("deliverables");
+      // The legacy admin label went with the legacy screens (wp5 §4.7).
+      expect(service).not.toHaveProperty("name");
     }
   });
 });

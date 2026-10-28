@@ -84,13 +84,22 @@ route("api/studio/media-search", "routes/api/studio/media-search.ts"),
 route("api/studio/media-register", "routes/api/studio/media-register.ts"),
 route("api/studio/media", "routes/api/studio/media.ts"),
 route("api/studio/media/:id/content", "routes/api/studio/media-content.ts"),
-// after the integration package flips it:
-route("admin/*", "routes/admin-legacy-redirect.ts", { id: "admin-legacy" }),
-route("admin", "routes/admin-legacy-redirect.ts", { id: "admin-legacy-index" }),
+// the retired /admin (§2.3): every legacy path by name, then the splat
+...[
+  "admin", "admin/content", "admin/content/:versionId/edit", "admin/content/:versionId/preview",
+  "admin/services", "admin/terms", "admin/works", "admin/links", "admin/posts", "admin/posts/:versionId/edit",
+  "admin/cases", "admin/cases/status", "admin/cases/student-discount", "admin/cases/cleanup",
+].map((path) =>
+  route(path, "routes/admin-legacy-redirect.ts", { id: `legacy-${path.replace(/[/:]+/g, "-")}` }),
+),
+route("admin/*", "routes/admin-legacy-redirect.ts", { id: "legacy-admin-splat" }),
 ```
 
 The auth middleware sits on the `studio` root, so it runs for the shell and the preview branch alike. The static
-`studio` segment outranks the public `:lang` route, as `admin` does today.
+`studio` segment outranks the public `:lang` route. A splat does **not** outrank `:lang/<child>`: with only
+`admin/*` registered, `/admin/services`, `/admin/terms` and `/admin/works` would match the public
+`:lang/services`, `:lang/terms` and `:lang/works` routes and render the public 404. That is why every legacy path
+is registered by name (`tests/unit/admin-legacy-routes.test.ts` checks the real config with `matchRoutes`).
 
 ### 2.2 Routes
 
@@ -142,27 +151,35 @@ is unit/worker tested without HTTP.
 
 ### 2.3 `/admin` redirects
 
-After the integration package ports the remaining panels, `/admin` and `/admin/*` resolve to
-`routes/admin-legacy-redirect.ts`: it calls `requireOwner` first (no redirect is issued to an unauthenticated
-request; it gets 403 like today), then answers GET/HEAD with **301**, and any other method with **410 Gone**
-(stale forms must not be replayed into new endpoints). Access keeps protecting `/admin` paths.
+Shipped in WP5 (2026-10). `/admin` and every legacy `/admin/...` URL resolve to the resource route
+`routes/admin-legacy-redirect.ts`. Its loader and action are wrapped in `withOwner`, so the owner check runs first:
+without a valid Access identity the answer is 403 (`Forbidden`, body drained, nothing read from D1, never a
+redirect). With the owner, GET/HEAD (and `OPTIONS`, which React Router runs as a loader) answer **301** to the Studio
+equivalent; POST/PUT/PATCH/DELETE answer **410 Gone** after the body is discarded, so stale forms are never replayed
+into Studio endpoints (no CSRF check: nothing changes, and an expired token must still get its 410). Other verbs are
+answered 405 by React Router before any route code runs. Every 301/410 is `Cache-Control: no-store` (a cached
+permanent redirect would outlive a rollback) and `X-Robots-Tag: noindex, nofollow`. Access keeps protecting the
+`/admin` paths.
 
-| Legacy path | Target |
-| --- | --- |
-| `/admin` | `/studio` |
-| `/admin/content` | `/studio` |
-| `/admin/content/:versionId/edit`, `/admin/content/:versionId/preview`, `/admin/posts/:versionId/edit` | look up `content_versions.entry_id` → `/studio/projects/:entryId` (work), `/studio/writing/:entryId` (post), `/studio/homepage` (page `home`), else `/studio` |
-| `/admin/works` | `/studio/projects` |
-| `/admin/posts` | `/studio/writing` |
-| `/admin/services` | `/studio/services/pricing` |
-| `/admin/terms` | `/studio/services/terms` |
-| `/admin/links` | `/studio/settings/footer` |
-| `/admin/cases` | `/studio/commissions` (query string kept) |
-| `/admin/cases/status`, `/student-discount`, `/cleanup` | 410 for POST; GET → `/studio/commissions` |
-| anything else under `/admin/` | `/studio` |
+| Legacy path | GET / HEAD (owner) | Other methods (owner) |
+| --- | --- | --- |
+| `/admin`, `/admin/`, `/admin/content` | `/studio` | 410 |
+| `/admin/content/:versionId/edit`, `/admin/content/:versionId/preview`, `/admin/posts/:versionId/edit` | one D1 lookup (`content_versions` → `content_entries` → the `projects`/`writings` row whose `legacy_source` is `content_entries:<id>`): work → `/studio/projects/:projectId`, or `/studio/projects` without a Studio row; post → `/studio/writing/:writingId`, or `/studio/writing`; page `home` → `/studio/homepage`; other page, unknown or malformed id (over 128 characters, bad `%`), or a failed lookup → `/studio` | 410 |
+| `/admin/works` | `/studio/projects` | 410 |
+| `/admin/posts` | `/studio/writing` | 410 |
+| `/admin/services` | `/studio/services/pricing` | 410 |
+| `/admin/terms` | `/studio/services/terms` | 410 |
+| `/admin/links` | `/studio/settings/footer` | 410 |
+| `/admin/cases`, `/admin/cases/status`, `/student-discount`, `/cleanup` | `/studio/commissions` plus the original query (`?status&service&cursor`, the inbox's own names) | 410 |
+| anything else reaching `admin/*` | `/studio` | 410 |
 
-Until the flip, `/admin/*` stays fully functional, so commission cases, prices and terms are manageable at every
-point of the build.
+React Router matches routes case-insensitively, so `/ADMIN/Works` and `/Admin/Cases?status=paused` reach the
+redirect too; the target helpers (`app/lib/cms/studio/legacy-admin.ts`) match case-insensitively for that reason.
+`requiresNoStore()` compares `/admin` case-sensitively, which is why the module sets `no-store` itself.
+
+Residual: a path under `/admin/` that equals a public child but was never a legacy URL (`/admin/about`,
+`/admin/works/x`) matches the public `:lang` layout and renders the public 404. It is owner-only in practice
+(Access gates `/admin/*`), and mirroring every public child under `admin/` would duplicate the public route list.
 
 ### 2.4 Preview routes
 
@@ -210,9 +227,17 @@ should not admit it anyway).
 
 ### 3.2 The one dashboard change, and behaviour before it
 
-Kevin adds `/studio`, `/studio/*` and `/api/studio/*` to the existing self-hosted Access application(s) for
-production and preview (runbook `docs/runbooks/cloudflare-setup.md` §5, updated by the integration package).
-Same application ⇒ same AUD ⇒ no config change.
+Kevin adds `/studio`, `/studio/*` and `/api/studio/*` to the **existing** self-hosted Access application(s) for
+production and preview, and `/studio.data` to the production application (runbook `docs/runbooks/cloudflare-setup.md`
+§5). Same application ⇒ same AUD ⇒ no config change; a second application for `/studio` would have its own AUD, so
+the Worker would answer 403 to every Studio request. `/studio.data` is the single-fetch URL a client navigation to
+the Studio home fetches (React Router 8 `<path>.data`); a wildcard path does not cover its parent, and the deployed
+Preview shows that `/studio` does not cover it either, so without it the sidebar Home link answers 403 after any
+in-app navigation. Every other Studio data URL (`/studio/<x>.data`) is under `/studio/*`. The Preview application
+keeps the six paths without `/studio.data`, so the deployed e2e still proves the Worker's own guard on that URL. The
+cost is on Preview only: there a client navigation to the Studio home (the sidebar Home link from another Studio page)
+gets that 403 and the Studio shows "Sign in to open the Studio"; loading `/studio` as a page (reload, address bar)
+works. The sidebar Home check therefore runs in production (release checklist D; wp5 spec §13 item 2).
 
 Before that change, Cloudflare forwards `/studio` requests without `Cf-Access-Jwt-Assertion`.
 `verifyAccessRequest` throws on the missing header, so **every Studio page, API and preview route answers
@@ -256,10 +281,12 @@ root's middleware). GET routes are read-only. Mutations need the header token an
 
 ### 3.6 Local development and tests (without weakening production)
 
-What exists today and is reused: auth is tested in worker tests with an injected `JwtVerifier`
-(`tests/worker/admin-guard.test.ts`); admin behaviour is tested at the service layer; e2e only asserts that
-`/admin` is 403; `verify:production` rejects builds containing `TEST_ADMIN_BYPASS`/test JWT keys (the loopback
-`.dev.vars` line `TEST_ADMIN_BYPASS=true` is inert: no code reads it).
+Auth is tested in worker tests with an injected `JwtVerifier`: the Studio guard in `tests/worker/studio-auth.test.ts`,
+the retired `/admin` redirect in `tests/worker/admin-legacy-redirect.test.ts` (no owner → 403 with no D1 read, owner →
+the §2.3 targets, 410 for mutations). The loopback e2e asserts that every legacy `/admin/*` URL answers 403 without an
+owner (`tests/e2e/admin-legacy.spec.ts`); the Studio harness asserts the 301/410 answers with the dev owner
+(`tests/e2e-studio/wp5-admin-legacy.spec.ts`). `verify:production` rejects builds containing
+`TEST_ADMIN_BYPASS`/test JWT keys (the loopback `.dev.vars` line `TEST_ADMIN_BYPASS=true` is inert: no code reads it).
 
 | Layer | How the Studio is tested |
 | --- | --- |
@@ -297,7 +324,8 @@ rendered config defines that var; the renderer never emits it; the loopback e2e 
 | `ADMIN_EMAIL`/`ACCESS_*` missing in env | 403 |
 | CSRF missing/expired/wrong subject/wrong Origin | 403; client refreshes once and retries |
 | GET to a mutation endpoint | 405 |
-| Legacy `/admin/*` POST after the flip | 410 |
+| Legacy `/admin/*` without an owner (any method) | 403, no-store, nothing read |
+| Legacy `/admin/*` POST/PUT/PATCH/DELETE by the owner | 410 |
 
 ### 3.8 Headers for Studio responses (`app/lib/security/headers.server.ts`)
 
@@ -603,7 +631,7 @@ radius 0 with 2 px for controls, hairline rules, accent budget, focus ring (desi
 changes **density and motion**, not identity: smaller type steps, tighter rhythm, visible controls, no ambient
 motion, no display-size headings. Styles live in `app/styles/studio/base.css` (foundation) and per-area files, all
 scoped under `.studio` and loaded by Studio route `links` only (public pages never load them). The legacy global
-`admin.css` is removed by the integration package.
+`admin.css` was removed in WP5 (2026-10).
 
 ### 5.2 Density tokens (defined on `.studio`)
 
