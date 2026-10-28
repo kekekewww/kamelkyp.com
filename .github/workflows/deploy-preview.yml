@@ -8,6 +8,8 @@ on:
 permissions:
   contents: read
 
+# A new push supersedes its own pull request's older run; that run's
+# fixture cleanup still runs (if: always()).
 concurrency:
   group: preview-${{ github.event.pull_request.number }}
   cancel-in-progress: true
@@ -17,6 +19,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     environment: preview
+    # Every run migrates, seeds, tests and cleans the one shared, persistent
+    # preview D1 (kamelkyp-preview). Runs of different pull requests take
+    # turns: one at a time, the others wait in order (queue: max) instead of
+    # replacing each other.
+    concurrency:
+      group: preview-d1
+      queue: max
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v5
