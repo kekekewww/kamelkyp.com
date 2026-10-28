@@ -44,8 +44,11 @@ describe("needs attention: commission form closed", () => {
       key: "commission-closed",
       severity: "high",
       title: "Commission form closed: 4 services",
+      // The Terms page's document names, each with the locales it lacks.
       detail:
-        "terms missing: General terms (ZH), Privacy notice (ZH), Service terms (ZH), General terms (EN), Privacy notice (EN), Service terms (EN)",
+        "terms missing: General terms (ZH, EN), Privacy notice (ZH, EN), " +
+        "Service terms · Full Song Mixing (ZH, EN), Service terms · Vocal Mixing (ZH, EN), " +
+        "Service terms · Simple Song Transition (ZH, EN), Service terms · Edited Song Transition (ZH, EN)",
       href: "/studio/services/terms",
       action: "Open terms",
       count: 4,
@@ -75,8 +78,10 @@ describe("needs attention: commission form closed", () => {
     await publish("vocal-mix", "zh");
     const { row } = await closedRow();
     expect(row?.title).toBe("Commission form closed: 3 services");
+    // Each service document is named: which one to publish, in which locale.
     expect(row?.detail).toBe(
-      "terms missing: Service terms (ZH), Service terms (EN)",
+      "terms missing: Service terms · Vocal Mixing (EN), " +
+        "Service terms · Simple Song Transition (ZH, EN), Service terms · Edited Song Transition (ZH, EN)",
     );
     expect(row?.count).toBe(3);
   });
@@ -88,7 +93,9 @@ describe("needs attention: commission form closed", () => {
     try {
       const { row } = await closedRow();
       expect(row?.title).toBe("Commission form closed: 1 service");
-      expect(row?.detail).toBe("terms missing: Service terms (EN)");
+      expect(row?.detail).toBe(
+        "terms missing: Service terms · Vocal Mixing (EN)",
+      );
     } finally {
       await env.DB.prepare(
         "UPDATE services SET status = 'published' WHERE commission_service_id IN ('simple_transition', 'edit_transition')",

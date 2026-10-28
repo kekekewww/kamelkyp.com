@@ -4,7 +4,8 @@
  * attention (each row links to the fix), the homepage as it is curated now,
  * and the commission queue. Every table is read here with its own queries
  * (read-only); one `db.batch` per page load, plus the commission readiness
- * reads (`getCommissionReadiness`, the one definition of an open form).
+ * reads (`getCommissionReadiness`, the one definition of an open form) and
+ * the service names the Terms page labels its documents with.
  *
  * `collectAttention` also feeds the sidebar badge (`getStudioCounts`), so the
  * number next to HOME always equals the rows on the home list.
@@ -13,14 +14,22 @@ import {
   type CommissionReadiness,
   getCommissionReadiness,
 } from "../../commission/availability.server";
-import type { TermDocumentId } from "../../commission/term-outline";
+import { TERM_DOCUMENT_IDS } from "../../commission/term-outline";
+import type { ServiceId } from "../../services/service-id";
 import { studioLabel } from "../localized";
 import {
   HOMEPAGE_SECTIONS,
   type HomepageSection,
 } from "../schemas/site-settings";
 import { settingsFromRows, settingsStatement } from "../settings.server";
-import { ENTITY_TYPES, type EntityType, type EntryStatus } from "../types";
+import {
+  ENTITY_TYPES,
+  type EntityType,
+  type EntryStatus,
+  type Locale,
+  type LocalizedText,
+} from "../types";
+import { serviceNamesOf, termDocumentInfo } from "./terms.server";
 
 // ---- Types ---------------------------------------------------------------------
 
@@ -265,41 +274,53 @@ function first<T>(result: D1Result | undefined): T | undefined {
   return rows<T>(result)[0];
 }
 
-// The words of the Studio readiness table (pricing/commission-readiness.tsx).
-const TERM_LABEL: Record<TermDocumentId, string> = {
-  common: "General terms",
-  privacy: "Privacy notice",
-  "full-mix": "Service terms",
-  "vocal-mix": "Service terms",
-  "simple-transition": "Service terms",
-  "edit-transition": "Service terms",
+/** What the "Commission form closed" row reads besides the batch. */
+type CommissionFacts = {
+  readiness: readonly CommissionReadiness[];
+  /** Service names for the term document labels. */
+  serviceNames: Partial<Record<ServiceId, LocalizedText>>;
 };
+
+async function commissionFacts(
+  db: D1Database,
+  now: Date,
+): Promise<CommissionFacts> {
+  const [readiness, serviceNames] = await Promise.all([
+    getCommissionReadiness(db, now),
+    serviceNamesOf(db),
+  ]);
+  return { readiness, serviceNames };
+}
+
+const LOCALES: readonly Locale[] = ["zh", "en"];
 
 /**
  * A single row for the commission forms that are closed in a locale while
  * their service page is published (wp2 §4.6): no active price, or a term
  * document not in effect. Production starts without terms, so the row stays
  * until the general terms, the privacy notice and the service terms are
- * published in both locales.
+ * published in both locales. The detail names each missing document the way
+ * the Terms page does ("Service terms · Vocal Mixing"), with the locales it
+ * lacks.
  */
-function commissionClosedRow(
-  readiness: readonly CommissionReadiness[],
-): AttentionItem | null {
+function commissionClosedRow({
+  readiness,
+  serviceNames,
+}: CommissionFacts): AttentionItem | null {
   const closed = readiness.filter(
     (item) =>
       item.serviceStatus === "published" && (!item.open.zh || !item.open.en),
   );
   if (closed.length === 0) return null;
   const priceMissing = closed.some((item) => item.price === null);
-  const documents: string[] = [];
-  for (const locale of ["zh", "en"] as const) {
-    for (const item of closed) {
-      for (const id of item.terms[locale].missing) {
-        const entry = `${TERM_LABEL[id]} (${locale.toUpperCase()})`;
-        if (!documents.includes(entry)) documents.push(entry);
-      }
-    }
-  }
+  const documents = TERM_DOCUMENT_IDS.flatMap((id) => {
+    const locales = LOCALES.filter((locale) =>
+      closed.some((item) => item.terms[locale].missing.includes(id)),
+    );
+    if (locales.length === 0) return [];
+    const tags = locales.map((locale) => locale.toUpperCase()).join(", ");
+    return [`${termDocumentInfo(id, serviceNames).label} (${tags})`];
+  });
   const reasons = [
     ...(priceMissing ? ["no active price"] : []),
     ...(documents.length > 0 ? [`terms missing: ${documents.join(", ")}`] : []),
@@ -317,7 +338,7 @@ function commissionClosedRow(
 
 function buildAttention(
   results: D1Result[],
-  readiness: readonly CommissionReadiness[],
+  commission: CommissionFacts,
 ): AttentionFacts {
   const [
     settingsResult,
@@ -483,7 +504,7 @@ function buildAttention(
     studentReviews: runtime?.student ?? 0,
     cleanupDue: runtime?.cleanup ?? 0,
   };
-  const closedForms = commissionClosedRow(readiness);
+  const closedForms = commissionClosedRow(commission);
   if (closedForms) items.push(closedForms);
 
   // Each commissions row links to the place that fixes it (admin-architecture
@@ -564,11 +585,11 @@ export async function collectAttention(
   db: D1Database,
   now: Date,
 ): Promise<AttentionFacts> {
-  const [results, readiness] = await Promise.all([
+  const [results, commission] = await Promise.all([
     db.batch(attentionStatements(db, now)),
-    getCommissionReadiness(db, now),
+    commissionFacts(db, now),
   ]);
-  return buildAttention(results, readiness);
+  return buildAttention(results, commission);
 }
 
 // ---- Studio home ------------------------------------------------------------------
@@ -631,13 +652,13 @@ export async function getStudioHome(
   now: Date,
 ): Promise<StudioHomeModel> {
   const attentionPart = attentionStatements(db, now);
-  const [results, readiness] = await Promise.all([
+  const [results, commission] = await Promise.all([
     db.batch([...attentionPart, ...homeStatements(db)]),
-    getCommissionReadiness(db, now),
+    commissionFacts(db, now),
   ]);
   const facts = buildAttention(
     results.slice(0, attentionPart.length),
-    readiness,
+    commission,
   );
   const [
     countsResult,

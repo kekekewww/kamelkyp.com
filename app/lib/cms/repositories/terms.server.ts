@@ -138,7 +138,8 @@ const notFound = () => new Response("Not Found", { status: 404 });
 
 // ---- Documents -----------------------------------------------------------------
 
-async function serviceNamesOf(
+/** Service names by commission service id (published name first). */
+export async function serviceNamesOf(
   db: D1Database,
 ): Promise<Partial<Record<ServiceId, LocalizedText>>> {
   const rows = await db
