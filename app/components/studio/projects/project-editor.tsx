@@ -50,6 +50,7 @@ import {
 } from "./editor-sections";
 import {
   backupBlocks,
+  blockFieldErrors,
   mergeIssues,
   PROJECT_SECTIONS,
   previewFormData,
@@ -473,6 +474,13 @@ export function ProjectEditor({
         ]
       : failure?.issues,
   );
+  // The block editor marks the locale a finding names: a block a save
+  // refused, or a media block the checklist blocks (asset missing, wrong
+  // kind, alt text missing), so the owner sees which locale to fix.
+  const bodyErrors = blockFieldErrors(
+    [...(failure?.issues ?? []), ...issues],
+    "body",
+  );
   const archived = meta.status === "archived";
   const canPublish =
     !archived &&
@@ -657,6 +665,7 @@ export function ProjectEditor({
             assets={data.assets}
             body={bodyRestore.body}
             bodyKey={bodyRestore.epoch}
+            bodyErrors={bodyErrors}
             onBlocksChange={onFormInput}
           />
           <LinksSection content={content} />

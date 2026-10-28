@@ -162,6 +162,33 @@ export function mergeIssues(
   ];
 }
 
+/**
+ * Inline messages for a block field (`name`), per locale: the first blocking
+ * issue on that locale's blocks. The server reports them on
+ * `<name>.<locale>` (media blocks: missing asset, wrong kind, and missing
+ * alt text, whose own locale names the alt text, not the block), below it
+ * (a block a save refused: `<name>.<locale>.<index>.<key>`) or on `<name>`
+ * with the locale (the whole list).
+ */
+export function blockFieldErrors(
+  issues: readonly ValidationIssue[],
+  name: string,
+): Partial<Record<"zh" | "en", string>> {
+  const result: Partial<Record<"zh" | "en", string>> = {};
+  for (const locale of ["zh", "en"] as const) {
+    const path = `${name}.${locale}`;
+    const issue = issues.find(
+      ({ severity, field, locale: issueLocale }) =>
+        severity === "error" &&
+        (field === path ||
+          field.startsWith(`${path}.`) ||
+          (field === name && issueLocale === locale)),
+    );
+    if (issue) result[locale] = issue.message;
+  }
+  return result;
+}
+
 export const PROJECT_SECTIONS = [
   { id: "basic", label: "Basic" },
   { id: "media", label: "Media" },

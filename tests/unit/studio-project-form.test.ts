@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   backupBlocks,
+  blockFieldErrors,
   changedProjectSections,
   mergeIssues,
   PROJECT_SECTIONS,
@@ -13,6 +14,10 @@ import {
 } from "../../app/components/studio/projects/project-form";
 import { ProjectDraftSchema } from "../../app/lib/cms/schemas/project";
 import type { ValidationIssue } from "../../app/lib/cms/types";
+import {
+  type AssetSummary,
+  validateForPublish,
+} from "../../app/lib/cms/validation";
 
 function form(entries: Array<[string, string]>): FormData {
   const data = new FormData();
@@ -144,6 +149,93 @@ describe("previewFormData", () => {
       ["body.zh:json", JSON.stringify([{ type: "divider" }])],
     ]);
     expect([...previewFormData(data).entries()]).toEqual([...data.entries()]);
+  });
+});
+
+describe("blockFieldErrors", () => {
+  const asset = (
+    id: string,
+    alt: AssetSummary["alt"],
+    state: AssetSummary["state"] = "ready",
+  ): [string, AssetSummary] => [id, { id, kind: "image", state, alt }];
+
+  it("puts the server's asset findings under the locale of the block", () => {
+    // The issues the publish check really reports for body media blocks:
+    // `body.en` without a locale (an asset that is not ready) and `body.zh`
+    // with the locale of the missing alt text (here EN, for a ZH block).
+    const content = ProjectDraftSchema.parse({
+      title: { zh: "標題", en: "Title" },
+      body: {
+        zh: [{ type: "media", mediaId: "img-no-en-alt" }],
+        en: [{ type: "media", mediaId: "img-pending" }],
+      },
+    });
+    const issues = validateForPublish("project", content, {
+      todoContent: false,
+      assets: new Map([
+        asset("img-no-en-alt", { zh: "替代文字", en: "" }),
+        asset("img-pending", { zh: "替代", en: "Alt" }, "pending"),
+      ]),
+    });
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: "body.zh",
+          code: "alt_required",
+          locale: "en",
+        }),
+        expect.objectContaining({ field: "body.en", code: "missing_asset" }),
+      ]),
+    );
+    expect(blockFieldErrors(issues, "body")).toEqual({
+      zh: "Add EN alt text to this image before publishing.",
+      en: "This media asset no longer exists.",
+    });
+  });
+
+  it("puts a refused save of a block under its locale", () => {
+    const parsed = readProjectForm(
+      form([
+        ["expectedRevision", "1"],
+        [
+          "body.en:json",
+          JSON.stringify([{ type: "paragraph", text: "長".repeat(8001) }]),
+        ],
+      ]),
+    );
+    expect(parsed.ok).toBe(false);
+    if (parsed.ok) return;
+    expect(parsed.issues[0]?.field).toBe("body.en.0.text");
+    expect(blockFieldErrors(parsed.issues, "body")).toEqual({
+      en: "This text is too long.",
+    });
+  });
+
+  it("ignores warnings, other fields and a field that only starts alike", () => {
+    const issue = (overrides: Partial<ValidationIssue>): ValidationIssue => ({
+      field: "body.zh",
+      code: "missing_asset",
+      severity: "error",
+      message: "Blocks",
+      ...overrides,
+    });
+    expect(
+      blockFieldErrors(
+        [
+          issue({ severity: "warning", message: "Only a warning" }),
+          issue({ field: "story.context", locale: "zh" }),
+          issue({ field: "bodyText.zh" }),
+          issue({ field: "body.zhx" }),
+        ],
+        "body",
+      ),
+    ).toEqual({});
+    expect(
+      blockFieldErrors(
+        [issue({ field: "body", locale: "en", message: "Too many blocks" })],
+        "body",
+      ),
+    ).toEqual({ en: "Too many blocks" });
   });
 });
 

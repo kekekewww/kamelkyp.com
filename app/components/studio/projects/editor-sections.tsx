@@ -349,6 +349,7 @@ export function CaseStudySection({
   assets,
   body = content.body,
   bodyKey = 0,
+  bodyErrors,
   onBlocksChange,
 }: {
   content: ProjectContent;
@@ -361,6 +362,8 @@ export function CaseStudySection({
   body?: ProjectContent["body"];
   /** A new key remounts the block editor with `body` (backup restored). */
   bodyKey?: number;
+  /** Server messages on the blocks, per locale (`blockFieldErrors`). */
+  bodyErrors?: Partial<Record<"zh" | "en", string>>;
   /** The editor's change notification (dirty state, checklist, preview). */
   onBlocksChange?: () => void;
 }) {
@@ -393,7 +396,7 @@ export function CaseStudySection({
           defaultValue={body}
           assets={Object.values(assets)}
           onChange={onBlocksChange}
-          errors={{ zh: errors("body", "zh"), en: errors("body", "en") }}
+          errors={bodyErrors}
         />
       </div>
     </EditorSection>
