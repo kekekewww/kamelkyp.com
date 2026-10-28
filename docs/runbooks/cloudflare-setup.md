@@ -17,6 +17,8 @@
 4. GitHub → repository **Settings** → **Environments** → `preview`／`production` → **Environment secrets**，新增 `D1_DATABASE_ID`。
 5. 不要把 ID 寫入 `wrangler.base.jsonc`；renderer 只在 runner 產生暫存設定。
 
+`kamelkyp-preview` 由所有 PR 的 Preview 共用且不會重設。preview workflow 每次部署後套用 `scripts/e2e-fixtures.mjs` 的 E2E fixture（與 loopback 相同清單），測試後移除；fixture 只寫 `e2e-*` 列，借用的列（commission terms 的 publication、showreel 標記）會備份並在 cleanup 還原。各 PR 的 preview job 以 concurrency group `preview-d1` 依序執行，不會互相刪掉 fixture。部分 E2E 斷言要求精確內容（首頁精選作品正好三個 fixture、footer 六組、Mixing 一個作品），因此不要在 Preview Studio 發布、精選內容或清除 `brand.contactEmail`；要試用 Studio 請在 loopback 或本機 dev 進行。若 workflow 在 cleanup 前中斷，fixture 會留在 Preview 直到下一次 preview run 的 seed 先清除殘留。
+
 ## 3. 設定 Cloudflare API Token
 
 1. Cloudflare Dashboard 右上角個人選單 → **My Profile** → **API Tokens** → **Create Token**。
