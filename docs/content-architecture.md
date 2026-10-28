@@ -138,8 +138,8 @@ excludes `media.kamelkyp.com` until its bucket has a CORS policy; `direct-audio-
 
 | # | Lead decision | Outcome in this design |
 | --- | --- | --- |
-| 1 | Studio at `/studio`; `/admin/*` preserved or redirected | All brief routes under `/studio`; legacy admin panels (pricing, terms, cases, links) ported into the Studio shell; `/admin/*` GET → 301 to the Studio equivalent after an owner check (admin-architecture §2.3). Commission case management keeps working throughout (legacy `/admin` stays live until the port lands). |
-| 2 | Reuse Access, Owner = `ADMIN_EMAIL`, server-side JWT on every loader/action/API, fail closed, CSRF kept | Studio root route middleware + per-handler `withOwner` / `withOwnerMutation` wrappers around the existing `verifyAccessRequest`; CSRF kept (form field and `X-Studio-CSRF` header variants). One dashboard change: add `/studio`, `/studio/*`, `/api/studio/*` to the Access app. Until then: 403. |
+| 1 | Studio at `/studio`; `/admin/*` preserved or redirected | All brief routes under `/studio`; legacy admin panels (pricing, terms, cases, links) ported into the Studio shell; `/admin/*` GET → 301 to the Studio equivalent after an owner check (admin-architecture §2.3). Commission case management keeps working throughout (legacy `/admin` stays live until the port lands). Flip shipped in WP5 (2026-10): every legacy URL is owner-checked, then answers 301 (GET/HEAD) or 410 (other methods). |
+| 2 | Reuse Access, Owner = `ADMIN_EMAIL`, server-side JWT on every loader/action/API, fail closed, CSRF kept | Studio root route middleware + per-handler `withOwner` / `withOwnerMutation` wrappers around the existing `verifyAccessRequest`; CSRF kept (form field and `X-Studio-CSRF` header variants). One dashboard change: add `/studio`, `/studio/*`, `/api/studio/*` (and, on production, `/studio.data`) to the existing Access app. Until then: 403. |
 | 3 | D1 + R2 binding if viable, configurable base URL, Image Transformations behind a flag | R2 binding **is viable** (no binding exists today; adding one is a config change): binding `MEDIA`, bucket `kamelkyp-media` (production) / `kamelkyp-media-preview`, public base `MEDIA_PUBLIC_BASE_URL`. External-URL registration ships first and always works; uploads switch on when the binding and base URL exist. `IMAGE_TRANSFORMATIONS=on` enables `/cdn-cgi/image/` URLs, else originals. |
 | 4 | zh/en for every text field; one representation; define "complete" | Localized JSON columns `{zh, en}`; publish requires **both** locales for required fields; optional fields render per locale with no fallback (§3.4). |
 | 5 | Brand = Kamel; contact email seeded and flagged; legal texts audited, not rewritten | `brand.brandName = "Kamel"`; hero real-name line removed; `brand.contactEmail` seeded from `CONTACT_EMAIL` with `contactEmailConfirmedAt: null` (Studio attention item); term documents audited with a query, excluded from the brand guard, left untouched (§6). |
@@ -637,8 +637,9 @@ a pointer counts once its `effective_from` has passed. A personal-name variant i
 ## 8. What Kevin must do or confirm (outside the code)
 
 1. **Cloudflare Access:** in Zero Trust → Access → Applications, edit the existing kamelkyp.com application (and
-   the preview one) and add paths `/studio`, `/studio/*`, `/api/studio/*` (keep the `/admin` paths). Same
-   application, so `ACCESS_AUD` is unchanged. Until then every Studio URL answers 403.
+   the preview one) and add paths `/studio`, `/studio/*`, `/api/studio/*` (keep the `/admin` paths), plus
+   `/studio.data` on the production application (the Studio home's single-fetch URL, admin-architecture §3.2).
+   Same application, so `ACCESS_AUD` is unchanged; never a new one. Until then every Studio URL answers 403.
 2. **R2:** tell us whether a bucket already serves `media.kamelkyp.com` (and its name). Otherwise create
    `kamelkyp-media`, attach the custom domain `media.kamelkyp.com`, and create `kamelkyp-media-preview` for previews
    (custom domain or r2.dev URL). Apply the CORS policy from §4.6 to both. Set GitHub Environment vars
@@ -820,3 +821,7 @@ the shared-file queue from P1–P5; optional CI job for `test:e2e:studio`.
 links, posts, cases, case status, student discount, cleanup); `/admin/*` GET → 301 after owner check; full
 `npm run check:all` green; manual acceptance on the PR preview behind Access: create, publish, unpublish, archive,
 preview, upload, reorder, showreel, settings, commission case status change; axe on Studio pages; mobile pass.
+**Status (2026-10):** delivered as WP1 commissions, WP2 pricing and terms, WP3 footer and WP5 admin retirement
+(`docs/superpowers/specs/2026-10-13-wp{1,2,3,5}-*.md`, plan `docs/superpowers/plans/2026-10-13-finish-code-work.md`).
+WP5 flipped `/admin/*` to the owner-gated redirect and deleted the legacy routes, components and admin-only
+libraries; the legacy tables stay (§5.1 step 5).

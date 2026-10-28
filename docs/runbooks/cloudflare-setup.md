@@ -49,7 +49,7 @@ Cloudflare 建議 CI Token 限縮到實際部署帳戶；GitHub Environment secr
 
 ## 5. 建立 Cloudflare Access email OTP
 
-Preview 與 Production 使用不同的 Self-hosted application、Audience tag；設定方法相同。
+Preview 與 Production 使用不同的 Self-hosted application、Audience tag；設定方法相同，唯一差別是 Production 多一個 `/studio.data` path（步驟 4）。新增 path 一律加在既有 application：另建一個 `/studio` application 會有自己的 Audience tag（≠ `ACCESS_AUD`），Worker 會對每個 Studio 請求回 403。
 
 1. Zero Trust → **Settings** → **Authentication** → **Login methods** → **Add new** → **One-time PIN**。
 2. Zero Trust → **Access controls** → **Applications** → **Add an application** → **Self-hosted**。
@@ -61,6 +61,11 @@ Preview 與 Production 使用不同的 Self-hosted application、Audience tag；
    - `/admin`
    - `/admin/*`
    - `/api/admin/*`
+
+   `/admin` 三個 path 保留：舊 `/admin` 網址已退場，但仍先經 owner 檢查才 301 到 Studio（`/api/admin/*` 已無路由）。
+   Production 另加第七個 path `/studio.data`：從其他 Studio 頁按側欄 Home 時，React Router 會抓 `/studio.data`，
+   它不在 `/studio`、`/studio/*` 內（部署的 Preview 已證實會直接到 Worker），沒有 Access header 就只會得到 403。
+   Preview 保持六個 path，讓部署後的 E2E 能驗證 Worker 自己對 `/studio.data` 的 403（見下方）。
 5. Application session duration 設為 8 hours（Dashboard 沒有 8 hours 選項時選 **Custom duration** 填 `8h`）。
 6. 建立 **Allow** policy：
    - Include selector：**Emails**
@@ -73,7 +78,7 @@ Preview 與 Production 使用不同的 Self-hosted application、Audience tag；
 
 設定後，部署的 Preview 對未登入的 Studio／admin 請求由 Access 回 302 到 `ACCESS_TEAM_DOMAIN` 的 `/cdn-cgi/access/login/<preview hostname>`，Worker 收不到請求；preview workflow 以 `E2E_ACCESS_GATE=1` 與 `ACCESS_TEAM_DOMAIN` 驗證這個 302（`tests/e2e/helpers/owner-gate.ts`：其他 team 或其他 host 的 302 都不算通過）。loopback E2E 前面沒有 Access，仍由 Worker 回 403。
 
-React Router 的 single-fetch data URL `/studio.data`、`/admin.data` 不在上述六個 path 內，部署後仍直接到 Worker，由 Worker 的 owner 檢查回 403；`tests/e2e/studio-access.spec.ts` 在 loopback 與部署的 Preview 都驗證這個 403。
+React Router 的 single-fetch data URL `/studio.data`、`/admin.data` 不在上述六個 path 內，部署後仍直接到 Worker，由 Worker 的 owner 檢查回 403；`tests/e2e/studio-access.spec.ts` 在 loopback 與部署的 Preview 都驗證這個 403。若日後也把 `/studio.data` 加進 Preview application，要同時把它從該測試的「Worker itself」清單移到 `STUDIO_PATHS`。
 
 官方文件：<https://developers.cloudflare.com/cloudflare-one/access-controls/policies/app-paths/>、<https://developers.cloudflare.com/cloudflare-one/access-controls/policies/>、<https://developers.cloudflare.com/cloudflare-one/access-controls/access-settings/session-management/>。
 
@@ -126,7 +131,7 @@ Custom Domain 由 Cloudflare 自動建立 DNS 與憑證。正式部署後確認�
 
 1. `https://kamelkyp.com/health` 回傳 healthy JSON。
 2. `https://kamelkyp.com/zh` 與 `/en` 可開啟。
-3. `/admin` 未登入會由 Access 阻擋；正確 email OTP 後 Worker JWT 驗證仍會檢查 email 與 audience。
+3. `/studio` 與 `/admin` 未登入會由 Access 阻擋；正確 email OTP 後 Worker JWT 驗證仍會檢查 email 與 audience：`/studio` 可開啟，從其他 Studio 頁按側欄 Home 會回到 Studio 首頁，`/admin` 301 到 `/studio`。
 4. Production response 有 HSTS、nonce CSP、`frame-ancestors 'none'`。
 5. Cloudflare Worker secrets 名稱恰為四個核准名稱；Dashboard 只核對名稱，不複製或顯示值。
 

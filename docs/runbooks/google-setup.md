@@ -59,7 +59,7 @@ gh secret set APPS_SCRIPT_HMAC_SECRET --env production
 2. 在 linked Sheet 刪除 row。
 3. 刪除 Gmail 通知與轉寄／下載副本。
 4. 刪除其他雲端或本機副本；Drive／Gmail 垃圾桶及平台備份可能仍有額外保留期。
-5. 回 Studio → Commissions（`/studio/commissions`；切換前仍可用 `/admin/cases`），在「Cleanup due」逐項勾選 Google、Gmail、其他副本已清理，再確認 cleanup。
+5. 回 Studio → Commissions（`/studio/commissions`），在「Cleanup due」逐項勾選 Google、Gmail、其他副本已清理，再確認 cleanup。
 6. Worker 會刪 Apps Script 的 `case:<id>` ledger 與 D1 暫存；D1 永久只保留案件編號、服務、實際鎖定價格／幣別、日期與狀態。
 
 學生證明不會下載到網站；只傳遞使用者提供的連結，使用者可遮蔽敏感資訊。案件清理時連結與其他完整表單資料一併移除。

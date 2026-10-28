@@ -1,6 +1,6 @@
 # kamelkyp.com
 
-Kamel 的雙語音樂委託網站。專案規劃支援混音、Vocal 混音、歌曲銜接、歌曲編輯、作品預覽，以及 `/admin` 後台。
+Kamel 的雙語音樂委託網站。專案規劃支援混音、Vocal 混音、歌曲銜接、歌曲編輯、作品預覽，以及 `/studio` 的 KAMEL STUDIO 後台。
 
 ## 已實作範圍
 
@@ -8,7 +8,7 @@ Kamel 的雙語音樂委託網站。專案規劃支援混音、Vocal 混音、�
 - 四種服務的四步委託流程、local-only draft、Turnstile、送出時報價鎖定與有限成功資訊。
 - D1 immutable content／price／term versions、案件有限永久紀錄與 7 日後人工確認清理。
 - Signed Apps Script relay、Google Form／Gmail idempotency 與重試。
-- `/admin` Cloudflare Access JWT + Origin/HMAC CSRF、內容／作品／連結／條款／價格／案件管理。
+- KAMEL STUDIO（`/studio`）：Cloudflare Access JWT + Origin/HMAC CSRF，內容、媒體、設定、價格、條款、案件管理；舊 `/admin` 網址經 owner 檢查後 301 到 Studio。
 - CSP nonce、安全標頭、安全錯誤、GitHub-hosted loopback E2E、Preview 與人工核准 Production workflow。
 
 外部 Cloudflare Access、Google Apps Script、Production D1／Turnstile 與法務 gate 必須依 runbook 由帳戶擁有人完成，程式會 fail closed，不會接受 placeholder。

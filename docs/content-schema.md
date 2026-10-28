@@ -297,7 +297,7 @@ only. A table CHECK forces `price_mode = 'starting_from'` and `price_amount IS N
 The displayed price everywhere (service pages, home pricing strip, `/services`, commission choice cards) is
 the **active `price_versions` rule** (`getActivePriceRule(db, serviceId, now).baseTwd`), the same row the wizard
 locks into a case. Prices change only by publishing a new immutable price version (Studio → Services → Pricing,
-the existing `/admin/services` flow). `SERVICE_CATALOG.basePriceTwd` is deleted. Result: one source of truth,
+the former `/admin/services` flow). `SERVICE_CATALOG.basePriceTwd` is deleted. Result: one source of truth,
 and the marketing page can no longer drift from the quote (today it can: pages read the static catalog, quotes
 read D1).
 
