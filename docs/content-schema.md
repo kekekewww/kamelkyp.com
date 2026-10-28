@@ -1663,11 +1663,14 @@ rebuildAllUsages(db): Promise<{ assets: number; usages: number }>;
 
 ### 5.3 Studio repositories (parallel packages)
 
+A line marked `module-private` is a function of that module that is not exported: other modules reach it only
+through the exported function named in the mark.
+
 ```ts
 // projects.server.ts (P1)
 listStudioProjects(db, f: { q?: string; status?: EntryStatus | "all"; categoryId?: string; year?: number; featured?: boolean; sort?: "order" | "updated" | "year" }): Promise<StudioProjectRow[]>;
 getProjectFacets(db): Promise<{ years: number[]; categories: Term[] }>;
-parseProjectForm(formData: FormData): { content: ProjectContent; expectedRevision: number };
+parseProjectForm(formData: FormData): { content: ProjectContent; expectedRevision: number }; // module-private (handleProjectEditorAction)
 
 // music.server.ts (P2)
 listStudioMusic(db, f: { q?; status?; artist?; year?; role?; featured?: boolean }): Promise<StudioMusicRow[]>;
@@ -1677,7 +1680,7 @@ listLibrary(db, f: { q?; kind?; usage?: "used" | "unused"; missingAlt?: boolean;
 getAssetWithUsages(db, id: string): Promise<{ asset: MediaAsset; usages: MediaUsage[] } | null>;
 updateAssetMetadata(db, id: string, patch: Partial<Pick<MediaAsset, "title" | "alt" | "caption" | "credit" | "focalX" | "focalY" | "tags" | "previewStartSeconds" | "previewEndSeconds">>): Promise<MediaAsset>;
 deleteAsset(db, bucket: R2Bucket | undefined, id: string, opts: { acknowledgeDraftUsages: boolean }): Promise<void>; // throws media_asset_in_published_use
-createPendingUpload(db, input: UploadDeclaration, config: MediaConfig): Promise<{ assetId: string; uploadUrl: string }>;
+createPendingUpload(db, input: unknown, config: MediaConfig): Promise<{ assetId: string; uploadUrl: string }>; // input parsed by the module's upload declaration schema
 receiveUpload(db, bucket: R2Bucket, assetId: string, request: Request, config: MediaConfig): Promise<MediaAsset>;
 cleanupPendingUploads(db, bucket: R2Bucket | undefined, now: Date): Promise<number>;
 
@@ -1685,7 +1688,7 @@ cleanupPendingUploads(db, bucket: R2Bucket | undefined, now: Date): Promise<numb
 listStudioRecognition(db, f: { q?; year?; typeTermId?; status? }): Promise<StudioRecognitionRow[]>;
 listStudioWriting(db, f: { q?; platform?; status?; categoryTermId? }): Promise<StudioWritingRow[]>;
 listSocialLinks(db): Promise<SocialLink[]>;
-saveSocialLink(db, input: SocialLinkInput): Promise<SocialLink>;
+saveSocialLink(db, draft: { id?; platform; label; url; username?; icon?; enabled? }): Promise<SocialLink>; // create when no id
 deleteSocialLink(db, id: string): Promise<void>;
 reorderSocialLinks(db, ids: string[]): Promise<boolean>; // false: not every stored link once, nothing written (409)
 
@@ -1697,10 +1700,10 @@ getHomepageModel(db, locale?: Locale): Promise<HomepageModel>;   // featured lis
 getStudioHome(db, now: Date): Promise<StudioHomeModel>;           // counts, recent changes, attention, commission queue
 
 // pricing.server.ts (WP2: Studio → Pricing; writes through the reused publishPriceVersion)
-listPriceHistory(db, serviceId: ServiceId, now: Date): Promise<StudioPriceVersion[]>;      // classified: active | scheduled | superseded | replaced | cancelled | retired (cancelled: every row at an instant whose winning row is a cancellation)
+listPriceHistory(db, serviceId: ServiceId, now: Date): Promise<StudioPriceVersion[]>;      // module-private (loadPricingIndex, loadPriceEditor, handlePriceEditorAction); classified: active | scheduled | superseded | replaced | cancelled | retired (cancelled: every row at an instant whose winning row is a cancellation)
 loadPricingIndex(db, now: Date): Promise<PricingIndexData>;                               // services, commission readiness, FX status
 loadPriceEditor(db, serviceId: string, now: Date): Promise<PriceEditorData>;              // 404 Response for an unknown service
-parsePriceVersionForm(formData, ctx: { serviceId; history; now }): ParsedPriceVersion;   // percent → bps by string arithmetic; carried fields from the baseline
+parsePriceVersionForm(formData, ctx: { serviceId; history; now }): ParsedPriceVersion;   // module-private (handlePriceEditorAction); percent → bps by string arithmetic; carried fields from the baseline
 handlePriceEditorAction({ db, serviceId, formData, intent, now });                       // publish-price-version | cancel-scheduled (only a scheduled change; inserts an action = 'cancel' row at that instant with the baseline values, so the rule before it stays active; nothing is updated or deleted)
 handlePricingIndexAction({ db, env, intent, now, fetcher = fetch });                     // refresh-fx
 
@@ -1710,19 +1713,19 @@ loadTermEditor(db, documentId: string, locale: string, now: Date): Promise<TermE
 parseTermDraftForm(formData): { parsed; expectedRevision: number | null; legalReviewConfirmed: boolean };
 saveTermDraft(db, { documentId, locale, clauses, expectedRevision, now }): Promise<{ revision; updatedAt; changed }>;
 publishTermDraft(db, { documentId, locale, revision, now }): Promise<{ versionId; versionNumber; effectiveFrom }>;
-discardTermDraft(db, { documentId, locale, revision }): Promise<void>;
+discardTermDraft(db, { documentId, locale, revision }): Promise<void>; // module-private (handleTermEditorAction)
 handleTermEditorAction({ db, documentId, locale, formData, intent, now });              // save | publish-term-version | discard-draft
 
 // footer.server.ts (WP3; Studio → Settings → Footer, §2 "Footer link groups")
 loadFooterScreen(db): Promise<{ groups: StudioFooterGroup[]; sources: FooterScreenSources }>; // footer order + link sources
-listStudioFooterGroups(db): Promise<StudioFooterGroup[]>;
-saveFooterGroup(db, draft: FooterGroupDraft): Promise<StudioFooterGroup>;   // create when no id; fingerprint check on update
-setFooterGroupEnabled(db, id: string, enabled: boolean): Promise<StudioFooterGroup>; // Legal → 409
-deleteFooterGroup(db, id: string): Promise<void>;                             // custom groups only
-reorderFooterGroups(db, ids: string[]): Promise<void>;                        // full list or 409
+listStudioFooterGroups(db): Promise<StudioFooterGroup[]>;                   // module-private (handleFooterAction)
+saveFooterGroup(db, draft: FooterGroupDraft): Promise<StudioFooterGroup>;   // module-private (handleFooterAction); create when no id; fingerprint check on update
+setFooterGroupEnabled(db, id: string, enabled: boolean): Promise<StudioFooterGroup>; // module-private (handleFooterAction); Legal → 409
+deleteFooterGroup(db, id: string): Promise<void>;                             // module-private (handleFooterAction); custom groups only
+reorderFooterGroups(db, ids: string[]): Promise<void>;                        // module-private (handleFooterAction); full list or 409
 ensureFooterSystemGroupStatements(db): D1PreparedStatement[];                 // the statements of 0010
-footerGroupFingerprint(label: LocalizedText, rows: FooterLinkRow[]): Promise<string>;
-parseFooterGroupForm(formData): FooterGroupDraft;
+footerGroupFingerprint(label: LocalizedText, rows: FooterLinkRow[]): Promise<string>; // module-private (loadFooterScreen, handleFooterAction)
+parseFooterGroupForm(formData): FooterGroupDraft;                             // module-private (handleFooterAction)
 handleFooterAction({ db, formData, intent, now });  // save-group, toggle-group, delete-group, reorder
 // public/footer.ts (client-safe): composeFooterGroups(sources: FooterSources): FooterGroup[]
 ```
