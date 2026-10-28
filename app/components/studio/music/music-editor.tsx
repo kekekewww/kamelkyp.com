@@ -698,7 +698,7 @@ export function MusicEditorView({ data }: { data: MusicEditorData }) {
       <LeaveGuard
         blocker={editor.blocker}
         formRef={editor.formRef}
-        saveState={editor.state.kind}
+        saveState={editor.state}
       />
     </StudioPage>
   );

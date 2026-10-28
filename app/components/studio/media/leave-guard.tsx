@@ -6,7 +6,27 @@
 import { useEffect, useState } from "react";
 import type { Blocker } from "react-router";
 import { ConfirmDialog } from "../ui/confirm-dialog";
+import type { SaveState } from "../ui/editor-state";
 import { findIntentButton } from "../ui/use-editor-form";
+
+export type LeaveGuardStep = "wait" | "proceed" | "reset";
+
+/**
+ * What "Save and leave" does next. `clicked` is the save state the owner saw
+ * when clicking; the reducer answers every submission with a new object, so
+ * only a different object can be this save's result: SAVED leaves, ERROR
+ * stays on the page. The state at the click is never the answer, also when
+ * it is the ERROR of an earlier failed save.
+ */
+export function leaveGuardStep(
+  clicked: SaveState,
+  current: SaveState,
+): LeaveGuardStep {
+  if (current === clicked) return "wait";
+  if (current.kind === "saved") return "proceed";
+  if (current.kind === "error") return "reset";
+  return "wait";
+}
 
 export function LeaveGuard({
   blocker,
@@ -17,21 +37,24 @@ export function LeaveGuard({
   blocker: Blocker;
   formRef: React.RefObject<HTMLFormElement | null>;
   saveIntent?: string;
-  /** The editor's save state kind. */
-  saveState: "saved" | "unsaved" | "saving" | "error";
+  /** The editor's save state (`useEditorForm().state`), not only its kind. */
+  saveState: SaveState;
 }) {
-  const [saving, setSaving] = useState(false);
+  /** The save state at the "Save and leave" click; null while not saving. */
+  const [clicked, setClicked] = useState<SaveState | null>(null);
+  const saving = clicked !== null;
 
   useEffect(() => {
-    if (!saving || blocker.state !== "blocked") return;
-    if (saveState === "saved") {
-      setSaving(false);
+    if (!clicked || blocker.state !== "blocked") return;
+    const step = leaveGuardStep(clicked, saveState);
+    if (step === "proceed") {
+      setClicked(null);
       blocker.proceed();
-    } else if (saveState === "error") {
-      setSaving(false);
+    } else if (step === "reset") {
+      setClicked(null);
       blocker.reset();
     }
-  }, [saving, saveState, blocker]);
+  }, [clicked, saveState, blocker]);
 
   return (
     <ConfirmDialog
@@ -45,7 +68,10 @@ export function LeaveGuard({
           <button
             type="button"
             className="studio-btn studio-btn--ghost studio-btn--compact"
-            onClick={() => blocker.reset?.()}
+            onClick={() => {
+              setClicked(null);
+              blocker.reset?.();
+            }}
           >
             Stay
           </button>
@@ -55,8 +81,8 @@ export function LeaveGuard({
             aria-busy={saving || undefined}
             onClick={() => {
               const form = formRef.current;
-              if (!form) return;
-              setSaving(true);
+              if (!form || saving) return;
+              setClicked(saveState);
               form.requestSubmit(findIntentButton(form, saveIntent));
             }}
           >
@@ -65,7 +91,10 @@ export function LeaveGuard({
           <button
             type="button"
             className="studio-btn studio-btn--danger studio-btn--compact"
-            onClick={() => blocker.proceed?.()}
+            onClick={() => {
+              setClicked(null);
+              blocker.proceed?.();
+            }}
           >
             Discard
           </button>

@@ -646,7 +646,7 @@ export function MediaDetailView({ data }: { data: MediaDetailData }) {
         blocker={editor.blocker}
         formRef={editor.formRef}
         saveIntent="update"
-        saveState={editor.state.kind}
+        saveState={editor.state}
       />
     </StudioPage>
   );
