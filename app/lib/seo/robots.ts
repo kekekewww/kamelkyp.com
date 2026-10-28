@@ -4,7 +4,7 @@
  * Commission workflow pages are not disallowed: crawlers must fetch them to
  * read their noindex.
  */
-export const ROBOTS_INDEXABLE_LINES = [
+const ROBOTS_INDEXABLE_LINES = [
   "User-agent: *",
   "Disallow: /admin",
   "Disallow: /api/",

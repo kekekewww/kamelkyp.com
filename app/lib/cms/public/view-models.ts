@@ -87,7 +87,7 @@ interface PublicStorySection {
  * pages are noindex) and the locales the page renders in (its hreflang set,
  * the same predicates as the sitemap).
  */
-export interface PublicIndexing {
+interface PublicIndexing {
   listed: boolean;
   locales: Locale[];
 }
