@@ -122,7 +122,7 @@ Auth column: **A** = Access JWT verified (middleware + `withOwner`), **A+C** = A
 | `/studio/services/pricing/:serviceId` | one service's price versions (4 ids, else 404) | `PriceEditorData`: active rule, editable fields, classified history, `versionCount`, NT$ mentions in its live terms | `publish-price-version` (now or scheduled ≥ 5 min ahead, Taipei time; through the existing `publishPriceVersion`; `basedOnVersionId` + `expectedVersionCount` → 409 when stale), `cancel-scheduled` (`versionId`, `expectedVersionCount`) | A / A+C | I |
 | `/studio/services/terms` | legal documents | `TermsIndexData`: 6 documents × 2 locales with live version and draft marker, commission readiness | — | A | I |
 | `/studio/services/terms/:documentId/:locale` | one document's draft (6 ids × `zh`/`en`, else 404) | `TermEditorData`: live version, server draft, other locale's keys, history, issues, diff, expected outline | `save` (revision-checked draft), `publish-term-version` (requires `legalReviewConfirmed`, else 422 and nothing saved; copies the stored draft into the next version, moves the pointer with `effective_from = now`, deletes the draft, one batch), `discard-draft` | A / A+C | I |
-| `/studio/social` | social links table | links | `create`, `update`, `delete`, `toggle`, `reorder` | A / A+C | P3 |
+| `/studio/social` | social links table | `{ links, findMe }` (every link, shown or hidden, in footer order; the Find me group's label and visibility from Settings → Footer) | `create`, `update`, `delete`, `toggle`, `reorder` (`ids` JSON naming every stored link once; any other set → 409 `stale_revision` "The order changed elsewhere. Reload and try again.", nothing written; check and write are one statement) | A / A+C | P3 |
 | `/studio/media` | library | page of assets (`?q&kind&usage&missingAlt&cursor`), CORS/analysis status, upload availability | `register-url`, `update`, `archive`, `delete` (`acknowledgeDraftUsages`), `rebuild-usages` | A / A+C | P2 |
 | `/studio/media/:id` | asset detail | asset, usages, public URL, image sources preview | `update`, `delete` | A / A+C | P2 |
 | `/studio/homepage` | homepage control (§4.2.1) | hero (brand fields), sections + counts (site), showreel, featured lists per type with candidates, availability, contact CTA | `save-hero`, `save-sections`, `set-showreel`, `feature`, `unfeature`, `reorder-featured` (`type`, `ids`) | A / A+C | P4 |
@@ -572,6 +572,15 @@ the checklist opens.
 - Each drop saves immediately (one `reorder` request with the full ordered id list, applied by a single
   `json_each` statement); the moved row flashes a background highlight (`--dur-3`); toast "Order saved"; a failure
   restores the previous order and shows an error toast.
+- A failure is any `ok: false` answer, for example 409 `stale_revision` from the lists that refuse an id set that is
+  not the stored one (Settings → Footer, `/studio/social`) after another tab added or deleted a row. A failed save
+  changes no server data, so `useKeyboardReorder` (`ui/list.tsx`) would keep the refused order; every list whose
+  reorder can fail therefore passes a failure counter as the hook's `resetKey` (`useFailureCount(fetcher)` from
+  `ui/use-fetcher-settled.ts`, or the list's own counter), and a new key restarts the order from the server order
+  during render. The rows stay mounted: focus, open editors and unsaved row edits survive. Lists: projects (homepage
+  strip and manual order), music, services (per group), taxonomies, homepage featured lists, social links. On the
+  same counter, the recognition and writing tie groups (`list-kit.tsx`, rows without inline edits) remount instead,
+  and Settings → Footer remounts only its reorder state (`ReorderState`), so its rows stay mounted too.
 - Pointer drag-and-drop is not required. No library is added; if pointer dragging is wanted later, a ~150-line
   Pointer Events hook that moves rows via CSSOM in an effect (CSP-safe) is enough; explicit controls stay as the
   accessible path.
