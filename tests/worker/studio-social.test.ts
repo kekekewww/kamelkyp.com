@@ -232,6 +232,8 @@ describe("social links store", () => {
     for (const stale of [
       ids.slice(1), // a link added elsewhere is missing
       [...ids, "missing"], // a link deleted elsewhere is still listed
+      // Both at once: the count matches, one member does not.
+      [...ids.slice(1), "missing"],
       [ids[0] ?? "", ...ids], // a duplicate
       [],
     ]) {
@@ -367,6 +369,44 @@ describe("social links action", () => {
       now,
     );
     const stored = await listSocialLinks(env.DB);
+
+    const result = await act({
+      intent: "reorder",
+      ids: JSON.stringify([...loaded].reverse()),
+    });
+    expect(result.status).toBe(409);
+    expect(result.body).toMatchObject({
+      ok: false,
+      code: "stale_revision",
+      message: "The order changed elsewhere. Reload and try again.",
+    });
+    expect(await listSocialLinks(env.DB)).toEqual(stored);
+  });
+
+  it("answers 409 when another tab replaced a link, though the count still matches", async () => {
+    const created: string[] = [];
+    for (const name of ["I", "J"]) {
+      const link = await saveSocialLink(
+        env.DB,
+        {
+          platform: "other",
+          label: label(name),
+          url: `https://${name.toLowerCase()}.example`,
+        },
+        now,
+      );
+      created.push(link.id);
+    }
+    // The screen loaded this list; then another tab deleted J and added K.
+    const loaded = (await listSocialLinks(env.DB)).map((link) => link.id);
+    await deleteSocialLink(env.DB, created[1] ?? "");
+    await saveSocialLink(
+      env.DB,
+      { platform: "other", label: label("K"), url: "https://k.example" },
+      now,
+    );
+    const stored = await listSocialLinks(env.DB);
+    expect(stored).toHaveLength(loaded.length);
 
     const result = await act({
       intent: "reorder",
