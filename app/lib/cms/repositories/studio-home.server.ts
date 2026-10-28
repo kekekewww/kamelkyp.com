@@ -276,9 +276,11 @@ const TERM_LABEL: Record<TermDocumentId, string> = {
 };
 
 /**
- * One row for every commission form that is closed in a locale while its
- * service page is published (wp2 §4.6): no active price, or a term document
- * not in effect. Production starts without terms, so this is the first row.
+ * A single row for the commission forms that are closed in a locale while
+ * their service page is published (wp2 §4.6): no active price, or a term
+ * document not in effect. Production starts without terms, so the row stays
+ * until the general terms, the privacy notice and the service terms are
+ * published in both locales.
  */
 function commissionClosedRow(
   readiness: readonly CommissionReadiness[],
