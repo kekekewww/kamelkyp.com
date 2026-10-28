@@ -58,7 +58,7 @@ export function Field({
   );
 }
 
-export function useFieldIds(hint?: unknown, error?: unknown) {
+function useFieldIds(hint?: unknown, error?: unknown) {
   const id = useId();
   const hintId = `${id}-hint`;
   const errorId = `${id}-error`;

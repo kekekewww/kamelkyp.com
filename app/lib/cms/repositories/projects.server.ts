@@ -57,8 +57,6 @@ import {
 import { createTerm, listTerms } from "../taxonomy.server";
 import type { EntityMeta, EntryStatus, LocalizedText } from "../types";
 
-export type { StudioProjectRow };
-
 const LIST_LIMIT = 500;
 const REORDER_MAX = 1000;
 

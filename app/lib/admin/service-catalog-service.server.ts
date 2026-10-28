@@ -11,7 +11,7 @@ const PriceInputSchema = z.object({
   effectiveFrom: z.iso.datetime(),
 });
 
-export type PublishAction = "publish" | "replace" | "cancel";
+type PublishAction = "publish" | "replace" | "cancel";
 
 interface AdminPriceVersion {
   id: string;

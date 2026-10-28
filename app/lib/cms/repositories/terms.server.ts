@@ -55,8 +55,6 @@ import {
 import type { Locale, LocalizedText, ValidationIssue } from "../types";
 import { type FxStatus, loadFxStatus } from "./pricing.server";
 
-export type { TermDocumentId } from "../../commission/term-outline";
-
 type TermDocumentKind = "common" | "service" | "privacy";
 
 type TermDocumentInfo = {

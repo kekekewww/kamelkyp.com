@@ -45,7 +45,7 @@ export const CASE_STATUS_LABELS: Record<CaseStatus, string> = {
   cancelled: "Cancelled",
 };
 
-export const CaseStatusSchema = z.enum(CASE_STATUSES);
+const CaseStatusSchema = z.enum(CASE_STATUSES);
 
 /** `KAM-<UTC yyyymmdd>-<10 Crockford base32>` (cases/case-id.ts). */
 export const CaseIdSchema = z

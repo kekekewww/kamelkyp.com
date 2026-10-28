@@ -43,8 +43,6 @@ import {
 } from "./tables.server";
 import { extractAssetRefs, syncUsages } from "./usage.server";
 
-export type { ContentOf };
-
 export type Loaded<T extends EntityType> = {
   meta: EntityMeta;
   content: ContentOf<T>;

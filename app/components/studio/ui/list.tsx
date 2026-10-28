@@ -14,7 +14,7 @@ import {
   reorderSource,
 } from "./reorder";
 
-export const STATUS_FILTERS = [
+const STATUS_FILTERS = [
   { value: "active", label: "Active" },
   { value: "draft", label: "Draft" },
   { value: "published", label: "Published" },

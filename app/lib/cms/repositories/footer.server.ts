@@ -43,8 +43,6 @@ import {
 } from "../studio/responses";
 import type { Locale, LocalizedText, ValidationIssue } from "../types";
 
-export type { FooterScreenData };
-
 /** Groups other than the built-in ones and the legacy `social` group. */
 const OTHER_GROUPS = `stable_key NOT IN (${[...FOOTER_SYSTEM_KEYS, "social"]
   .map((key) => `'${key}'`)

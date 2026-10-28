@@ -98,7 +98,7 @@ const SERVICE_AREA_ORDER: readonly ServiceAreaKey[] = [
   "software",
 ];
 
-export const SERVICE_AREA_PATHS: Readonly<
+const SERVICE_AREA_PATHS: Readonly<
   Record<ServiceAreaKey, { id: string; path: string }>
 > = {
   mixing: { id: "mixing", path: "/mixing" },

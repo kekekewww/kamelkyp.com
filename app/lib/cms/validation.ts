@@ -7,7 +7,7 @@
  * (the deny list lives in `brand-guard.server.ts` and never reaches a client
  * bundle) and the serialized snapshot size. Draft saves never run this.
  */
-import { filledLocales, isComplete, isFilled, LOCALES } from "./localized";
+import { filledLocales, isFilled, LOCALES } from "./localized";
 import { isHttpsUrl } from "./schemas/common";
 import type { MediaKind } from "./schemas/media-asset";
 import { AUDIO_KINDS, IMAGE_KINDS, VIDEO_KINDS } from "./schemas/media-asset";
@@ -576,6 +576,3 @@ export function structuralIssues(error: {
     };
   });
 }
-
-/** Convenience for list rows: is `text` complete in both locales? */
-export { isComplete };

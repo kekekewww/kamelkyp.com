@@ -59,15 +59,7 @@ import type {
   ValidationIssue,
 } from "../types";
 
-export type { PriceValues } from "../../pricing/sample-quotes";
-export {
-  EDITABLE_PRICE_FIELDS,
-  MIN_SCHEDULE_LEAD_MS,
-  PERCENT_INPUT_NAMES,
-  priceInputName,
-} from "../../pricing/sample-quotes";
-
-export type PublishAction = "publish" | "replace" | "cancel";
+type PublishAction = "publish" | "replace" | "cancel";
 
 export type StudioPriceVersion = PriceValues & {
   id: string;

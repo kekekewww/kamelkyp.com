@@ -75,10 +75,7 @@ const STORY: Record<StoryKey, { label: string; hint: string }> = {
 };
 
 /** Inline structural errors from the last failed save. */
-export type FieldErrors = (
-  field: string,
-  locale?: "zh" | "en",
-) => string | undefined;
+type FieldErrors = (field: string, locale?: "zh" | "en") => string | undefined;
 
 export function fieldErrorLookup(
   issues: readonly ValidationIssue[] | undefined,

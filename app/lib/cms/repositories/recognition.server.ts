@@ -48,12 +48,7 @@ import {
   withCmsErrors,
 } from "../studio/responses";
 import { createTerm, listTerms } from "../taxonomy.server";
-import type {
-  EntityMeta,
-  EntryStatus,
-  LocalizedText,
-  ValidationIssue,
-} from "../types";
+import type { EntityMeta, EntryStatus, LocalizedText } from "../types";
 import { structuralIssues } from "../validation";
 
 /* ---------------------------------------------------------------------------
@@ -640,5 +635,3 @@ export async function handleRecognitionCreate(args: ActionArgs) {
 export async function handleRecognitionEditorAction(args: ActionArgs) {
   return handleEntryEditorIntent("recognition", args, parseRecognitionForm);
 }
-
-export type { ValidationIssue };

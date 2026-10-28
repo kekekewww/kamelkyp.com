@@ -45,13 +45,6 @@ import type { StudioActionArgs } from "../studio/auth.server";
 import { actionError, actionOk, unknownIntent } from "../studio/responses";
 import type { ValidationIssue } from "../types";
 
-export type {
-  CleanupDueItem,
-  CommissionCaseRow,
-  CommissionsModel,
-  StudentReviewItem,
-};
-
 /** The case service's maximum page size (same as the legacy list). */
 const COMMISSION_PAGE_SIZE = 100;
 

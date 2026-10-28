@@ -19,7 +19,6 @@ import { StudioPage } from "../../shell/studio-page";
 import {
   ConfirmDialog,
   EditorLayout,
-  EditorSection,
   FlagBadge,
   focusIssueField,
   PREVIEW_FRAME_NAME,
@@ -722,5 +721,3 @@ export function EntryEditorFrame({
     </StudioPage>
   );
 }
-
-export { EditorSection };

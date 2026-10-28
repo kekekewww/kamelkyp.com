@@ -40,7 +40,7 @@ const PRICE_FIGURE =
   /(?:NT|US)\s*[$＄]|(?<![a-z])(?:NTD|TWD|USD)(?![a-z])|(?<![a-z])NT\s*[\d０-９]|[$＄€£¥￥]\s*[\d０-９]|[\d０-９]\s*[$＄€£¥￥]|[\d０-９〇零一二兩两三四五六七八九十百千萬万億亿]\s*元|[台臺]幣|美[元金]/i;
 
 /** Site paths that are not public pages (the public site never links to them). */
-export const RESERVED_PATH_PREFIXES = ["/studio", "/api", "/admin"] as const;
+const RESERVED_PATH_PREFIXES = ["/studio", "/api", "/admin"] as const;
 
 /** The site's own hosts: an absolute address there is judged like a site path. */
 const SITE_HOSTS: readonly string[] = ["kamelkyp.com", "www.kamelkyp.com"];

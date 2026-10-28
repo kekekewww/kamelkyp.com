@@ -82,7 +82,7 @@ function noise1D(x: number): number {
 }
 
 /** §4.3: two slow sines plus value noise. */
-export function wave(
+function wave(
   u: number,
   t: number,
   k: number,
@@ -102,7 +102,7 @@ export function wave(
  * the right with a quiet crest near 0.78W. Band (stacked mobile layout): full
  * across x with an 8% fade at both edges.
  */
-export function envelope(u: number, mode: FieldMode): number {
+function envelope(u: number, mode: FieldMode): number {
   if (mode === "band") {
     return smoothstep(0, 0.08, u) * smoothstep(0, 0.08, 1 - u);
   }

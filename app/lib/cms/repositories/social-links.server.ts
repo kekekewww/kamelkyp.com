@@ -27,8 +27,6 @@ import {
 } from "../studio/responses";
 import type { LocalizedText, ValidationIssue } from "../types";
 
-export type { SocialLink, SocialPlatform };
-
 type SocialLinkDraft = {
   id?: string;
   platform: string;
