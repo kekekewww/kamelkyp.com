@@ -22,6 +22,19 @@ DELETE FROM projects WHERE id GLOB 'e2e-cms-*';
 DELETE FROM social_links WHERE id GLOB 'e2e-cms-*';
 DELETE FROM media_assets WHERE id GLOB 'e2e-cms-asset-*';
 
+-- The one showreel slot (music_tracks_single_showreel). On the shared preview
+-- D1 an owner track may hold it, a draft legacy-showreel included: it gives
+-- the slot up for the run and cms-e2e-cleanup.sql gives it back. A track an
+-- interrupted run saved stays saved unless the owner has flagged another.
+CREATE TABLE IF NOT EXISTS e2e_cms_showreel_backup (
+  slot INTEGER PRIMARY KEY CHECK (slot = 1),
+  track_id TEXT NOT NULL
+);
+INSERT OR REPLACE INTO e2e_cms_showreel_backup (slot, track_id)
+SELECT 1, id FROM music_tracks WHERE is_showreel = 1 AND id NOT GLOB 'e2e-cms-*';
+UPDATE music_tracks SET is_showreel = 0
+WHERE is_showreel = 1 AND id NOT GLOB 'e2e-cms-*';
+
 -- Assets ----------------------------------------------------------------------
 INSERT INTO media_assets (
   id, kind, source, state, external_url, provider, filename, width, height,

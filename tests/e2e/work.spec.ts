@@ -90,8 +90,8 @@ test("keyboard focus on a row shows its preview", async ({ page }) => {
   const row = page.locator(
     '.project-row[data-preview-id="fixture-booking-console"]',
   );
-  // The preview is client state: a focus that lands before hydration does
-  // nothing, so move focus away and back until the preview reports visible.
+  // The preview listens from an effect: a focus that lands before hydration
+  // is missed, so focus again until the preview shows.
   await expect(async () => {
     await row.blur();
     await row.focus();

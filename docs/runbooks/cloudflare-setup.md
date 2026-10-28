@@ -17,6 +17,8 @@
 4. GitHub → repository **Settings** → **Environments** → `preview`／`production` → **Environment secrets**，新增 `D1_DATABASE_ID`。
 5. 不要把 ID 寫入 `wrangler.base.jsonc`；renderer 只在 runner 產生暫存設定。
 
+`kamelkyp-preview` 由所有 PR 的 Preview 共用且不會重設。preview workflow 每次部署後套用 `scripts/e2e-fixtures.mjs` 的 E2E fixture（與 loopback 相同清單），測試後移除；fixture 只寫 `e2e-*` 列，借用的列（commission terms 的 publication、showreel 標記）會備份並在 cleanup 還原。各 PR 的 preview job 以 concurrency group `preview-d1` 依序執行，不會互相刪掉 fixture。部分 E2E 斷言要求精確內容（首頁精選作品正好三個 fixture、footer 六組、Mixing 一個作品），因此不要在 Preview Studio 發布、精選內容或清除 `brand.contactEmail`；要試用 Studio 請在 loopback 或本機 dev 進行。若 workflow 在 cleanup 前中斷，fixture 會留在 Preview 直到下一次 preview run 的 seed 先清除殘留。
+
 ## 3. 設定 Cloudflare API Token
 
 1. Cloudflare Dashboard 右上角個人選單 → **My Profile** → **API Tokens** → **Create Token**。
@@ -69,7 +71,9 @@ Preview 與 Production 使用不同的 Self-hosted application、Audience tag；
 9. Application 頁面複製 Audience tag，設為對應 GitHub Environment variable `ACCESS_AUD`。
 10. Zero Trust 顯示的 team domain 必須以完整 HTTPS issuer 保存，例如 `https://<team>.cloudflareaccess.com`，設為 `ACCESS_TEAM_DOMAIN`。
 
-設定後，部署的 Preview 對未登入的 Studio／admin 請求由 Access 回 302 到 `*.cloudflareaccess.com`，Worker 收不到請求；preview workflow 以 `E2E_ACCESS_GATE=1` 驗證這個 302。loopback E2E 前面沒有 Access，仍由 Worker 回 403。
+設定後，部署的 Preview 對未登入的 Studio／admin 請求由 Access 回 302 到 `ACCESS_TEAM_DOMAIN` 的 `/cdn-cgi/access/login/<preview hostname>`，Worker 收不到請求；preview workflow 以 `E2E_ACCESS_GATE=1` 與 `ACCESS_TEAM_DOMAIN` 驗證這個 302（`tests/e2e/helpers/owner-gate.ts`：其他 team 或其他 host 的 302 都不算通過）。loopback E2E 前面沒有 Access，仍由 Worker 回 403。
+
+React Router 的 single-fetch data URL `/studio.data`、`/admin.data` 不在上述六個 path 內，部署後仍直接到 Worker，由 Worker 的 owner 檢查回 403；`tests/e2e/studio-access.spec.ts` 在 loopback 與部署的 Preview 都驗證這個 403。
 
 官方文件：<https://developers.cloudflare.com/cloudflare-one/access-controls/policies/app-paths/>、<https://developers.cloudflare.com/cloudflare-one/access-controls/policies/>、<https://developers.cloudflare.com/cloudflare-one/access-controls/access-settings/session-management/>。
 

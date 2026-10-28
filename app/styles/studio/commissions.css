@@ -1,0 +1,460 @@
+/* ==========================================================================
+   KAMEL STUDIO — Commissions inbox (wp1). Loaded only by /studio/commissions.
+   Two decision queues, then ruled case rows. Status and markers always carry
+   their word; colour only reinforces it. Rows stack below 768 px.
+   ========================================================================== */
+
+.studio .commissions-summary {
+  color: var(--color-text-meta);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta-xs);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.08em;
+}
+
+.studio .commissions-privacy {
+  max-inline-size: var(--studio-measure);
+  margin: 0 0 var(--space-6);
+  color: var(--color-text-secondary);
+}
+
+.studio .commissions-mono,
+.studio .commissions-id {
+  font-family: var(--font-mono);
+  font-size: var(--text-meta-xs);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+
+/* One click selects the whole ID for a Gmail search. */
+.studio .commissions-id {
+  color: var(--color-text);
+  user-select: all;
+}
+
+.studio .commissions-service {
+  display: grid;
+  min-inline-size: 0;
+}
+
+.studio .commissions-service__secondary {
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+}
+
+.studio .commissions-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+}
+
+/* ---- Headings and queues -------------------------------------------------- */
+
+.studio .commissions-heading {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  margin: 0;
+  padding-block-end: var(--space-2);
+  border-block-end: 1px solid var(--color-rule);
+  color: var(--color-text-meta);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta-xs);
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.studio .commissions-heading:focus-visible {
+  outline-offset: -2px;
+}
+
+.studio .commissions-heading__count {
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.studio .commissions-needs {
+  display: grid;
+  gap: var(--space-6);
+  margin-block-end: var(--space-7);
+}
+
+@media (min-width: 1024px) {
+  .studio .commissions-needs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+}
+
+.studio .commissions-queue {
+  display: grid;
+  gap: var(--space-3);
+  min-inline-size: 0;
+}
+
+.studio .commissions-queue__empty {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.studio .commissions-queue__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.studio .commissions-queue__item {
+  display: grid;
+  gap: var(--space-2);
+  padding-block: var(--space-3);
+  border-block-end: 1px solid var(--color-rule);
+}
+
+.studio .commissions-queue__facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+}
+
+.studio .commissions-queue__blocked {
+  margin: 0;
+  font-size: 0.8125rem;
+}
+
+.studio .commissions-prices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-5);
+  margin: 0;
+}
+
+.studio .commissions-prices__item {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.studio .commissions-prices dt {
+  color: var(--color-text-meta);
+  font-size: 0.8125rem;
+}
+
+.studio .commissions-prices dd {
+  margin: 0;
+  color: var(--color-text);
+}
+
+.studio .commissions-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.studio .commissions-confirm {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--color-rule-strong);
+  border-radius: var(--radius-xs);
+  background: var(--color-bg-2);
+}
+
+.studio .commissions-confirm__text {
+  margin: 0;
+  color: var(--color-text);
+}
+
+/* ---- Cleanup dialog --------------------------------------------------------- */
+
+.studio .commissions-cleanup {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.studio .commissions-checklist {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.studio .commissions-checklist__legend {
+  margin-block-end: var(--space-2);
+  padding: 0;
+  color: var(--color-text);
+}
+
+.studio .commissions-checklist__item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  min-block-size: var(--studio-control-h-compact);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.studio .commissions-checklist__item input {
+  flex: none;
+  inline-size: 1rem;
+  block-size: 1rem;
+  margin-block-start: 0.2em;
+  accent-color: var(--color-danger);
+}
+
+@media (pointer: coarse) {
+  .studio .commissions-checklist__item {
+    align-items: center;
+    min-block-size: var(--target-min);
+  }
+}
+
+.studio .commissions-dialog__hint {
+  margin: 0;
+  color: var(--color-text-meta);
+  font-size: 0.8125rem;
+}
+
+/* ---- Cases -------------------------------------------------------------------- */
+
+.studio .commissions-cases {
+  --commissions-cols: 13.5rem 7rem minmax(0, 1fr) 7rem minmax(9rem, 1fr)
+    minmax(14rem, auto);
+
+  display: grid;
+  gap: var(--space-3);
+  min-inline-size: 0;
+}
+
+.studio .commissions-notice {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-inline-start: 2px solid var(--color-warning);
+  color: var(--color-text);
+  background: var(--color-bg-2);
+}
+
+.studio .commissions-filters__toggle {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--studio-control-h);
+  padding-inline: var(--space-4);
+  border: 1px solid var(--color-control-border);
+  border-radius: var(--radius-xs);
+  font-family: var(--font-display);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  list-style: none;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.studio .commissions-filters__toggle::-webkit-details-marker {
+  display: none;
+}
+
+.studio .commissions-filters__form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+
+.studio .commissions-filters[open] > .commissions-filters__form {
+  margin-block-start: var(--space-3);
+}
+
+.studio .commissions-filters__form .studio-field + .studio-field {
+  margin-block-start: 0;
+}
+
+.studio .commissions-filters__form .studio-link {
+  align-self: center;
+}
+
+@media (min-width: 768px) {
+  .studio .commissions-filters__toggle {
+    display: none;
+  }
+
+  .studio .commissions-filters[open] > .commissions-filters__form {
+    margin-block-start: 0;
+  }
+}
+
+.studio .commissions-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, max-content);
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3);
+  border-block-end: 1px solid var(--color-rule);
+}
+
+@media (hover: hover) {
+  .studio .commissions-row:hover {
+    background: var(--color-surface-hover);
+  }
+}
+
+.studio .commissions-cell {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  min-inline-size: 0;
+}
+
+.studio .commissions-cell__label {
+  color: var(--color-text-meta);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Phones: ID and status on top, the facts below, the control full width. */
+.studio .commissions-cell--id,
+.studio .commissions-cell--status {
+  grid-row: 1;
+}
+
+.studio .commissions-cell--status {
+  justify-items: end;
+}
+
+.studio .commissions-cell--id .commissions-cell__label,
+.studio .commissions-cell--status .commissions-cell__label {
+  position: absolute;
+  overflow: hidden;
+  inline-size: 1px;
+  block-size: 1px;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.studio .commissions-cell--control {
+  grid-column: 1 / -1;
+}
+
+.studio .commissions-status-control {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.studio .commissions-status-control__select {
+  flex: 1;
+  min-inline-size: 0;
+}
+
+.studio .commissions-status-control [aria-disabled="true"] {
+  color: var(--color-text-meta);
+  cursor: default;
+}
+
+.studio .commissions-cases .studio-rows__head {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .studio .commissions-cases .studio-rows__head {
+    display: grid;
+    grid-template-columns: var(--commissions-cols);
+    gap: var(--space-3);
+  }
+
+  .studio .commissions-row {
+    grid-template-columns: var(--commissions-cols);
+    align-items: center;
+    gap: var(--space-3);
+    min-block-size: var(--studio-row-h);
+    padding-block: var(--space-2);
+  }
+
+  .studio .commissions-cell--id,
+  .studio .commissions-cell--status {
+    grid-row: auto;
+  }
+
+  .studio .commissions-cell--status {
+    justify-items: start;
+  }
+
+  .studio .commissions-cell--control {
+    grid-column: auto;
+  }
+
+  /* The column head names the cells of listed rows. */
+  .studio .commissions-cell__label {
+    position: absolute;
+    overflow: hidden;
+    inline-size: 1px;
+    block-size: 1px;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+/* Between tablet and desktop the control moves under the facts. */
+@media (min-width: 768px) and (max-width: 1199px) {
+  .studio .commissions-cases {
+    --commissions-cols: 13.5rem 6.5rem minmax(0, 1fr) 6.5rem minmax(8rem, 1fr);
+  }
+
+  .studio .commissions-cell--control {
+    grid-column: 3 / -1;
+  }
+}
+
+.studio .commissions-pages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding-block-start: var(--space-2);
+}
+
+/* ---- Status and marker badges ------------------------------------------------ */
+
+.studio .commissions-status {
+  border-color: var(--color-control-border);
+  color: var(--color-text-secondary);
+}
+
+.studio .commissions-status--pending-review {
+  border-color: var(--color-warning);
+  color: var(--color-warning);
+}
+
+.studio .commissions-status--in-production,
+.studio .commissions-status--preview-approval {
+  border-color: color-mix(in srgb, var(--color-accent) 60%, transparent);
+  color: var(--color-accent);
+}
+
+.studio .commissions-status--delivered {
+  border-color: color-mix(in srgb, var(--color-success) 55%, transparent);
+  color: var(--color-success);
+}
+
+.studio .commissions-status--cancelled,
+.studio .commissions-status--paused {
+  border-style: dashed;
+  color: var(--color-text-meta);
+}
+
+.studio .commissions-marker {
+  padding-inline: var(--space-2);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-2);
+}
+
+.studio .commissions-marker--student,
+.studio .commissions-marker--cleanup-due {
+  border: 1px dashed var(--color-warning);
+  color: var(--color-warning);
+  background: transparent;
+}

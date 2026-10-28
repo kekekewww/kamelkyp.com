@@ -108,4 +108,32 @@ export async function openStudio(page: Page, path = "/studio"): Promise<void> {
   });
 }
 
+/**
+ * Runs a SQL file against the harness's local D1 (the same database and
+ * mechanism as the migration step in `globalSetup`). For fixtures that a
+ * spec seeds in `beforeAll` and removes in `afterAll`.
+ */
+export function runLocalD1File(file: string): void {
+  const result = spawnSync(
+    process.execPath,
+    [
+      "node_modules/wrangler/bin/wrangler.js",
+      "d1",
+      "execute",
+      "kamelkyp-com",
+      "--local",
+      "--config",
+      "wrangler.base.jsonc",
+      "--file",
+      file,
+    ],
+    { encoding: "utf8", env: { ...process.env, CI: "1" } },
+  );
+  if (result.status !== 0) {
+    throw new Error(
+      `studio_e2e_d1_file_failed ${file}\n${result.stdout}\n${result.stderr}`,
+    );
+  }
+}
+
 export { expect, test };
