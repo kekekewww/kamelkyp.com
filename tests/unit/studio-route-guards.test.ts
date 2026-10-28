@@ -125,9 +125,6 @@ describe("studio route guards", () => {
     expect(paths).toContain("/admin");
     expect(paths).toContain("/admin/*");
     for (const [path, file] of admin) {
-      // Pending wp3 (Studio → Footer): the legacy footer link editor stays
-      // until its Studio replacement is merged.
-      if (path === "/admin/links") continue;
       expect(file, path).toBe("routes/admin-legacy-redirect.ts");
     }
     expect(
@@ -135,7 +132,7 @@ describe("studio route guards", () => {
         .map(([, file]) => file)
         .filter((file) => file.startsWith("routes/admin/"))
         .sort(),
-    ).toEqual(["routes/admin/layout.tsx", "routes/admin/links.tsx"]);
+    ).toEqual([]);
   });
 
   it("keeps the redirect a guarded resource route", () => {

@@ -19,22 +19,8 @@ const sources: Record<string, string> = Object.fromEntries(
 );
 const files = Object.keys(sources).sort();
 
-// Pending wp3 (Studio → Footer): the legacy footer link editor, its layout,
-// shell and stylesheet stay live until the Studio screen that replaces them
-// is merged. This package's last commit deletes them and empties this list.
-const LEGACY_FOOTER_PANEL = new Set([
-  "app/components/admin/AdminShell.tsx",
-  "app/components/admin/LinkGroupEditor.tsx",
-  "app/lib/admin/media-content-service.server.ts",
-  "app/lib/auth/mutation-guard.server.ts",
-  "app/root.tsx",
-  "app/routes/admin/layout.tsx",
-  "app/routes/admin/links.tsx",
-  "app/styles/admin.css",
-]);
-
-// Pending wp3 as well: Studio → Footer is still the stub panel, which links
-// to the legacy editor. The exemption holds only while a route renders the
+// Pending wp3: Studio → Footer is still the stub panel, which links to the
+// retired legacy editor. The exemption holds only while a route renders the
 // stub; once none does, the stub must be deleted (wp5 §4.7, last case).
 const FOOTER_ROUTE = "app/routes/studio/settings/footer.tsx";
 const STUB_PANEL = "app/components/studio/shell/stub-panel.tsx";
@@ -45,8 +31,7 @@ const FOOTER_STUB = new Set(
   stubImporters.includes(FOOTER_ROUTE) ? [FOOTER_ROUTE, STUB_PANEL] : [],
 );
 
-const exempt = (file: string) =>
-  LEGACY_FOOTER_PANEL.has(file) || FOOTER_STUB.has(file);
+const exempt = (file: string) => FOOTER_STUB.has(file);
 
 /** Files that answer or refuse the legacy URLs on purpose (plan §2.6). */
 const ADMIN_LITERAL_ALLOWLIST = new Set([

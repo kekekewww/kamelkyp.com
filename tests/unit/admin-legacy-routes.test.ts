@@ -40,11 +40,6 @@ function allEntries(entries: RouteEntry[]): RouteEntry[] {
   ]);
 }
 
-// Pending wp3 (Studio → Footer): the legacy footer link editor stays live
-// until the Studio screen that replaces it is merged; its retirement is the
-// last, separate commit of this package.
-const LEGACY_FOOTER_PANEL = "routes/admin/links.tsx";
-
 describe("legacy /admin routes", () => {
   it.each([
     "/admin",
@@ -56,6 +51,7 @@ describe("legacy /admin routes", () => {
     "/admin/services/",
     "/admin/terms",
     "/admin/works",
+    "/admin/links",
     "/admin/posts",
     "/admin/posts/v-1/edit",
     "/admin/cases",
@@ -68,10 +64,6 @@ describe("legacy /admin routes", () => {
     "/Admin/Cases",
   ])("%s reaches the owner-gated redirect", (path) => {
     expect(matchedFiles(path)).toEqual([REDIRECT]);
-  });
-
-  it("keeps the legacy footer link editor until Studio → Footer lands", () => {
-    expect(matchedFiles("/admin/links").at(-1)).toBe(LEGACY_FOOTER_PANEL);
   });
 
   it("never sends the paths that collide with public children to the public layout", () => {
@@ -109,10 +101,7 @@ describe("legacy /admin routes", () => {
     const legacy = entries
       .map((entry) => entry.file)
       .filter((file) => file.startsWith("routes/admin/"));
-    expect(legacy.sort()).toEqual([
-      "routes/admin/layout.tsx",
-      LEGACY_FOOTER_PANEL,
-    ]);
+    expect(legacy).toEqual([]);
     const ids = entries.flatMap((entry) => (entry.id ? [entry.id] : []));
     expect(new Set(ids).size).toBe(ids.length);
     // Without an explicit id, React Router derives it from the file.

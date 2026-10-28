@@ -14,6 +14,7 @@ const REDIRECTS: Array<[string, string]> = [
   ["/admin/posts", "/studio/writing"],
   ["/admin/services", "/studio/services/pricing"],
   ["/admin/terms", "/studio/services/terms"],
+  ["/admin/links", "/studio/settings/footer"],
   ["/admin/cases", "/studio/commissions"],
   ["/admin/cases/status", "/studio/commissions"],
   ["/admin/cases/student-discount", "/studio/commissions"],
@@ -53,9 +54,15 @@ test("legacy form posts are gone, not replayed", async ({ request }) => {
   expect(await status.text()).toBe("Gone");
   expect(status.headers()["cache-control"]).toContain("no-store");
 
-  const terms = await request.fetch("/admin/terms", {
+  const links = await request.fetch("/admin/links", {
     method: "PUT",
     data: "{}",
+    maxRedirects: 0,
+  });
+  expect(links.status()).toBe(410);
+
+  const terms = await request.fetch("/admin/terms", {
+    method: "DELETE",
     maxRedirects: 0,
   });
   expect(terms.status()).toBe(410);
@@ -80,3 +87,14 @@ for (const [path, url, heading] of SCREENS) {
     await expect(page.locator('a[href^="/admin"]')).toHaveCount(0);
   });
 }
+
+test("a /admin/links bookmark opens Studio → Footer", async ({ page }) => {
+  // Pending wp3: once Studio → Footer replaces its stub, this case also
+  // asserts no "Not built yet" and no link back to the retired admin, like
+  // the screens above.
+  await openStudio(page, "/admin/links");
+  await expect(page).toHaveURL(/\/studio\/settings\/footer$/);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Footer", exact: true }),
+  ).toBeVisible();
+});

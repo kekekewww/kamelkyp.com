@@ -87,6 +87,7 @@ export default [
     "admin/services",
     "admin/terms",
     "admin/works",
+    "admin/links",
     "admin/posts",
     "admin/posts/:versionId/edit",
     "admin/cases",
@@ -98,11 +99,6 @@ export default [
       id: `legacy-${path.replace(/[/:]+/g, "-")}`,
     }),
   ),
-  // Pending wp3: the legacy footer link editor stays until Studio → Footer
-  // replaces it (then admin/links joins the list above).
-  layout("routes/admin/layout.tsx", [
-    route("admin/links", "routes/admin/links.tsx"),
-  ]),
   route("admin/*", "routes/admin-legacy-redirect.ts", {
     id: "legacy-admin-splat",
   }),

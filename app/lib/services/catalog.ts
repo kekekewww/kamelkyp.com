@@ -1,10 +1,5 @@
 import type { ServiceId } from "./service-id";
 
-export interface LocalizedText {
-  zh: string;
-  en: string;
-}
-
 /**
  * Commission service structure (content-architecture §3.5): id, category and
  * the slug of its fixed public route. Names, copy and deliverables live in the
