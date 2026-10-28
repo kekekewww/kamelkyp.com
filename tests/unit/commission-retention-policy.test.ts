@@ -53,7 +53,6 @@ describe("commission retention policy", () => {
     const allowed = new Set([
       "app/lib/admin/cleanup-service.server.ts",
       "app/lib/cms/repositories/commissions.server.ts",
-      "app/routes/admin/cleanup-confirm.ts",
     ]);
     const callers = referencing(/\bconfirmVerifiedCleanup\b/);
     for (const path of callers) {

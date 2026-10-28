@@ -21,6 +21,17 @@ const sources: Record<string, string> = Object.fromEntries(
 );
 const studioModules = Object.keys(sources).sort();
 
+// The retired /admin URLs (wp5 §4.4): guarded like a Studio route.
+const redirectSource: Record<string, string> = Object.fromEntries(
+  Object.entries(
+    import.meta.glob<string>("../../app/routes/admin-legacy-redirect.ts", {
+      query: "?raw",
+      import: "default",
+      eager: true,
+    }),
+  ).map(([path, source]) => [path.replace(/^(\.\.\/)+/, ""), source]),
+);
+
 type RouteEntry = { path?: string; file: string; children?: RouteEntry[] };
 
 function flatten(entries: RouteEntry[], prefix = ""): Array<[string, string]> {
@@ -107,11 +118,38 @@ describe("studio route guards", () => {
     ]);
   });
 
-  it("keeps the legacy /admin panels routed until the integration flip", () => {
+  it("routes every /admin path to the owner-gated redirect", () => {
     const flat = flatten(routes as RouteEntry[]);
-    expect(flat.some(([path]) => path === "/admin")).toBe(true);
+    const admin = flat.filter(([path]) => path.startsWith("/admin"));
+    const paths = admin.map(([path]) => path);
+    expect(paths).toContain("/admin");
+    expect(paths).toContain("/admin/*");
+    for (const [path, file] of admin) {
+      // Pending wp3 (Studio → Footer): the legacy footer link editor stays
+      // until its Studio replacement is merged.
+      if (path === "/admin/links") continue;
+      expect(file, path).toBe("routes/admin-legacy-redirect.ts");
+    }
     expect(
-      flat.some(([, file]) => file === "routes/admin-legacy-redirect.ts"),
-    ).toBe(false);
+      flat
+        .map(([, file]) => file)
+        .filter((file) => file.startsWith("routes/admin/"))
+        .sort(),
+    ).toEqual(["routes/admin/layout.tsx", "routes/admin/links.tsx"]);
+  });
+
+  it("keeps the redirect a guarded resource route", () => {
+    const source = redirectSource["app/routes/admin-legacy-redirect.ts"] ?? "";
+    expect(source).toMatch(/export\s+const\s+loader\s*=\s*withOwner\(/);
+    expect(source).toMatch(/export\s+const\s+action\s*=\s*withOwner\(/);
+    expect(source.match(/export\s+const\s+(loader|action)\b/g)).toHaveLength(2);
+    expect(source).not.toMatch(
+      /export\s+(async\s+)?function\s+(loader|action|clientLoader|clientAction)\b/,
+    );
+    expect(source).not.toMatch(/export\s+\{[^}]*\b(loader|action)\b[^}]*\}/);
+    // No UI: the thrown 403 stays plain text and nothing renders for it.
+    expect(source).not.toMatch(/export\s+default\b/);
+    expect(source).not.toMatch(/ErrorBoundary/);
+    expect(source).not.toMatch(/from\s+["'][^"']*routes\/admin\//);
   });
 });
