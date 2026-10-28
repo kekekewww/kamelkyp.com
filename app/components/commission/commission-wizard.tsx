@@ -105,6 +105,24 @@ function errorFieldId(path: PropertyKey[]): string {
 }
 
 /**
+ * The notification retry still pending after a refused submit. A
+ * `retry_required` answer names the stored case. A `terms_changed` answer
+ * ends a pending retry: the case was stored with the previous term versions,
+ * so a retry with the new ones can never match it, and the next submit is a
+ * new commission (the daily orphan cleanup removes the unfinished case).
+ */
+export function retryCaseAfterRefusal(
+  current: string | null,
+  error: { code?: string; retryCaseId?: string } | undefined,
+): string | null {
+  if (error?.code === "retry_required" && error.retryCaseId) {
+    return error.retryCaseId;
+  }
+  if (error?.code === "terms_changed") return null;
+  return current;
+}
+
+/**
  * The verify step's buttons. After a "terms changed" answer, submitting
  * again would fail the same way, so the forward action reloads the page data
  * (the new term versions) instead.
@@ -310,12 +328,11 @@ export function CommissionWizard({
         error?: { code?: string; message?: string; retryCaseId?: string };
       };
       if (!response.ok || !result.ok) {
-        if (
-          result.error?.code === "retry_required" &&
-          result.error.retryCaseId
-        ) {
-          saveRetryCaseId(serviceId, result.error.retryCaseId);
-          setRetryCaseId(result.error.retryCaseId);
+        const nextRetry = retryCaseAfterRefusal(retryCaseId, result.error);
+        if (nextRetry !== retryCaseId) {
+          if (nextRetry) saveRetryCaseId(serviceId, nextRetry);
+          else clearRetryCaseId(serviceId);
+          setRetryCaseId(nextRetry);
         }
         if (result.error?.code === "terms_changed") setTermsChanged(true);
         throw new Error(result.error?.message ?? "submission_failed");
