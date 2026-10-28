@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  backupBlocks,
   changedProjectSections,
   mergeIssues,
   PROJECT_SECTIONS,
@@ -20,6 +21,59 @@ function form(entries: Array<[string, string]>): FormData {
 
 const software = "term-project_category-software";
 const ai = "term-project_category-ai";
+
+describe("backupBlocks", () => {
+  const stored = {
+    zh: [{ type: "paragraph" as const, text: "已存段落" }],
+    en: [],
+  };
+
+  it("reads the block editor fields of a local backup", () => {
+    const fields = JSON.stringify([
+      ["body.en:json", JSON.stringify([{ type: "divider" }])],
+      [
+        "body.zh:json",
+        JSON.stringify([
+          { type: "paragraph", text: "備份段落" },
+          { type: "media", mediaId: "asset-body" },
+        ]),
+      ],
+      ["title.zh", "標題"],
+    ]);
+    expect(backupBlocks(fields, "body", stored)).toEqual({
+      zh: [
+        { type: "paragraph", text: "備份段落" },
+        { type: "media", mediaId: "asset-body" },
+      ],
+      en: [{ type: "divider" }],
+    });
+  });
+
+  it("keeps the stored blocks of a locale the backup lacks or garbles", () => {
+    const fields = JSON.stringify([
+      ["body.en:json", "{not json"],
+      ["title.zh", "標題"],
+    ]);
+    expect(backupBlocks(fields, "body", stored)).toEqual(stored);
+    expect(backupBlocks("not a backup", "body", stored)).toEqual(stored);
+  });
+
+  it("drops blocks the schema refuses", () => {
+    const fields = JSON.stringify([
+      [
+        "body.zh:json",
+        JSON.stringify([
+          { type: "paragraph", text: "" },
+          { type: "paragraph", text: "留下" },
+          { type: "script", text: "x" },
+        ]),
+      ],
+    ]);
+    expect(backupBlocks(fields, "body", stored).zh).toEqual([
+      { type: "paragraph", text: "留下" },
+    ]);
+  });
+});
 
 describe("readProjectForm", () => {
   it("parses every editor group, localized fields and lists", () => {
@@ -61,12 +115,14 @@ describe("readProjectForm", () => {
         ["credits.0.role.zh", "攝影"],
         ["credits.0.role.en", "Photography"],
         ["credits.0.name", "Studio North"],
+        // The block editor posts one field per locale.
         [
-          "body:json",
-          JSON.stringify({
-            zh: [{ type: "paragraph", text: "舊內容" }],
-            en: [],
-          }),
+          "body.zh:json",
+          JSON.stringify([{ type: "paragraph", text: "舊內容" }]),
+        ],
+        [
+          "body.en:json",
+          JSON.stringify([{ type: "media", mediaId: "asset-body" }]),
         ],
         ["listed:bool", "false"],
         ["listed:bool", "true"],
@@ -112,7 +168,10 @@ describe("readProjectForm", () => {
     expect(content.credits).toEqual([
       { role: { zh: "攝影", en: "Photography" }, name: "Studio North" },
     ]);
-    expect(content.body.zh).toHaveLength(1);
+    expect(content.body).toEqual({
+      zh: [{ type: "paragraph", text: "舊內容" }],
+      en: [{ type: "media", mediaId: "asset-body" }],
+    });
     expect(content.listed).toBe(true);
     expect(content.seo.title.en).toBe("SEO title");
   });

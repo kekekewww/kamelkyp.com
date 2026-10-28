@@ -158,7 +158,7 @@ repository while referenced from brand capabilities JSON. Archive is the normal 
 | links | links_json | TEXT (JSON `[{label_i18n, url}]`) | no | `[]` | label L | ≤ 20 | url `https:`; label **R** |
 | credits | credits_json | TEXT (JSON `[{role_i18n, name}]`) | no | `[]` | role L | ≤ 40 | name non-empty; brand guard |
 | context, problem, approach, process, architecture, result, reflection | `<name>_i18n` | TEXT | no | empty | L | ≤ 12000 each, formatted text | O (warning when one locale only) |
-| (legacy D1 work body) | body_i18n | TEXT (JSON `{zh: Block[], en: Block[]}`) | no | `{"zh":[],"en":[]}` | L | block schema, ≤ 300 blocks/locale | O; media blocks must reference existing assets |
+| additional content blocks (imported legacy work bodies included) | body_i18n | TEXT (JSON `{zh: Block[], en: Block[]}`) | no | `{"zh":[],"en":[]}` | L | block schema, ≤ 300 blocks/locale; the Studio block editor (CASE STUDY) posts `body.zh:json` and `body.en:json` | O; media blocks must reference existing assets; rendered after the case study |
 | (SEO) | seo_title_i18n, seo_description_i18n | TEXT | no | empty | L | ≤ 300 / ≤ 400 | O (falls back to title / short description of the same locale) |
 | (social image) | social_image_id | TEXT FK (SET NULL) | yes | | | kind `image` | O |
 | (listing) | listed | INTEGER 0/1 | no | 1 | | | |

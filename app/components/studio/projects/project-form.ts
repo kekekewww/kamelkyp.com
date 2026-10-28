@@ -9,11 +9,12 @@ import {
   type ProjectContent,
   ProjectDraftSchema,
 } from "../../../lib/cms/schemas/project";
-import type { ValidationIssue } from "../../../lib/cms/types";
+import type { LocalizedBlocks, ValidationIssue } from "../../../lib/cms/types";
 import {
   structuralIssues,
   validateForPublish,
 } from "../../../lib/cms/validation";
+import { ContentBlockSchema } from "../../../lib/content/block-schema";
 
 export type ProjectFormResult =
   | {
@@ -39,6 +40,48 @@ export function readProjectForm(formData: FormData): ProjectFormResult {
     expectedRevision: readExpectedRevision(formData),
     clearTodoContent: raw.clearTodoContent === true,
   };
+}
+
+/**
+ * The block editor's value in a local backup (`serializeForm` entries):
+ * `<name>.zh:json` and `<name>.en:json`. Restoring a backup writes only the
+ * visible controls back (`useEditorForm`), so the block editor remounts with
+ * this value instead. A locale the backup lacks or garbles keeps `stored`;
+ * blocks the schema refuses are dropped.
+ */
+export function backupBlocks(
+  fields: string,
+  name: string,
+  stored: LocalizedBlocks,
+): LocalizedBlocks {
+  let entries: unknown;
+  try {
+    entries = JSON.parse(fields);
+  } catch {
+    return stored;
+  }
+  if (!Array.isArray(entries)) return stored;
+  const read = (locale: "zh" | "en"): LocalizedBlocks["zh"] => {
+    const entry = entries.find(
+      (item): item is [string, string] =>
+        Array.isArray(item) &&
+        item[0] === `${name}.${locale}:json` &&
+        typeof item[1] === "string",
+    );
+    if (!entry) return stored[locale];
+    let value: unknown;
+    try {
+      value = JSON.parse(entry[1]);
+    } catch {
+      return stored[locale];
+    }
+    if (!Array.isArray(value)) return stored[locale];
+    return value.flatMap((block) => {
+      const parsed = ContentBlockSchema.safeParse(block);
+      return parsed.success ? [parsed.data] : [];
+    });
+  };
+  return { zh: read("zh"), en: read("en") };
 }
 
 /** Publish readiness the browser can judge on its own (model + TODO rules). */

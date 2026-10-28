@@ -539,22 +539,6 @@
   background: var(--color-text-secondary);
 }
 
-.projects-legacy {
-  display: grid;
-  justify-items: start;
-  gap: var(--space-2);
-  padding: var(--space-4);
-  border: 1px dashed var(--color-rule-strong);
-}
-
-.projects-legacy .studio-hint {
-  margin: 0;
-}
-
-.projects-legacy[data-removed] .studio-hint {
-  text-decoration: line-through;
-}
-
 .projects-related__list,
 .projects-redirects__list {
   display: grid;

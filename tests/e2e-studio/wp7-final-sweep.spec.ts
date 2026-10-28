@@ -85,3 +85,85 @@ test.describe("C3 c: Save and leave from an error state", () => {
     }
   });
 });
+
+test.describe("C3 e: project body blocks", () => {
+  test("adds a ZH and an EN paragraph, saves, and the preview shows them after the case study", async ({
+    page,
+  }) => {
+    test.setTimeout(150_000);
+    await openStudio(page, "/studio/projects/new");
+    await page.locator('input[name="title.zh"]').fill("區塊測試");
+    const titleEn = page.locator('input[name="title.en"]');
+    // The slug follows the EN title once the page is interactive.
+    await expect(async () => {
+      await titleEn.fill("");
+      await titleEn.pressSequentially(`wp7 blocks ${token}`);
+      await expect(page.locator('input[name="slug"]')).not.toHaveValue("", {
+        timeout: 2_000,
+      });
+    }).toPass();
+    await page.getByRole("button", { name: "Create draft" }).click();
+    await expect(page).toHaveURL(/\/studio\/projects\/[0-9a-f-]{36}$/);
+    await expect(topSaveState(page)).toHaveText(/SAVED|NO CHANGES/);
+    const editorPath = new URL(page.url()).pathname;
+    const story = `案例背景 ${token}`;
+    const zh = `案例之後的段落 ${token}`;
+    const en = `A paragraph after the case study ${token}`;
+    try {
+      const section = page.locator("#section-case-study");
+      const openSection = async () => {
+        if ((await section.getAttribute("open")) === null) {
+          await page.locator("#section-case-study > summary").click();
+        }
+      };
+      await openSection();
+      await section.locator('textarea[name="story.context.zh"]').fill(story);
+      const blocks = section.getByRole("group", {
+        name: "Additional content blocks",
+      });
+      await expect(blocks).toContainText(
+        "Shown after the case study on the public page.",
+      );
+      await blocks.getByRole("button", { name: "Paragraph (ZH)" }).click();
+      await blocks.getByRole("textbox", { name: "Paragraph" }).fill(zh);
+      await blocks.getByRole("tab", { name: /^EN/ }).click();
+      await blocks.getByRole("button", { name: "Paragraph (EN)" }).click();
+      await blocks.getByRole("textbox", { name: "Paragraph" }).fill(en);
+      await expect(topSaveState(page)).toHaveText("UNSAVED CHANGES");
+      await page.keyboard.press("ControlOrMeta+s");
+      await expect(topSaveState(page)).toHaveText(/^SAVED \d{2}:\d{2}$/);
+
+      // A fresh page starts from the stored blocks.
+      await openStudio(page, editorPath);
+      await openSection();
+      await expect(
+        blocks.getByRole("tab", { name: /^ZH · 1 block$/ }),
+      ).toBeVisible();
+      await expect(
+        blocks.getByRole("textbox", { name: "Paragraph" }),
+      ).toHaveValue(zh);
+      await blocks.getByRole("tab", { name: /^EN/ }).click();
+      await expect(
+        blocks.getByRole("textbox", { name: "Paragraph" }),
+      ).toHaveValue(en);
+
+      // The preview renders the working copy: the blocks follow the story.
+      const id = editorPath.split("/").pop();
+      for (const [locale, text] of [
+        ["zh", zh],
+        ["en", en],
+      ] as const) {
+        await page.goto(`/studio/preview/projects/${id}?locale=${locale}`);
+        const body = page.locator(".project-doc__body");
+        await expect(body).toContainText(text);
+        if (locale === "zh") {
+          const content = await body.innerText();
+          expect(content.indexOf(story)).toBeGreaterThanOrEqual(0);
+          expect(content.indexOf(story)).toBeLessThan(content.indexOf(text));
+        }
+      }
+    } finally {
+      await archiveEntry(page, editorPath);
+    }
+  });
+});

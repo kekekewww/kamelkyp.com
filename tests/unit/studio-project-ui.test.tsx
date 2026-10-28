@@ -357,15 +357,33 @@ describe("project editor", () => {
     expect(html).toContain("Preview changes");
   });
 
-  it("lists the checklist and keeps legacy content blocks", () => {
+  it("lists the checklist", () => {
     const html = render(
       <ProjectEditor data={editorData()} />,
       "/studio/projects/p-1",
     );
     expect(html).toContain("Year is required.");
     expect(html).toContain("2 issues block publishing");
-    expect(html).toContain('name="body:json"');
-    expect(html).toContain("1 block in ZH");
+  });
+
+  it("edits the body blocks with the block editor, one field per locale", () => {
+    const html = render(
+      <ProjectEditor data={editorData()} />,
+      "/studio/projects/p-1",
+    );
+    expect(html).toContain('name="body.zh:json"');
+    expect(html).toContain('name="body.en:json"');
+    expect(html).not.toContain('name="body:json"');
+    // The stored ZH paragraph is the editor's starting value.
+    expect(html).toContain(
+      `value="${JSON.stringify([{ type: "paragraph", text: "舊段落" }]).replaceAll('"', "&quot;")}"`,
+    );
+    expect(html).toContain('value="[]"');
+    expect(html).toContain("Additional content blocks");
+    expect(html).toContain("Shown after the case study on the public page.");
+    expect(html).toContain(" · 1 block");
+    expect(html).not.toContain("Remove the blocks on save");
+    expect(html).not.toContain("Imported from the old admin");
   });
 
   it("frames the preview route for the working copy", () => {

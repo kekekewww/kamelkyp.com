@@ -480,11 +480,15 @@ export async function handleProjectCreate({
 }
 
 function referencedAssetIds(content: ProjectContent): string[] {
+  const bodyMedia = [...content.body.zh, ...content.body.en].flatMap((block) =>
+    block.type === "media" ? [block.mediaId] : [],
+  );
   return [
     content.coverImageId,
     content.coverVideoId,
     content.socialImageId,
     ...content.gallery.map((item) => item.assetId),
+    ...bodyMedia,
   ].filter((id): id is string => Boolean(id));
 }
 
