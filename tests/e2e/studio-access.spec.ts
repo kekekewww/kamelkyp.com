@@ -88,9 +88,9 @@ test("Studio mutations are refused without an owner identity", async ({
 
   const footer = await request.post("/studio/settings/footer", {
     form: { intent: "reorder", ids: "[]" },
+    maxRedirects: 0,
   });
-  expect(footer.status()).toBe(403);
-  expect(footer.headers()["cache-control"]).toContain("no-store");
+  expectOwnerGate(footer);
 
   const status = await request.post("/studio/commissions/status", {
     form: { caseId: "x", status: "accepted" },
