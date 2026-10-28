@@ -68,6 +68,20 @@ describe("strict response security headers", () => {
     expect(requiresNoStore("/api/studio/session", 200)).toBe(true);
     expect(requiresNoStore("/studios", 200)).toBe(false);
   });
+
+  // React Router and Cloudflare Access both match paths case-insensitively,
+  // so a mixed-case owner URL must get the same headers as the lowercase one.
+  it("marks mixed-case Studio, admin and commission paths no-store", () => {
+    expect(requiresNoStore("/Studio", 200)).toBe(true);
+    expect(requiresNoStore("/STUDIO/commissions", 200)).toBe(true);
+    expect(requiresNoStore("/Studio/Preview/home", 200)).toBe(true);
+    expect(requiresNoStore("/API/studio/session", 200)).toBe(true);
+    expect(requiresNoStore("/Admin", 200)).toBe(true);
+    expect(requiresNoStore("/ADMIN/cases", 200)).toBe(true);
+    expect(requiresNoStore("/zh/Commission/mixing/full", 200)).toBe(true);
+    expect(requiresNoStore("/API/Commission/Submit", 200)).toBe(true);
+    expect(requiresNoStore("/Studios", 200)).toBe(false);
+  });
 });
 
 describe("Studio header surfaces", () => {
@@ -82,6 +96,17 @@ describe("Studio header surfaces", () => {
     expect(securitySurface("/en/studio")).toBe("public");
     expect(securitySurface("/studios")).toBe("public");
     expect(securitySurface("/zh")).toBe("public");
+  });
+
+  it("derives the same surface from a mixed-case path", () => {
+    expect(securitySurface("/Studio")).toBe("studio");
+    expect(securitySurface("/STUDIO/commissions")).toBe("studio");
+    expect(securitySurface("/API/Studio/media-search")).toBe("studio");
+    expect(securitySurface("/Studio/Preview/projects/abc")).toBe(
+      "studio-preview",
+    );
+    expect(securitySurface("/En/Studio")).toBe("public");
+    expect(securitySurface("/Studios")).toBe("public");
   });
 
   it("allows local previews and the preview frame only on Studio pages", () => {

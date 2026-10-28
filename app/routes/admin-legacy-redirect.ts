@@ -9,8 +9,8 @@
  * into a Studio endpoint. Nothing changes, so there is no CSRF check: a
  * stale form with an expired token still gets its 410. Both answers are
  * `no-store` (a cached permanent redirect would outlive a rollback) and
- * noindex; `requiresNoStore()` compares the path case-sensitively, so this
- * module sets `no-store` itself for mixed-case paths.
+ * noindex. The Worker's `requiresNoStore()` covers every casing of `/admin`;
+ * this module sets the headers itself as well, so they never depend on it.
  */
 import { discardRequestBody, withOwner } from "../lib/cms/studio/auth.server";
 import {

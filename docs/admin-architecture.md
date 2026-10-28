@@ -175,7 +175,8 @@ permanent redirect would outlive a rollback) and `X-Robots-Tag: noindex, nofollo
 
 React Router matches routes case-insensitively, so `/ADMIN/Works` and `/Admin/Cases?status=paused` reach the
 redirect too; the target helpers (`app/lib/cms/studio/legacy-admin.ts`) match case-insensitively for that reason.
-`requiresNoStore()` compares `/admin` case-sensitively, which is why the module sets `no-store` itself.
+`requiresNoStore()` and `securitySurface()` lower-case the path before comparing, so every casing of `/admin`,
+`/studio` and `/api/studio` gets the same `no-store` and Studio headers; the module still sets `no-store` itself.
 
 Residual: a path under `/admin/` that equals a public child but was never a legacy URL (`/admin/about`,
 `/admin/works/x`) matches the public `:lang` layout and renders the public 404. It is owner-only in practice
