@@ -28,10 +28,17 @@ export async function loader(args: LoaderFunctionArgs) {
   return { locale };
 }
 
-export const meta: MetaFunction<typeof loader> = ({ loaderData, matches }) =>
-  pageMeta(matches, {
-    title: loaderData?.locale === "en" ? "About" : "關於",
-  });
+export const meta: MetaFunction<typeof loader> = ({
+  loaderData,
+  matches,
+  location,
+}) =>
+  pageMeta(
+    { matches, location },
+    {
+      title: loaderData?.locale === "en" ? "About" : "關於",
+    },
+  );
 
 /** Paragraphs as running text; `- ` lists as the numbered principle rows. */
 function SectionBody({ blocks }: { blocks: readonly FormattedBlock[] }) {

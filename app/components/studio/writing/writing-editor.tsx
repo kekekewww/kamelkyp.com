@@ -321,7 +321,7 @@ export function WritingEditor({
                 name="listed"
                 label="Show in lists and on the homepage"
                 defaultChecked={content.listed}
-                hint="Unlisted articles stay reachable by their URL. Takes effect when you publish."
+                hint="Unlisted articles stay reachable by their URL but are left out of lists, the homepage and the sitemap, and ask search engines not to index them. Takes effect when you publish."
               />
               {meta.status !== "archived" ? (
                 <div className="p3-feature">

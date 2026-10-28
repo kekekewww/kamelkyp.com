@@ -26,12 +26,19 @@ export const handle: PublicRouteHandle = {
   contactBand: { variant: "work", size: "large" },
 };
 
-export const meta: MetaFunction<typeof loader> = ({ loaderData, matches }) => {
+export const meta: MetaFunction<typeof loader> = ({
+  loaderData,
+  matches,
+  location,
+}) => {
   const copy = getWorkCopy(loaderData?.locale === "en" ? "en" : "zh");
-  return pageMeta(matches, {
-    title: copy.metaTitle,
-    description: copy.metaDescription,
-  });
+  return pageMeta(
+    { matches, location },
+    {
+      title: copy.metaTitle,
+      description: copy.metaDescription,
+    },
+  );
 };
 
 export async function loader(args: LoaderFunctionArgs) {

@@ -629,6 +629,40 @@ Each cover also carries the project index (`01`) as an Archivo 200 `font-stretch
 
 **Static (reduced motion, JS off, before hydration):** the hero must look complete with nothing moving (principle 1). Ship a server-rendered inline `<svg>` of the same field (36 paths, fixed seed, `t = 0`, pointer bump 0, envelope at rest) inside `.home-hero__stage`'s backdrop layer. The canvas mounts over it and fades in (opacity only) once its first frame is drawn. Under `prefers-reduced-motion: reduce` the canvas never animates: it draws that same static frame once (or the SVG simply remains), there is no pointer bump and no audio reactivity, and the carrier line shows the accent. The canvas pauses when off screen or when the tab is hidden (motion doc).
 
+### 7.3 Social card and icons
+
+The default share card and the site icons are static PNGs in `public/`, rasterized once by
+`scripts/generate-brand-assets.mjs` (run by hand with the Playwright Chromium, never in CI; WP4,
+`docs/superpowers/specs/2026-10-13-wp4-seo.md`). They use the tokens of §8 and Archivo from `@fontsource-variable/archivo`, and carry no
+text other than `KAMEL` or `K`: no tagline, no domain, no name.
+
+**Share card** `og/kamel-default.png`, 1200 × 630 (used when no page or settings image applies):
+
+- **Background:** `--color-bg` with the two page-field radial gradients of §2.3. No grain, no accent fills.
+- **Line field:** 21 horizontal 1px lines every 28px (y = 28…588), `--color-text` at 12%. Straight on the left; the
+  envelope is 0 up to 45% of the width and smoothsteps to its maximum (0.6 × spacing) by 70%. The waveform is two
+  sines with small fixed phase steps between neighbours, so lines never cross. Lines inside the wordmark band (from
+  one spacing above the cap top down to the baseline) stay straight across the full width, as §7.2 keeps the field
+  straight behind the wordmark. The lines fade to 0% over the bottom 15%.
+- **Wordmark:** `KAMEL` in Archivo, `font-stretch: 125%`, weight 780, `letter-spacing: -0.035em`, 220px,
+  `--color-text`, **horizontally centred**, baseline on field line 14 (y = 392), which centres the cap height on the
+  card. It departs from the hero's left alignment on purpose: feeds crop share cards (some to a square), the hero is
+  never cropped.
+- **Carrier line:** field line 14 itself, drawn under the baseline instead of the neutral line: straight, full width,
+  `--color-accent` at 60%, **2px** (feeds downscale the card to about 500px). It is the card's one accent element
+  (§2.4 item 4).
+
+**Icons** `favicon.ico` (wrapping the 32px PNG), `icons/icon-32.png`, `apple-touch-icon.png` (180),
+`icons/icon-192.png`, `icons/icon-512.png` and `icons/icon-maskable-512.png`:
+
+- An opaque `--color-bg` square (no transparency: iOS fills it black) with the letter `K` in Archivo 780,
+  `font-stretch: 125%`, `--color-text` (16.54:1). Cap height 58% of the side (40% on the maskable icon, inside the
+  80% safe zone), optically centred.
+- The carrier line sits under the K baseline at full width: `--color-accent` at 60%, `max(1, round(side / 48))` px.
+
+The web app manifest (`manifest.webmanifest`) is hand-written: name and short name "Kamel", `theme_color` and
+`background_color` = `--color-bg`, `display: browser`, no description.
+
 ---
 
 ## 8. Token file (`app/styles/tokens.css`, ready to paste)

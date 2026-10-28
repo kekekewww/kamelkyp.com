@@ -226,7 +226,7 @@ export function SiteSettingsForm({
               name="ogImageId"
               label="OpenGraph image"
               kind="image"
-              hint="Shown when the homepage is shared. 1200 × 630 works best."
+              hint="Shown when the homepage is shared, and by pages without their own image when no default social image is set. 1200 × 630 works best. When empty, the homepage uses the default social image, then the built-in Kamel image."
               value={asset(value.ogImageId)}
               error={errorFor(errors, "ogImageId")}
             />
@@ -234,7 +234,7 @@ export function SiteSettingsForm({
               name="defaultSocialImageId"
               label="Default social image"
               kind="image"
-              hint="Used by pages that have no image of their own."
+              hint="Used by pages that have no image of their own. When empty, the OpenGraph image is used, then the built-in Kamel image."
               value={asset(value.defaultSocialImageId)}
               error={errorFor(errors, "defaultSocialImageId")}
             />

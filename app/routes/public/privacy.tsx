@@ -18,10 +18,17 @@ export async function loader(args: LoaderFunctionArgs) {
   return { locale, terms: await listPublishedTerms(db, locale, "privacy") };
 }
 
-export const meta: MetaFunction<typeof loader> = ({ loaderData, matches }) =>
-  pageMeta(matches, {
-    title: loaderData?.locale === "en" ? "Privacy" : "隱私說明",
-  });
+export const meta: MetaFunction<typeof loader> = ({
+  loaderData,
+  matches,
+  location,
+}) =>
+  pageMeta(
+    { matches, location },
+    {
+      title: loaderData?.locale === "en" ? "Privacy" : "隱私說明",
+    },
+  );
 
 export default function PrivacyRoute() {
   const { locale, terms } = useLoaderData<typeof loader>();

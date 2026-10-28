@@ -109,6 +109,7 @@ export function ErrorBoundary() {
   return (
     <main className="error-page" id="main-content" aria-live="polite">
       <title>{`${title} — Kamel`}</title>
+      <meta name="robots" content="noindex" />
       <div className="grid">
         <a className="error-page__brand" href={localePath(locale)}>
           Kamel

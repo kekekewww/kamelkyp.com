@@ -48,3 +48,11 @@
 3. D1 不自動 rollback；先由 Kamel 確認影響範圍與 migration 前 bookmark。
 4. 如需 Time Travel restore，依 `cloudflare-setup.md` 人工處理並記錄還原後 bookmark。
 5. 修正需重新通過完整 CI、Preview 與 production approval。
+
+## F. SEO 與分享
+
+- [ ] Preview：`/robots.txt` 內容為 `User-agent: *` 與 `Disallow: /`，`/zh` 的回應帶 `X-Robots-Tag: noindex, nofollow`。
+- [ ] Production：`https://kamelkyp.com/robots.txt` 含 `Sitemap: https://kamelkyp.com/sitemap.xml`；`/sitemap.xml` 列出 `/zh` 與 `/en` 兩種語系的公開頁面。
+- [ ] Production：`https://kamelkyp.com/zh` 的回應沒有 `X-Robots-Tag`；正式 Worker 的 `*.workers.dev` 網址回應的 `robots.txt` 為 `Disallow: /`。
+- [ ] 以分享預覽工具（share debugger）檢查首頁與一個作品頁，OG 卡片正確顯示。
+- [ ] 上線後（Kamel）：在 Google Search Console 驗證網域並提交 sitemap。

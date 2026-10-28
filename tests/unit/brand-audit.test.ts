@@ -1,7 +1,7 @@
 // Vitest strips CSS modules (even `?raw`) in this config, so stylesheets are
 // read from disk (as in motion-tokens.test.ts).
 // @ts-expect-error Node types are not installed; Vitest runs these tests in Node.
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 /**
@@ -52,6 +52,32 @@ const sources: Record<string, string> = {
   ),
 };
 
+// Static public files and repository scripts (WP4), kept in their own map:
+// Vite cannot `?raw`-import the publicDir, so they are read from disk.
+const STATIC_FILES: ReadonlyArray<{ dir: string; pattern: RegExp }> = [
+  { dir: "public", pattern: /\.(webmanifest|json|svg|txt|xml)$/ },
+  { dir: "scripts", pattern: /\.mjs$/ },
+];
+const staticSources: Record<string, string> = Object.fromEntries(
+  STATIC_FILES.flatMap(({ dir, pattern }) =>
+    (readdirSync(dir, { recursive: true }) as string[])
+      .map((name) => `${dir}/${name.replaceAll("\\", "/")}`)
+      .filter((file) => pattern.test(file))
+      .map((file) => [file, readFileSync(file, "utf8") as string]),
+  ),
+);
+
+function scanStatic(): string[] {
+  const hits: string[] = [];
+  for (const [path, source] of Object.entries(staticSources)) {
+    source.split("\n").forEach((line, index) => {
+      const term = DENY.find((entry) => entry.pattern.test(line));
+      if (term) hits.push(`${path}:${index + 1} ${term.label}`);
+    });
+  }
+  return hits.sort();
+}
+
 function scan(): string[] {
   const hits: string[] = [];
   for (const [path, source] of Object.entries(sources)) {
@@ -88,6 +114,17 @@ describe("brand audit", () => {
           ),
       );
     expect(hooks).toEqual([]);
+  });
+
+  it("reads the static public files and the scripts", () => {
+    expect(Object.keys(staticSources)).toContain("public/manifest.webmanifest");
+    expect(Object.keys(staticSources)).toContain(
+      "scripts/generate-brand-assets.mjs",
+    );
+  });
+
+  it("finds no personal-name variant in public files or scripts", () => {
+    expect(scanStatic()).toEqual([]);
   });
 
   it("detects a planted variant (the scanner is live)", () => {

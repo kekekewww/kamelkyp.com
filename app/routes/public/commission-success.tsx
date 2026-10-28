@@ -1,5 +1,6 @@
-import { Link, useLocation } from "react-router";
+import { Link, type MetaFunction, useLocation } from "react-router";
 import type { PublicRouteHandle } from "../../components/layout/public-shell";
+import { pageMeta } from "../../lib/cms/public/meta";
 import { isServiceId, type ServiceId } from "../../lib/services/service-id";
 
 // No contact band on commission pages (IA §5.1).
@@ -29,6 +30,29 @@ function validState(value: unknown): value is ConfirmationState {
     !Number.isNaN(new Date(state.submittedAt).getTime())
   );
 }
+
+/**
+ * Never indexed. The title is the h1 of the branch that renders and never
+ * carries the case ID or a submitted value; during SSR there is no state, so
+ * the server title is the "no confirmation" one, like the server body.
+ */
+export const meta: MetaFunction = ({ matches, location, params }) => {
+  const isZh = params.lang !== "en";
+  const submitted = validState(location.state);
+  return pageMeta(
+    { matches, location },
+    {
+      title: submitted
+        ? isZh
+          ? "委託已送出"
+          : "Commission submitted"
+        : isZh
+          ? "沒有可顯示的送出紀錄"
+          : "No confirmation to display",
+      noindex: true,
+    },
+  );
+};
 
 export default function CommissionSuccessRoute() {
   const location = useLocation();

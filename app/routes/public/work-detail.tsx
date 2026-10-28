@@ -21,14 +21,26 @@ export const handle: PublicRouteHandle = {
   contactBand: { variant: "project", size: "large" },
 };
 
-export const meta: MetaFunction<typeof loader> = ({ loaderData, matches }) => {
+export const meta: MetaFunction<typeof loader> = ({
+  loaderData,
+  matches,
+  location,
+}) => {
   const project = loaderData?.project;
-  return pageMeta(matches, {
-    title: project?.seo.title,
-    description: project?.seo.description,
-    image: project?.socialImage ?? project?.cover ?? null,
-    type: "article",
-  });
+  return pageMeta(
+    { matches, location },
+    {
+      title: project?.seo.title,
+      description: project?.seo.description,
+      image: project?.socialImage ?? project?.cover ?? null,
+      type: "article",
+      locales: project?.indexing.locales,
+      // Unlisted entries stay reachable but out of search (WP4 O1).
+      noindex: project
+        ? !project.indexing.listed || project.todoContent
+        : false,
+    },
+  );
 };
 
 /**

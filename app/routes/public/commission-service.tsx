@@ -1,6 +1,11 @@
-import { type LoaderFunctionArgs, useLoaderData } from "react-router";
+import {
+  type LoaderFunctionArgs,
+  type MetaFunction,
+  useLoaderData,
+} from "react-router";
 import { CommissionWizard } from "../../components/commission/commission-wizard";
 import type { PublicRouteHandle } from "../../components/layout/public-shell";
+import { pageMeta } from "../../lib/cms/public/meta";
 import { loadCommissionWizard } from "../../lib/commission/availability.server";
 import { getPublicLoaderContext } from "../../lib/content/public-loader.server";
 import type { ServiceId } from "../../lib/services/service-id";
@@ -14,6 +19,20 @@ const ROUTE_SERVICES: Record<string, ServiceId> = {
 
 // No contact band on commission pages (IA §5.1).
 export const handle: PublicRouteHandle = { contactBand: false };
+
+/** The wizard is a workflow step: titled by its service, never indexed. */
+export const meta: MetaFunction<typeof loader> = ({
+  loaderData,
+  matches,
+  location,
+}) =>
+  pageMeta(
+    { matches, location },
+    {
+      title: loaderData?.serviceName,
+      noindex: true,
+    },
+  );
 
 export async function loader(args: LoaderFunctionArgs) {
   const routeKey = `${args.params.category ?? ""}/${args.params.service ?? ""}`;

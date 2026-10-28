@@ -12,10 +12,17 @@ export async function loader(args: LoaderFunctionArgs) {
   return loadServiceArea(args, "mixing");
 }
 
-export const meta: MetaFunction<typeof loader> = ({ loaderData, matches }) =>
-  pageMeta(matches, {
-    title: loaderData?.locale === "en" ? "Mixing" : "混音",
-  });
+export const meta: MetaFunction<typeof loader> = ({
+  loaderData,
+  matches,
+  location,
+}) =>
+  pageMeta(
+    { matches, location },
+    {
+      title: loaderData?.locale === "en" ? "Mixing" : "混音",
+    },
+  );
 
 export default function MixingIndexRoute() {
   const { locale, fxSnapshot, services } = useLoaderData<typeof loader>();

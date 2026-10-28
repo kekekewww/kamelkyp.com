@@ -22,10 +22,17 @@ export async function loader(args: LoaderFunctionArgs) {
   return { locale, items: await listPublicWriting(db, env, locale) };
 }
 
-export const meta: MetaFunction<typeof loader> = ({ loaderData, matches }) =>
-  pageMeta(matches, {
-    title: loaderData?.locale === "en" ? "Writing" : "文章",
-  });
+export const meta: MetaFunction<typeof loader> = ({
+  loaderData,
+  matches,
+  location,
+}) =>
+  pageMeta(
+    { matches, location },
+    {
+      title: loaderData?.locale === "en" ? "Writing" : "文章",
+    },
+  );
 
 export default function WritingIndexRoute() {
   const { locale, items } = useLoaderData<typeof loader>();

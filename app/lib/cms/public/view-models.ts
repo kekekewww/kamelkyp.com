@@ -82,6 +82,16 @@ export interface PublicStorySection {
   blocks: FormattedBlock[];
 }
 
+/**
+ * Search facts of a detail page (WP4): the published `listed` flag (unlisted
+ * pages are noindex) and the locales the page renders in (its hreflang set,
+ * the same predicates as the sitemap).
+ */
+export interface PublicIndexing {
+  listed: boolean;
+  locales: Locale[];
+}
+
 export interface PublicProjectDetail extends PublicProjectCard {
   description: FormattedBlock[];
   tools: string[];
@@ -96,6 +106,7 @@ export interface PublicProjectDetail extends PublicProjectCard {
   seo: { title: string; description: string };
   socialImage: PublicImage | null;
   publishedAt: string | null;
+  indexing: PublicIndexing;
 }
 
 export interface PublicMusicItem {
@@ -158,6 +169,7 @@ export interface PublicWritingDetail extends PublicWritingItem {
   seo: { title: string; description: string };
   socialImage: PublicImage | null;
   publishedAt: string | null;
+  indexing: PublicIndexing;
 }
 
 export interface PublicServiceItem {

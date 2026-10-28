@@ -25,10 +25,16 @@ export function buildSecurityHeaders({
   nonce,
   mode,
   surface = "public",
+  indexable = mode === "production",
 }: {
   nonce: string;
   mode: DeploymentMode;
   surface?: SecuritySurface;
+  /**
+   * Whether search engines may index this response (WP4 §4.3): only the
+   * production deployment on its own origin. Defaults to the mode.
+   */
+  indexable?: boolean;
 }): Headers {
   const studio = surface === "studio";
   const headers = new Headers({
@@ -58,7 +64,7 @@ export function buildSecurityHeaders({
     "X-Content-Type-Options": "nosniff",
   });
 
-  if (surface !== "public") {
+  if (surface !== "public" || !indexable) {
     headers.set("X-Robots-Tag", "noindex, nofollow");
   }
 

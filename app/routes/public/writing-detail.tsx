@@ -32,14 +32,26 @@ export async function loader(args: LoaderFunctionArgs) {
   return { locale, writing: result.writing };
 }
 
-export const meta: MetaFunction<typeof loader> = ({ loaderData, matches }) => {
+export const meta: MetaFunction<typeof loader> = ({
+  loaderData,
+  matches,
+  location,
+}) => {
   const writing = loaderData?.writing;
-  return pageMeta(matches, {
-    title: writing?.seo.title,
-    description: writing?.seo.description,
-    image: writing?.socialImage ?? writing?.cover ?? null,
-    type: "article",
-  });
+  return pageMeta(
+    { matches, location },
+    {
+      title: writing?.seo.title,
+      description: writing?.seo.description,
+      image: writing?.socialImage ?? writing?.cover ?? null,
+      type: "article",
+      locales: writing?.indexing.locales,
+      // Unlisted entries stay reachable but out of search (WP4 O1).
+      noindex: writing
+        ? !writing.indexing.listed || writing.todoContent
+        : false,
+    },
+  );
 };
 
 export default function WritingDetailRoute() {

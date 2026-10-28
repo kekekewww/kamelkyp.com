@@ -70,6 +70,19 @@ Notes:
   301; update them in Studio → Settings → Footer, but it is not a blocker.
 - `?category=` with an unknown value renders the "All" view (no 404) and the
   canonical link points to `/:lang/works`.
+- Search and sharing (WP4, `docs/superpowers/specs/2026-10-13-wp4-seo.md`): `/robots.txt` and
+  `/sitemap.xml` are dynamic Worker routes, never files in `public/`;
+  `/manifest.webmanifest`, `/favicon.ico`, `/apple-touch-icon.png`,
+  `/icons/*.png` and `/og/kamel-default.png` are static files. Indexable
+  public pages carry an absolute canonical and hreflang alternates (`zh-Hant`,
+  `en`, `x-default` → `en`). Unlisted detail pages,
+  `/:lang/commission/:category`, `/:lang/commission/:category/:service`,
+  `/:lang/commission/success` and error pages carry
+  `<meta name="robots" content="noindex">` and no canonical. Preview
+  deployments, and any host other than `https://kamelkyp.com`, answer
+  `X-Robots-Tag: noindex, nofollow` and `robots.txt` `Disallow: /`. The Studio
+  stays noindex everywhere, and production `robots.txt` disallows the Studio,
+  the APIs and the language switch.
 
 ---
 
@@ -283,7 +296,9 @@ are absent (`sections` array keyed by `kind`):
   security e2e asserts zero iframes before consent on works pages).
 - Placeholder projects have `cover: null`; the UI draws a category-coded
   procedural cover. Placeholder detail pages add `<meta name="robots"
-  content="noindex">`.
+  content="noindex">`. Since the Studio, placeholders are TODO_CONTENT rows,
+  which cannot be published, so they are 404 publicly; the detail `noindex`
+  for `todoContent` is defensive (WP4).
 
 D1 works (`getPublicContent(db, "work", slug, locale)`):
 

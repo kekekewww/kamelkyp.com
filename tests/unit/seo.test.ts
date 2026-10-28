@@ -1,0 +1,271 @@
+import { describe, expect, it } from "vitest";
+import { createCloudflareContextProvider } from "../../app/lib/cloudflare/context";
+import {
+  deploymentMode,
+  isIndexableRequest,
+  PRODUCTION_ORIGIN,
+  siteOrigin,
+} from "../../app/lib/seo/origin.server";
+import { buildRobotsTxt } from "../../app/lib/seo/robots";
+import {
+  buildSitemapXml,
+  SITEMAP_STATIC_PATHS,
+  xmlEscape,
+} from "../../app/lib/seo/sitemap";
+import {
+  absoluteUrl,
+  canonicalPath,
+  HREFLANG,
+  localeAlternates,
+  X_DEFAULT_LOCALE,
+} from "../../app/lib/seo/urls";
+import { loader as publicLayoutLoader } from "../../app/routes/public/layout";
+import { createTestEnv } from "../helpers/test-env";
+
+const PROD = "https://kamelkyp.com";
+const PREVIEW = "https://kamelkyp-com-pr-7.example.workers.dev";
+
+describe("seo url helpers", () => {
+  it("strips a trailing slash but never the root, a query or a hash", () => {
+    expect(canonicalPath("/en/works/")).toBe("/en/works");
+    expect(canonicalPath("/zh")).toBe("/zh");
+    expect(canonicalPath("/")).toBe("/");
+    expect(canonicalPath("/en/works//")).toBe("/en/works");
+    expect(absoluteUrl(PROD, "/en/works")).toBe(`${PROD}/en/works`);
+  });
+
+  it("gives case and percent-encoded spellings the one lowercase path", () => {
+    // React Router matches segments case-insensitively and after decoding,
+    // so these render the same page as their lowercase twin.
+    expect(canonicalPath("/en/Works/fixture-signal-map")).toBe(
+      "/en/works/fixture-signal-map",
+    );
+    expect(canonicalPath("/en/ABOUT/")).toBe("/en/about");
+    expect(canonicalPath("/en/%61bout")).toBe("/en/about");
+    expect(canonicalPath("/%65n")).toBe("/en");
+    expect(canonicalPath("/en/works/fixture%2Dsignal-map")).toBe(
+      "/en/works/fixture-signal-map",
+    );
+    // A decoded slash stays inside its segment; other characters stay valid.
+    expect(canonicalPath("/en/works/A%2Fb")).toBe("/en/works/a%2Fb");
+    expect(canonicalPath("/en/works/%E4%B8%AD")).toBe("/en/works/%E4%B8%AD");
+    // A malformed escape cannot be decoded (React Router keeps it as is).
+    expect(canonicalPath("/en/works/%zz")).toBe("/en/works/%zz");
+  });
+
+  it("matches <html lang> and the negotiation fallback", () => {
+    expect(HREFLANG).toEqual({ zh: "zh-Hant", en: "en" });
+    expect(X_DEFAULT_LOCALE).toBe("en");
+  });
+
+  it("lists zh-Hant, en and x-default (→ en) for a two-locale page", () => {
+    expect(localeAlternates(PROD, "/zh/works/a", ["zh", "en"])).toEqual([
+      { hrefLang: "zh-Hant", href: `${PROD}/zh/works/a` },
+      { hrefLang: "en", href: `${PROD}/en/works/a` },
+      { hrefLang: "x-default", href: `${PROD}/en/works/a` },
+    ]);
+    expect(localeAlternates(PROD, "/en/works/a/", ["en", "zh"])).toEqual([
+      { hrefLang: "zh-Hant", href: `${PROD}/zh/works/a` },
+      { hrefLang: "en", href: `${PROD}/en/works/a` },
+      { hrefLang: "x-default", href: `${PROD}/en/works/a` },
+    ]);
+    expect(localeAlternates(PROD, "/en", ["zh", "en"])).toEqual([
+      { hrefLang: "zh-Hant", href: `${PROD}/zh` },
+      { hrefLang: "en", href: `${PROD}/en` },
+      { hrefLang: "x-default", href: `${PROD}/en` },
+    ]);
+  });
+
+  it("links the lowercase path from a case or percent-encoded spelling", () => {
+    expect(localeAlternates(PROD, "/en/Works/%61", ["zh", "en"])).toEqual([
+      { hrefLang: "zh-Hant", href: `${PROD}/zh/works/a` },
+      { hrefLang: "en", href: `${PROD}/en/works/a` },
+      { hrefLang: "x-default", href: `${PROD}/en/works/a` },
+    ]);
+  });
+
+  it("gives a one-locale page no alternates", () => {
+    expect(localeAlternates(PROD, "/zh/works/a", ["zh"])).toEqual([]);
+    expect(localeAlternates(PROD, "/en/works/a", [])).toEqual([]);
+  });
+});
+
+describe("robots.txt", () => {
+  it("disallows the private surfaces and names the sitemap on production", () => {
+    const text = buildRobotsTxt({ indexable: true, origin: PROD });
+    expect(text).toBe(
+      [
+        "User-agent: *",
+        "Disallow: /admin",
+        "Disallow: /api/",
+        "Disallow: /language/",
+        "Disallow: /studio",
+        "",
+        "Sitemap: https://kamelkyp.com/sitemap.xml",
+        "",
+      ].join("\n"),
+    );
+    expect(text).not.toContain("Disallow: /\n");
+    expect(text).not.toContain("commission");
+  });
+
+  it("disallows everything on every other deployment", () => {
+    expect(buildRobotsTxt({ indexable: false, origin: PREVIEW })).toBe(
+      "User-agent: *\nDisallow: /\n",
+    );
+  });
+});
+
+describe("sitemap.xml", () => {
+  it("writes one <url> per entry and locale, with alternates and lastmod", () => {
+    const xml = buildSitemapXml(
+      [
+        { path: "", locales: ["zh", "en"], lastModified: null },
+        {
+          path: "/works/a",
+          locales: ["zh"],
+          lastModified: "2026-09-20T00:00:00Z",
+        },
+      ],
+      PROD,
+    );
+    expect(xml).toBe(
+      [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">',
+        "  <url>",
+        "    <loc>https://kamelkyp.com/zh</loc>",
+        '    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://kamelkyp.com/zh"/>',
+        '    <xhtml:link rel="alternate" hreflang="en" href="https://kamelkyp.com/en"/>',
+        '    <xhtml:link rel="alternate" hreflang="x-default" href="https://kamelkyp.com/en"/>',
+        "  </url>",
+        "  <url>",
+        "    <loc>https://kamelkyp.com/en</loc>",
+        '    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://kamelkyp.com/zh"/>',
+        '    <xhtml:link rel="alternate" hreflang="en" href="https://kamelkyp.com/en"/>',
+        '    <xhtml:link rel="alternate" hreflang="x-default" href="https://kamelkyp.com/en"/>',
+        "  </url>",
+        "  <url>",
+        "    <loc>https://kamelkyp.com/zh/works/a</loc>",
+        "    <lastmod>2026-09-20T00:00:00Z</lastmod>",
+        "  </url>",
+        "</urlset>",
+        "",
+      ].join("\n"),
+    );
+    expect(xml).not.toMatch(/changefreq|priority/);
+  });
+
+  it("escapes every text and attribute value", () => {
+    expect(xmlEscape(`a&b<'">`)).toBe("a&amp;b&lt;&apos;&quot;&gt;");
+    const xml = buildSitemapXml(
+      [{ path: "/works/a&b", locales: ["en"], lastModified: null }],
+      PROD,
+    );
+    expect(xml).toContain("<loc>https://kamelkyp.com/en/works/a&amp;b</loc>");
+  });
+
+  it("lists the static public paths, locale-less, home first", () => {
+    expect(SITEMAP_STATIC_PATHS).toEqual([
+      "",
+      "/works",
+      "/services",
+      "/mixing",
+      "/song-transition",
+      "/services/software",
+      "/about",
+      "/writing",
+      "/commission",
+      "/terms",
+      "/privacy",
+    ]);
+  });
+});
+
+describe("origin and deployment mode", () => {
+  const prod = { APP_ORIGIN: PRODUCTION_ORIGIN };
+  const preview = { APP_ORIGIN: PREVIEW };
+
+  it("is indexable only on the production origin of the production Worker", () => {
+    expect(PRODUCTION_ORIGIN).toBe(PROD);
+    expect(isIndexableRequest(prod, `${PROD}/x`)).toBe(true);
+    expect(deploymentMode(prod)).toBe("production");
+
+    const workersDev = "https://kamelkyp-com.x.workers.dev/x";
+    expect(siteOrigin(prod, workersDev)).toBe(PROD);
+    expect(isIndexableRequest(prod, workersDev)).toBe(false);
+
+    expect(siteOrigin(preview, `${PREVIEW}/en`)).toBe(PREVIEW);
+    expect(isIndexableRequest(preview, `${PREVIEW}/en`)).toBe(false);
+    expect(isIndexableRequest(preview, `${PROD}/en`)).toBe(false);
+    expect(deploymentMode(preview)).toBe("preview");
+  });
+
+  it("falls back to the request origin when APP_ORIGIN does not parse", () => {
+    const broken = { APP_ORIGIN: "nope" };
+    expect(siteOrigin(broken, "http://127.0.0.1:8787/en")).toBe(
+      "http://127.0.0.1:8787",
+    );
+    expect(isIndexableRequest(broken, `${PROD}/en`)).toBe(false);
+    expect(deploymentMode(broken)).toBe("preview");
+    expect(siteOrigin({ APP_ORIGIN: "ftp://x.example" }, `${PROD}/en`)).toBe(
+      PROD,
+    );
+    expect(
+      siteOrigin({ APP_ORIGIN: undefined as never }, "http://localhost:5173/"),
+    ).toBe("http://localhost:5173");
+  });
+
+  it("strips a trailing slash from APP_ORIGIN", () => {
+    expect(
+      siteOrigin(
+        { APP_ORIGIN: "http://127.0.0.1:5173/" },
+        "http://127.0.0.1:5173/en",
+      ),
+    ).toBe("http://127.0.0.1:5173");
+  });
+});
+
+describe("public layout loader seo context", () => {
+  function context(overrides: Parameters<typeof createTestEnv>[0]) {
+    const throwing = {
+      prepare() {
+        throw new Error("d1_down");
+      },
+    } as unknown as D1Database;
+    return createCloudflareContextProvider(
+      createTestEnv({ DB: throwing, ...overrides }),
+      {} as ExecutionContext,
+      { nonce: "n", requestId: "r" },
+    );
+  }
+
+  it("computes the origin before the D1 read, so the fallback keeps canonicals", async () => {
+    const result = await publicLayoutLoader({
+      params: { lang: "en" },
+      context: context({}),
+      request: new Request(`${PROD}/en`),
+    } as never);
+    expect(result.site.brand.brandName).toBe("Kamel");
+    expect(result.seo).toEqual({ origin: PROD });
+  });
+
+  it("uses the request origin when APP_ORIGIN is unusable", async () => {
+    const result = await publicLayoutLoader({
+      params: { lang: "en" },
+      context: context({ APP_ORIGIN: "invalid" }),
+      request: new Request("https://kamelkyp-com.x.workers.dev/en"),
+    } as never);
+    expect(result.seo).toEqual({
+      origin: "https://kamelkyp-com.x.workers.dev",
+    });
+  });
+
+  it("returns no seo context without a Cloudflare context (unit renders)", async () => {
+    const result = await publicLayoutLoader({
+      params: { lang: "zh" },
+    } as never);
+    expect(result.seo).toBeNull();
+    expect(result.site.brand.brandName).toBe("Kamel");
+  });
+});

@@ -58,7 +58,8 @@ in `app/lib/cms/db/tables.server.ts`; the lifecycle engine, Studio primitives an
 | `created_at`, `updated_at`, `published_at`, `first_published_at`, `archived_at` | TEXT | |
 
 Slugged types (`projects`, `writings`, `services`) add `slug` (working, UNIQUE), `published_slug` (the URL that is
-live, UNIQUE) and, for projects and writings, `listed` (0 = reachable by URL but omitted from lists and home).
+live, UNIQUE) and, for projects and writings, `listed` (0 = reachable by URL but omitted from lists and home;
+excluded from the sitemap, and the detail page carries `noindex` (WP4, O1)).
 
 **Working copy and snapshot.** Editing never touches the live site: saves update the working columns; *Publish*
 validates the working copy and copies it into `published_json` via the snapshot view in the same statement.
@@ -411,8 +412,8 @@ saves. Media references inside the documents are indexed in `media_usages`.
 | siteTitle | siteTitle | L (home `<title>`; other pages use `"<page> — <brandName>"`) |
 | siteDescription | siteDescription | L (OpenGraph/JSON-LD description) |
 | SEO description | seoDescription | L (`<meta name="description">` default) |
-| OpenGraph image | ogImageId | asset id \| null |
-| default social image | defaultSocialImageId | asset id \| null |
+| OpenGraph image | ogImageId | asset id \| null (the home page's share image, then its fallback: other pages use it when `defaultSocialImageId` is empty) |
+| default social image | defaultSocialImageId | asset id \| null (pages without their own image; the home page uses it when `ogImageId` is empty). With both empty, the built-in `/og/kamel-default.png` is used (WP4) |
 | contact email | — | not duplicated: the Site settings screen shows `brand.contactEmail` read-only with a link to edit it in Brand |
 | navigation | navigation.items | `[{key: 'work'\|'services'\|'about'\|'writing', visible}]` (order and visibility; labels stay UI copy) |
 | footer message | footerMessage | L |

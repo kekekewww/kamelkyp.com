@@ -121,5 +121,8 @@ test("the public site does not link to the Studio", async ({ request }) => {
   const home = await request.get("/en");
   expect(home.status()).toBe(200);
   expect(await home.text()).not.toContain("/studio");
-  expect(home.headers()["x-robots-tag"]).toBeUndefined();
+  // The loopback renders the preview config (run-loopback-e2e.mjs), and preview
+  // deployments are noindex by design (WP4). Production indexability is proven
+  // by security-headers.test.ts and the isIndexableRequest table in seo.test.ts.
+  expect(home.headers()["x-robots-tag"]).toBe("noindex, nofollow");
 });

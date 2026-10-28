@@ -4,6 +4,8 @@
  * page renders the same way whether its data came from a snapshot or a form.
  * No cross-locale fallback: an empty value in this locale stays empty.
  */
+
+import { LOCALES } from "../../i18n/locale";
 import type { MediaItem } from "../../media/media-schema";
 import { parseMediaUrl } from "../../media/parse-media-url";
 import { isFilled, localize } from "../localized";
@@ -132,6 +134,11 @@ export function isProjectVisible(content: ProjectContent, locale: Locale) {
   );
 }
 
+/** Locales in which a project detail page renders (hreflang, sitemap). */
+export function projectLocales(content: ProjectContent): Locale[] {
+  return LOCALES.filter((locale) => isProjectVisible(content, locale));
+}
+
 export function buildProjectCard(
   content: ProjectContent,
   locale: Locale,
@@ -201,6 +208,7 @@ export function buildProjectView(
     },
     socialImage: imageView(content.socialImageId, context, locale),
     publishedAt: facts.publishedAt,
+    indexing: { listed: content.listed, locales: projectLocales(content) },
   };
 }
 
@@ -338,6 +346,14 @@ export function isWritingVisible(content: WritingContent, locale: Locale) {
   );
 }
 
+/** Locales in which a writing detail page renders (hreflang, sitemap). */
+export function writingDetailLocales(content: WritingContent): Locale[] {
+  return LOCALES.filter(
+    (locale) =>
+      isWritingVisible(content, locale) && writingHasDetail(content, locale),
+  );
+}
+
 export function buildWritingItem(
   content: WritingContent,
   locale: Locale,
@@ -384,6 +400,10 @@ export function buildWritingView(
     },
     socialImage: imageView(content.socialImageId, context, locale),
     publishedAt: facts.publishedAt,
+    indexing: {
+      listed: content.listed,
+      locales: writingDetailLocales(content),
+    },
   };
 }
 
