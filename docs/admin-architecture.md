@@ -313,6 +313,8 @@ Belt and braces: `verify-production-config.mjs` fails if the build output contai
 rendered config defines that var; the renderer never emits it; the loopback e2e (a production build) proves the
 403. Local `.dev.vars` for Studio work: `ADMIN_EMAIL`, `STUDIO_DEV_OWNER_EMAIL` (same value),
 `APP_ORIGIN=http://localhost:5173`, `CSRF_SECRET` (≥ 32 chars), plus the existing loopback values.
+The Studio e2e uses port 5173; when another server holds it, `STUDIO_E2E_PORT=5174 npm run test:e2e:studio` moves
+the dev server, its origin and the `APP_ORIGIN` the harness passes to it together.
 
 ### 3.7 Failure modes
 
