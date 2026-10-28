@@ -220,6 +220,37 @@ describe("term drafts", () => {
     expect(await versionCount("common", "zh")).toBe(0);
   });
 
+  it("leaves an existing draft untouched when the legal review is missing", async () => {
+    const now = new Date("2026-10-13T02:30:00.000Z");
+    const prior = await draftRow("privacy", "zh");
+    const saved = await act(
+      "privacy",
+      "zh",
+      "save",
+      termForm([CLAUSE], { expectedRevision: String(prior?.revision ?? 0) }),
+      now,
+    );
+    expect(status(saved)).toBe(200);
+    const before = await draftRow("privacy", "zh");
+    const versionsBefore = await versionCount("privacy", "zh");
+
+    const result = await act(
+      "privacy",
+      "zh",
+      "publish-term-version",
+      termForm([{ ...CLAUSE, title: "Changed while publishing" }], {
+        expectedRevision: String(before?.revision ?? 0),
+      }),
+      now,
+    );
+    expect(status(result)).toBe(422);
+    expect(body(result).code).toBe("legal_review_required");
+    const after = await draftRow("privacy", "zh");
+    expect(after?.revision).toBe(before?.revision);
+    expect(after?.body_json).toBe(before?.body_json);
+    expect(await versionCount("privacy", "zh")).toBe(versionsBefore);
+  });
+
   it("saves the draft but does not publish while blocking issues remain", async () => {
     const now = new Date("2026-10-13T03:00:00.000Z");
     const result = await act(

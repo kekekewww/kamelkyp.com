@@ -138,14 +138,21 @@ function blockImplicitSubmit(event: React.KeyboardEvent<HTMLFormElement>) {
 }
 
 /** Latest publish time, else the active rule's time (backup freshness). */
+// A scheduled version taking effect changes the form's defaults without a new
+// publish, so the active version's effective time counts as a change too:
+// otherwise the editor keeps the old clean baseline and reports the
+// remounted form as unsaved.
 function lastChange(data: PriceEditorData): string | null {
-  let latest: string | null = null;
+  let latest: string | null = data.service.active?.effectiveFrom ?? null;
   for (const version of data.history) {
-    if (version.publishedAt && (!latest || version.publishedAt > latest)) {
+    if (
+      version.publishedAt &&
+      (!latest || Date.parse(version.publishedAt) > Date.parse(latest))
+    ) {
       latest = version.publishedAt;
     }
   }
-  return latest ?? data.service.active?.effectiveFrom ?? null;
+  return latest;
 }
 
 function CurrentPrice({ data }: { data: PriceEditorData }) {

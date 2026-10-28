@@ -206,15 +206,21 @@ export function TermEditor({ data }: { data: TermEditorData }) {
 
   const [generation, setGeneration] = useState(0);
   const [reloading, setReloading] = useState(false);
-  // The clause list is rebuilt (remounted) when the published version or
-  // the existence of the draft changes, when the owner starts over, and on
-  // "Reload latest"; never on an ordinary save.
-  const formKey = [
-    live?.id ?? "none",
-    draft ? "draft" : "live",
-    generation,
-    reloading ? (draft?.updatedAt ?? "") : "",
-  ].join(":");
+  // The clause list is rebuilt (remounted) when the published version
+  // changes, when the draft is discarded, when the owner starts over, and on
+  // "Reload latest"; never on a save, including the first one that creates
+  // the draft (the rows on screen already hold that text, and a remount would
+  // drop what was typed while it was saving).
+  const keyFor = useCallback(
+    (next: number) =>
+      [
+        live?.id ?? "none",
+        next,
+        reloading ? (draft?.updatedAt ?? "") : "",
+      ].join(":"),
+    [live, draft, reloading],
+  );
+  const formKey = keyFor(generation);
   const [start, setStart] = useState<{
     clauses: TermDraftClause[];
     forKey: string;
@@ -314,6 +320,8 @@ export function TermEditor({ data }: { data: TermEditorData }) {
     if (result.ok && result.published === false) {
       checklistRef.current?.focus();
     }
+    // The draft is gone: rebuild the rows from the live version.
+    if (result.ok && result.discarded) setGeneration((next) => next + 1);
     if (result.ok === false && result.code === "legal_review_required") {
       setLegalError(result.message ?? null);
       legalRef.current?.focus();
@@ -334,17 +342,11 @@ export function TermEditor({ data }: { data: TermEditorData }) {
   const rebuild = useCallback(
     (clauses: TermDraftClause[], then: "dirty" | "restore") => {
       const next = generation + 1;
-      const nextKey = [
-        live?.id ?? "none",
-        draft ? "draft" : "live",
-        next,
-        reloading ? (draft?.updatedAt ?? "") : "",
-      ].join(":");
       afterMount.current = then;
-      setStart({ clauses, forKey: nextKey });
+      setStart({ clauses, forKey: keyFor(next) });
       setGeneration(next);
     },
-    [generation, live, draft, reloading],
+    [generation, keyFor],
   );
 
   const requestStart = useCallback(

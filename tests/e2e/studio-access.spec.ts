@@ -48,15 +48,15 @@ test("Studio mutations are refused without an owner identity", async ({
 
   const price = await request.post("/studio/services/pricing/full_mix", {
     form: { intent: "publish-price-version", "baseTwd:number": "1" },
+    maxRedirects: 0,
   });
-  expect(price.status()).toBe(403);
-  expect(price.headers()["cache-control"]).toContain("no-store");
+  expectOwnerGate(price);
 
   const terms = await request.post("/studio/services/terms/common/zh", {
     form: { intent: "publish-term-version", legalReviewConfirmed: "on" },
+    maxRedirects: 0,
   });
-  expect(terms.status()).toBe(403);
-  expect(terms.headers()["cache-control"]).toContain("no-store");
+  expectOwnerGate(terms);
 
   const register = await request.post("/api/studio/media-register", {
     data: { url: "https://example.com/a.jpg" },

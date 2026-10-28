@@ -1619,11 +1619,11 @@ getHomepageModel(db, locale?: Locale): Promise<HomepageModel>;   // featured lis
 getStudioHome(db, now: Date): Promise<StudioHomeModel>;           // counts, recent changes, attention, commission queue
 
 // pricing.server.ts (WP2: Studio → Pricing; writes through the reused publishPriceVersion)
-listPriceHistory(db, serviceId: ServiceId, now: Date): Promise<StudioPriceVersion[]>;      // classified: active | scheduled | superseded | replaced | retired
+listPriceHistory(db, serviceId: ServiceId, now: Date): Promise<StudioPriceVersion[]>;      // classified: active | scheduled | superseded | replaced | cancelled | retired (cancelled: every row at an instant whose winning row is a cancellation)
 loadPricingIndex(db, now: Date): Promise<PricingIndexData>;                               // services, commission readiness, FX status
 loadPriceEditor(db, serviceId: string, now: Date): Promise<PriceEditorData>;              // 404 Response for an unknown service
 parsePriceVersionForm(formData, ctx: { serviceId; history; now }): ParsedPriceVersion;   // percent → bps by string arithmetic; carried fields from the baseline
-handlePriceEditorAction({ db, serviceId, formData, intent, now });                       // publish-price-version | cancel-scheduled
+handlePriceEditorAction({ db, serviceId, formData, intent, now });                       // publish-price-version | cancel-scheduled (only a scheduled change; inserts an action = 'cancel' row at that instant with the baseline values, so the rule before it stays active; nothing is updated or deleted)
 handlePricingIndexAction({ db, env, intent, now, fetcher = fetch });                     // refresh-fx
 
 // terms.server.ts (WP2: Studio → Terms)
