@@ -15,6 +15,7 @@ import {
   validateForPublish,
 } from "../../../lib/cms/validation";
 import { ContentBlockSchema } from "../../../lib/content/block-schema";
+import { editableBlocks } from "../blocks/block-model";
 
 export type ProjectFormResult =
   | {
@@ -46,8 +47,9 @@ export function readProjectForm(formData: FormData): ProjectFormResult {
  * The block editor's value in a local backup (`serializeForm` entries):
  * `<name>.zh:json` and `<name>.en:json`. Restoring a backup writes only the
  * visible controls back (`useEditorForm`), so the block editor remounts with
- * this value instead. A locale the backup lacks or garbles keeps `stored`;
- * blocks the schema refuses are dropped.
+ * this value instead. A locale the backup lacks or garbles keeps `stored`.
+ * Blocks still being written stay, as the writing editor keeps them
+ * (`editableBlocks`); only entries the editor cannot show are dropped.
  */
 export function backupBlocks(
   fields: string,
@@ -76,12 +78,48 @@ export function backupBlocks(
       return stored[locale];
     }
     if (!Array.isArray(value)) return stored[locale];
-    return value.flatMap((block) => {
-      const parsed = ContentBlockSchema.safeParse(block);
-      return parsed.success ? [parsed.data] : [];
-    });
+    return editableBlocks(value);
   };
   return { zh: read("zh"), en: read("en") };
+}
+
+const BODY_FIELDS: ReadonlySet<string> = new Set([
+  "body.zh:json",
+  "body.en:json",
+]);
+
+/** A block list without the blocks the schema refuses (unchanged when none). */
+function storableBlocksJson(raw: string): string {
+  let value: unknown;
+  try {
+    value = JSON.parse(raw);
+  } catch {
+    return raw;
+  }
+  if (!Array.isArray(value)) return raw;
+  const kept = value.filter(
+    (block) => ContentBlockSchema.safeParse(block).success,
+  );
+  return kept.length === value.length ? raw : JSON.stringify(kept);
+}
+
+/**
+ * The form as the preview reads it. The block editor posts a block the owner
+ * is still writing (a link with only its label) so that a save refuses it
+ * and the block keeps its message; the preview leaves such blocks out instead
+ * of refusing the whole form (422), so it keeps following everything else.
+ */
+export function previewFormData(formData: FormData): FormData {
+  const result = new FormData();
+  for (const [name, value] of formData.entries()) {
+    result.append(
+      name,
+      BODY_FIELDS.has(name) && typeof value === "string"
+        ? storableBlocksJson(value)
+        : value,
+    );
+  }
+  return result;
 }
 
 /** Publish readiness the browser can judge on its own (model + TODO rules). */

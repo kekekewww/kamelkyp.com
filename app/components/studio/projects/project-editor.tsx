@@ -52,6 +52,7 @@ import {
   backupBlocks,
   mergeIssues,
   PROJECT_SECTIONS,
+  previewFormData,
   projectPublishIssues,
   readProjectForm,
   sectionIssueCounts,
@@ -171,8 +172,15 @@ export function ProjectEditor({
 
   const clientCheck = useCallback(
     (form: HTMLFormElement): ValidationIssue[] => {
-      const parsed = readProjectForm(new FormData(form));
-      if (!parsed.ok) return parsed.issues;
+      const formData = new FormData(form);
+      const parsed = readProjectForm(formData);
+      if (!parsed.ok) {
+        // A body block still being written: the save refuses the form, but
+        // the story coverage keeps following the typing.
+        const readable = readProjectForm(previewFormData(formData));
+        if (readable.ok) setStory(readable.content.story);
+        return parsed.issues;
+      }
       setStory(parsed.content.story);
       return projectPublishIssues(parsed.content, {
         todoContent: meta.todoContent && !parsed.clearTodoContent,
@@ -204,7 +212,7 @@ export function ProjectEditor({
       const locale = current.includes("locale=en") ? "en" : "zh";
       poster.action = previewSrc(data.urls.preview, locale);
       poster.target = target;
-      const inputs = [...new FormData(form).entries()].flatMap(
+      const inputs = [...previewFormData(new FormData(form)).entries()].flatMap(
         ([name, value]) => {
           if (typeof value !== "string" || name === "intent") return [];
           const input = document.createElement("input");
@@ -235,7 +243,7 @@ export function ProjectEditor({
       if (!livePreview || !previewOpen || !previewWide()) return;
       window.clearTimeout(liveTimer.current);
       liveTimer.current = window.setTimeout(() => {
-        const snapshot = serializeForm(new FormData(form));
+        const snapshot = serializeForm(previewFormData(new FormData(form)));
         if (snapshot === lastLivePost.current) return;
         lastLivePost.current = snapshot;
         postPreview(PREVIEW_FRAME_NAME);

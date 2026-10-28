@@ -168,6 +168,30 @@ test.describe("C3 e: project body blocks", () => {
           content.indexOf(text),
         );
       }
+
+      // Live preview while a block is still being written (a link with only
+      // its label, which a save refuses): the preview keeps following the
+      // rest of the form instead of answering 422.
+      await openStudio(page, editorPath);
+      await openSection();
+      await blocks.getByRole("button", { name: "Link (ZH)" }).click();
+      await blocks
+        .getByRole("textbox", { name: "Link label" })
+        .fill(`label-${token}`);
+      const live = `livestory-${token}`;
+      const livePost = page.waitForResponse(
+        (response) =>
+          response.request().method() === "POST" &&
+          response.url().includes(`/studio/preview/projects/${id}`) &&
+          (response.request().postData() ?? "").includes(live),
+      );
+      await section
+        .locator('textarea[name="story.context.zh"]')
+        .fill(`${story.zh} ${live}`);
+      expect((await livePost).status()).toBe(200);
+      const frame = page.frameLocator('iframe[name="studio-preview"]');
+      await expect(frame.locator(".project-doc__body")).toContainText(live);
+      await expect(frame.locator(".project-doc__body")).toContainText(zh);
     } finally {
       await archiveEntry(page, editorPath);
     }

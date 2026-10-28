@@ -4,6 +4,7 @@ import {
   changedProjectSections,
   mergeIssues,
   PROJECT_SECTIONS,
+  previewFormData,
   projectPublishIssues,
   projectSectionOf,
   readProjectForm,
@@ -58,20 +59,91 @@ describe("backupBlocks", () => {
     expect(backupBlocks("not a backup", "body", stored)).toEqual(stored);
   });
 
-  it("drops blocks the schema refuses", () => {
+  it("keeps blocks still being written, which the schema refuses", () => {
+    // What the block editor posts while the owner types: the block keeps
+    // its place and its inline message, so a restore must not lose it.
+    const typed = [
+      {
+        type: "external_image",
+        url: "http://example.com/a.png",
+        alt: "",
+        caption: null,
+      },
+      { type: "external_link", url: "", label: "Only the label" },
+      { type: "quote", text: "", attribution: "Attribution first" },
+      { type: "paragraph", text: "長".repeat(8001) },
+      { type: "list", style: "ordered", items: ["a", "a"] },
+      { type: "heading", level: 2, text: "" },
+    ];
+    const fields = JSON.stringify([["body.en:json", JSON.stringify(typed)]]);
+    expect(backupBlocks(fields, "body", stored).en).toEqual(typed);
+  });
+
+  it("drops entries the block editor cannot show", () => {
     const fields = JSON.stringify([
       [
         "body.zh:json",
         JSON.stringify([
-          { type: "paragraph", text: "" },
           { type: "paragraph", text: "留下" },
           { type: "script", text: "x" },
+          { type: "heading", level: 4, text: "x" },
+          { type: "media" },
+          "text",
+          null,
         ]),
       ],
     ]);
     expect(backupBlocks(fields, "body", stored).zh).toEqual([
       { type: "paragraph", text: "留下" },
     ]);
+  });
+});
+
+describe("previewFormData", () => {
+  const typing = () =>
+    form([
+      ["title.zh", "標題"],
+      ["title.en", "Title"],
+      ["story.context.en", "Context typed while a block is unfinished"],
+      [
+        "body.zh:json",
+        JSON.stringify([
+          { type: "paragraph", text: "完成的段落" },
+          { type: "external_link", url: "", label: "Label typed first" },
+        ]),
+      ],
+      [
+        "body.en:json",
+        JSON.stringify([
+          { type: "quote", text: "", attribution: "Attribution first" },
+        ]),
+      ],
+    ]);
+
+  it("leaves out the body blocks the preview cannot read yet", () => {
+    // The form as typed cannot be read (the preview route would answer 422).
+    expect(readProjectForm(typing()).ok).toBe(false);
+    const result = readProjectForm(previewFormData(typing()));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.content.body).toEqual({
+      zh: [{ type: "paragraph", text: "完成的段落" }],
+      en: [],
+    });
+    expect(result.content.title).toEqual({ zh: "標題", en: "Title" });
+    expect(result.content.story.context.en).toBe(
+      "Context typed while a block is unfinished",
+    );
+  });
+
+  it("keeps every other field and a readable form as they are", () => {
+    const data = form([
+      ["title.zh", "標題"],
+      ["tags", "a"],
+      ["tags", "b"],
+      ["body.zh:json", JSON.stringify([{ type: "divider" }])],
+    ]);
+    expect([...previewFormData(data).entries()]).toEqual([...data.entries()]);
   });
 });
 
