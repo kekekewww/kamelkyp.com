@@ -4,11 +4,26 @@
  * change rendering. Every case sets its own viewport, because this suite runs
  * in both the desktop and the mobile project. It passed on the CSS before the
  * clean-up and must keep passing after it.
+ *
+ * wp7 (C3 a) adds the same kind of characterization for retiring the legacy
+ * stylesheet and its token aliases: the service choice pages and the media
+ * consent block render as they did, with the values recorded on the CSS
+ * before the change.
  */
 import { expect, type Page, test } from "@playwright/test";
 
 const WIDE = { width: 1440, height: 900 };
 const NARROW = { width: 390, height: 844 };
+
+/**
+ * The first `.service-select__card` box, recorded on both service choice
+ * pages and in both projects before the legacy stylesheet was removed (the
+ * values were the same everywhere).
+ */
+const SERVICE_CARD_BOXES = [
+  { size: WIDE, x: 391.03125, width: 487.4375 },
+  { size: NARROW, x: 16.484375, width: 357.03125 },
+];
 
 function tracks(value: string): number {
   return value.trim().split(/\s+/).filter(Boolean).length;
@@ -105,5 +120,43 @@ test("the zh quote summary heading keeps its size and line height", async ({
   expect(Number.parseFloat(lineHeight)).toBeCloseTo(
     Number.parseFloat(size) * 1.3,
     1,
+  );
+});
+
+for (const path of ["/en/mixing", "/zh/song-transition"]) {
+  test(`${path}: the service choice section is a plain block and the cards keep their box`, async ({
+    page,
+  }) => {
+    for (const expected of SERVICE_CARD_BOXES) {
+      await page.setViewportSize(expected.size);
+      await page.goto(path);
+      const section = page.locator("section.service-choice");
+      await expect(section).toHaveCSS("display", "block");
+      for (const side of ["top", "right", "bottom", "left"]) {
+        await expect(section).toHaveCSS(`border-${side}-width`, "0px");
+      }
+      const box = await page
+        .locator(".service-select__card")
+        .first()
+        .boundingBox();
+      expect(box).not.toBeNull();
+      expect(box?.x).toBeCloseTo(expected.x, 2);
+      expect(box?.width).toBeCloseTo(expected.width, 2);
+    }
+  });
+}
+
+test("the media consent block keeps its colours", async ({ page }) => {
+  await page.setViewportSize(WIDE);
+  await page.goto("/en/works/media-test");
+  const consent = page.locator(".media-consent");
+  // Recorded while media.css still read the legacy aliases
+  // (--color-cool-gray, --color-line, --color-console).
+  await expect(consent.locator("p")).toHaveCSS("color", "rgb(154, 165, 178)");
+  await expect(consent).toHaveCSS("border-top-color", "rgb(42, 54, 67)");
+  await expect(consent).toHaveCSS("background-color", "rgb(15, 21, 29)");
+  await expect(page.locator(".media-preview", { has: consent })).toHaveCSS(
+    "border-top-color",
+    "color(srgb 0.603922 0.647059 0.698039 / 0.35)",
   );
 });
