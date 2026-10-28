@@ -1,9 +1,9 @@
-import { type APIResponse, expect, test } from "@playwright/test";
-import { expectOwnerOnlyRefusal } from "./helpers/access";
+import { expect, test } from "@playwright/test";
+import { behindAccess, expectOwnerGate } from "./helpers/owner-gate";
 
 // The loopback server has no Access identity and no dev owner, so every
-// Studio surface must refuse the request before any data is read. On a
-// deployed preview Cloudflare Access may refuse it first (helpers/access.ts).
+// Studio surface must refuse the request before any data is read; a deployed
+// Preview redirects it to the Access login instead.
 const STUDIO_PATHS = [
   "/studio",
   "/studio/commissions",
@@ -23,11 +23,10 @@ for (const path of STUDIO_PATHS) {
     request,
   }) => {
     const response = await request.get(path, { maxRedirects: 0 });
-    await expectOwnerOnlyRefusal(response, (refusal) => {
-      expect(refusal.status()).toBe(403);
-      expect(refusal.headers()["cache-control"]).toContain("no-store");
-      expect(refusal.headers()["x-robots-tag"]).toBe("noindex, nofollow");
-    });
+    expectOwnerGate(response);
+    if (!behindAccess) {
+      expect(response.headers()["x-robots-tag"]).toBe("noindex, nofollow");
+    }
     const body = await response.text();
     expect(body).not.toContain("seed-p-001");
     expect(body).not.toContain("csrfToken");
@@ -37,37 +36,30 @@ for (const path of STUDIO_PATHS) {
 test("Studio mutations are refused without an owner identity", async ({
   request,
 }) => {
-  const refusedUncached = (refusal: APIResponse) => {
-    expect(refusal.status()).toBe(403);
-    expect(refusal.headers()["cache-control"]).toContain("no-store");
-  };
-
   const upload = await request.put("/api/studio/media/x/content", {
     data: "not a file",
     headers: { "Content-Type": "application/octet-stream" },
     maxRedirects: 0,
   });
-  await expectOwnerOnlyRefusal(upload, refusedUncached);
+  expectOwnerGate(upload);
 
   const register = await request.post("/api/studio/media-register", {
     data: { url: "https://example.com/a.jpg" },
     maxRedirects: 0,
   });
-  await expectOwnerOnlyRefusal(register, (refusal) => {
-    expect(refusal.status()).toBe(403);
-  });
+  expectOwnerGate(register);
 
   const status = await request.post("/studio/commissions/status", {
     form: { caseId: "x", status: "accepted" },
     maxRedirects: 0,
   });
-  await expectOwnerOnlyRefusal(status, refusedUncached);
+  expectOwnerGate(status);
 
   const student = await request.post("/studio/commissions/student-discount", {
     form: { intent: "accept-student-price", caseId: "KAM-20261001-E2E0000003" },
     maxRedirects: 0,
   });
-  await expectOwnerOnlyRefusal(student, refusedUncached);
+  expectOwnerGate(student);
 
   const cleanup = await request.post("/studio/commissions/cleanup", {
     form: {
@@ -79,7 +71,7 @@ test("Studio mutations are refused without an owner identity", async ({
     },
     maxRedirects: 0,
   });
-  await expectOwnerOnlyRefusal(cleanup, refusedUncached);
+  expectOwnerGate(cleanup);
 });
 
 test("the public site does not link to the Studio", async ({ request }) => {

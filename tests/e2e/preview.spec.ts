@@ -1,13 +1,13 @@
 import { expect, test } from "@playwright/test";
-import { expectOwnerOnlyRefusal } from "./helpers/access";
+import { behindAccess, expectOwnerGate } from "./helpers/owner-gate";
 
 /*
  * Studio preview routes (admin-architecture §2.4): owner-only behind
  * Cloudflare Access, never cached, never indexed, never linked publicly. The
  * loopback Worker has no Access in front of it, so every preview URL must
- * fail closed with 403; on a deployed preview Access may refuse first
- * (helpers/access.ts). The owner flow itself is covered by worker tests of
- * the preview read layer and the dev-server Studio suite.
+ * fail closed with 403; a deployed Preview redirects it to the Access login
+ * (the owner flow itself is covered by worker tests of the preview read layer
+ * and the dev-server Studio suite).
  */
 const PREVIEW_URLS = [
   "/studio/preview/home?locale=en&drafts=1",
@@ -24,15 +24,10 @@ test("preview routes fail closed without the owner: 403, no-store, noindex", asy
 }) => {
   for (const url of PREVIEW_URLS) {
     const response = await request.get(url, { maxRedirects: 0 });
-    await expectOwnerOnlyRefusal(
-      response,
-      (refusal) => {
-        expect(refusal.status(), url).toBe(403);
-        expect(refusal.headers()["cache-control"], url).toContain("no-store");
-        expect(refusal.headers()["x-robots-tag"], url).toContain("noindex");
-      },
-      url,
-    );
+    expectOwnerGate(response, url);
+    if (!behindAccess) {
+      expect(response.headers()["x-robots-tag"], url).toContain("noindex");
+    }
     const body = await response.text();
     expect(body, url).not.toContain("Fixture Draft");
     expect(body, url).not.toContain("Sample:");
@@ -52,10 +47,7 @@ test("an unsaved-form preview POST is refused before it is read", async ({
       maxRedirects: 0,
     },
   );
-  await expectOwnerOnlyRefusal(response, (refusal) => {
-    expect(refusal.status()).toBe(403);
-    expect(refusal.headers()["cache-control"]).toContain("no-store");
-  });
+  expectOwnerGate(response);
   expect(await response.text()).not.toContain("Injected title");
 });
 

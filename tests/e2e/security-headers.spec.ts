@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { expectOwnerOnlyRefusal } from "./helpers/access";
+import { expectOwnerGate } from "./helpers/owner-gate";
 
 test("HTML responses use one nonce and the strict approved CSP", async ({
   request,
@@ -29,10 +29,7 @@ test("private workflows and failures are never cached", async ({ request }) => {
   const missing = await request.get("/en/not-a-real-page");
 
   expect(commission.headers()["cache-control"]).toContain("no-store");
-  await expectOwnerOnlyRefusal(admin, (refusal) => {
-    expect(refusal.headers()["cache-control"]).toContain("no-store");
-    expect(refusal.status()).toBe(403);
-  });
+  expectOwnerGate(admin);
   expect(missing.headers()["cache-control"]).toContain("no-store");
   expect(missing.status()).toBe(404);
 });
