@@ -333,6 +333,40 @@ describe("cloud project configuration", () => {
     expect(ci).toContain("--config build/server/.wrangler.generated.jsonc");
   });
 
+  it("runs exactly the contract's named worker tests, and they exist", async () => {
+    const contract = await readFile(
+      ".github/workflows/config-contract.yml",
+      "utf8",
+    );
+    const runner = "npx vitest run --config vitest.worker.config.ts ";
+    const runs = contract
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line.startsWith("- run: "));
+    // `npm run test:worker` appends the `tests/worker` directory, which
+    // matches every worker file, so the named files would change nothing.
+    expect(runs.filter((run) => run.includes("test:worker"))).toEqual([]);
+    const steps = runs.filter((run) => run.includes("tests/worker"));
+    expect(steps).toHaveLength(1);
+    expect(steps[0]?.startsWith(`- run: ${runner}`)).toBe(true);
+    const files = (steps[0] ?? "")
+      .slice(`- run: ${runner}`.length)
+      .split(/\s+/);
+    expect(files).toEqual([
+      "tests/worker/migrations.test.ts",
+      "tests/worker/public-terms.test.ts",
+    ]);
+    // Vitest fails only when no filter matches, so a renamed or deleted file
+    // would leave the step green: each must exist.
+    const sources = await Promise.all(
+      files.map((file) => readFile(file, "utf8")),
+    );
+    // The live term_publications pointer trigger (wp5 §6.2, plan §2.3).
+    expect(sources[1]).toContain(
+      "rejects a term publication pointer with a mismatched version tuple",
+    );
+  });
+
   it("normalizes repository text files to LF for cross-platform checks", async () => {
     const attributes = await readFile(".gitattributes", "utf8");
 
