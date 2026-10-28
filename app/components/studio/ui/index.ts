@@ -60,7 +60,6 @@ export {
   ValidationChecklist,
 } from "./publication-panel";
 export { moveItem } from "./reorder";
-export { ShortcutHelp } from "./shortcut-help";
 export { SlugField } from "./slug-field";
 export { CsrfField, IntentButton, StudioForm } from "./studio-form";
 export { StudioSessionProvider, useStudioSession } from "./studio-session";
