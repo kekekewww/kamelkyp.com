@@ -98,7 +98,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          npx wrangler secret list --name kamelkyp-com --json > .worker-secret-list.json
+          npx wrangler secret list --name kamelkyp-com --format json > .worker-secret-list.json
           node -e "const fs=require('fs');const actual=JSON.parse(fs.readFileSync('.worker-secret-list.json','utf8')).map(x=>x.name).sort();const expected=['APPS_SCRIPT_HMAC_SECRET','APPS_SCRIPT_URL','CSRF_SECRET','TURNSTILE_SECRET'];if(JSON.stringify(actual)!==JSON.stringify(expected))process.exit(1)"
       - name: Remove generated deployment files
         if: always()
