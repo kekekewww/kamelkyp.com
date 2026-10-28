@@ -9,8 +9,9 @@
  *   commission form (labels, totals) are unchanged; names come from the
  *   services rows, prices from the active price rules.
  * - Footer: six groups with the e2e fixture (one enabled social link adds
- *   "Find me"), footer links > 3; /admin 403 (on a deployed Preview, the
- *   Access login redirect: helpers/owner-gate.ts).
+ *   "Find me"), footer links > 3; /admin 403, the legacy redirect is
+ *   owner-gated (on a deployed Preview, the Access login redirect:
+ *   helpers/owner-gate.ts).
  */
 import { expect, test } from "@playwright/test";
 import { expectNoPersonalName } from "./helpers/brand";
