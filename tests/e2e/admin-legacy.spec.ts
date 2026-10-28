@@ -89,7 +89,9 @@ test("the public pages do not link to the retired admin", async ({
   for (const path of ["/en", "/zh"]) {
     const response = await request.get(path);
     expect(response.status(), path).toBe(200);
-    expect(await response.text(), path).not.toContain('href="/admin');
+    // Routes match case-insensitively: `/Admin/cases` is the same surface.
+    const html = (await response.text()).toLowerCase();
+    expect(html, path).not.toContain('href="/admin');
   }
 });
 

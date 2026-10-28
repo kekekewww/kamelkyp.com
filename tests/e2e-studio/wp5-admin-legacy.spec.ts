@@ -84,7 +84,8 @@ for (const [path, url, heading] of SCREENS) {
       page.getByRole("heading", { level: 1, name: heading, exact: true }),
     ).toBeVisible();
     await expect(page.getByText("Not built yet")).toHaveCount(0);
-    // Neither the sidebar nor the screen links back to the retired admin.
-    await expect(page.locator('a[href^="/admin"]')).toHaveCount(0);
+    // Neither the sidebar nor the screen links back to the retired admin,
+    // in any case (routes match `/Admin/cases` too).
+    await expect(page.locator('a[href^="/admin" i]')).toHaveCount(0);
   });
 }

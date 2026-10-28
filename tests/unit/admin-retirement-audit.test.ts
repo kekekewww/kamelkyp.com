@@ -29,8 +29,11 @@ const ADMIN_LITERAL_ALLOWLIST = new Set([
   "app/lib/cms/schemas/footer.ts",
 ]);
 
-/** A string literal that starts with the retired path (WP4 mirrors it). */
-const ADMIN_LITERAL = /["'`]\/admin(?:[/?"'`]|$)/m;
+/**
+ * A string literal that starts with the retired path, in any case: React
+ * Router matches `/Admin/cases` to the same route (WP4 mirrors it).
+ */
+const ADMIN_LITERAL = /["'`]\/admin(?:[/?"'`]|$)/im;
 
 /**
  * Source without comments: JSDoc in this repo quotes paths in backtick code
@@ -101,6 +104,10 @@ describe("admin retirement audit", () => {
   it("still detects a quoted admin path (the regex is live)", () => {
     expect('const path = "/admin";').toMatch(ADMIN_LITERAL);
     expect("href={`/admin/cases`}").toMatch(ADMIN_LITERAL);
+    // Routes match case-insensitively, so a mixed-case link still lands on
+    // the retired surface.
+    expect('<a href="/Admin/cases">').toMatch(ADMIN_LITERAL);
+    expect("to={`/ADMIN`}").toMatch(ADMIN_LITERAL);
     expect('"Disallow: /admin"').not.toMatch(ADMIN_LITERAL);
     expect(withoutComments("// see `/admin/cases`\nconst a = 1;")).not.toMatch(
       ADMIN_LITERAL,
@@ -129,6 +136,8 @@ describe("admin retirement audit", () => {
       group.items.map((item) => item.to),
     );
     expect(targets.length).toBeGreaterThan(10);
-    expect(targets.filter((to) => to.startsWith("/admin"))).toEqual([]);
+    expect(
+      targets.filter((to) => to.toLowerCase().startsWith("/admin")),
+    ).toEqual([]);
   });
 });
