@@ -85,6 +85,70 @@ test.describe("C3 c: Save and leave from an error state", () => {
       await archiveEntry(page, editorPath);
     }
   });
+
+  test("asset detail: a value the browser refuses keeps the dialog usable, then Save and leave saves", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    const file = `wp7-leave-${token}.mp3`;
+    await openStudio(page, "/studio/media");
+    await page.getByRole("button", { name: "Register URL" }).click();
+    await page
+      .getByRole("textbox", { name: "Address (https://)" })
+      .fill(`https://audio.example.com/${file}`);
+    await page.getByRole("button", { name: "Register", exact: true }).click();
+    await expect(page.getByText(`Registered ${file}`)).toBeVisible();
+    await page.getByRole("link", { name: file }).click();
+    await expect(
+      page.getByRole("heading", { level: 1, name: file }),
+    ).toBeVisible();
+    const detailPath = new URL(page.url()).pathname;
+    try {
+      // The media form validates natively (no `noValidate`): 12.5 is off the
+      // whole-seconds step, so the browser sends nothing, and behind the
+      // modal dialog it shows no message either.
+      const start = page.getByRole("spinbutton", {
+        name: "Preview starts (seconds)",
+      });
+      await start.fill("12.5");
+      await expect(topSaveState(page)).toHaveText("UNSAVED CHANGES");
+      const music = page
+        .locator("header")
+        .getByRole("link", { name: "Music", exact: true });
+      await music.click();
+      const dialog = page.getByRole("dialog", {
+        name: "Leave without saving?",
+      });
+      const saveAndLeave = dialog.getByRole("button", {
+        name: "Save and leave",
+      });
+      await saveAndLeave.click();
+      await expect(dialog.getByRole("alert")).toHaveText(
+        "“Preview starts (seconds)” has a value this form cannot save. Stay to correct it, or discard the changes.",
+      );
+      // Not stuck on "Saving…": the button can be used again, Stay works.
+      await expect(saveAndLeave).not.toHaveAttribute("aria-busy", "true");
+      await expect(page).toHaveURL(new RegExp(`${detailPath}$`));
+      await dialog.getByRole("button", { name: "Stay" }).click();
+      await expect(dialog).toBeHidden();
+
+      await start.fill("12");
+      await music.click();
+      await expect(dialog.getByRole("alert")).toHaveCount(0);
+      await saveAndLeave.click();
+      await expect(page).toHaveURL(/\/studio\/music$/);
+      await expect(dialog).toBeHidden();
+      await openStudio(page, detailPath);
+      await expect(start).toHaveValue("12");
+    } finally {
+      // An unused registered URL: delete it, as the media library flow does.
+      acceptDialogs(page);
+      await openStudio(page, detailPath);
+      await page.getByRole("button", { name: "Delete…" }).click();
+      await page.getByRole("button", { name: "Delete permanently" }).click();
+      await expect(page).toHaveURL(/\/studio\/media\?deleted=/);
+    }
+  });
 });
 
 test.describe("C3 e: project body blocks", () => {

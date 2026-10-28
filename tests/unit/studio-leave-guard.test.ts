@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { leaveGuardStep } from "../../app/components/studio/media/leave-guard";
+import {
+  leaveGuardStep,
+  requestSave,
+  unsentMessage,
+} from "../../app/components/studio/media/leave-guard";
 import {
   initialSaveState,
   type SaveState,
@@ -81,5 +85,52 @@ describe("Save and leave (leaveGuardStep)", () => {
     );
     expect(failedAgain).not.toBe(clicked);
     expect(leaveGuardStep(clicked, failedAgain)).toBe("reset");
+  });
+});
+
+/**
+ * A form as `requestSubmit` treats it: a valid one dispatches `submit`
+ * synchronously; constraint validation stops an invalid one before any
+ * submit event (12.5 in a `step=1` number field, say).
+ */
+class StandInForm extends EventTarget {
+  submits = 0;
+  constructor(private readonly valid: boolean) {
+    super();
+  }
+  requestSubmit() {
+    if (!this.valid) return;
+    this.submits += 1;
+    this.dispatchEvent(new Event("submit", { cancelable: true }));
+  }
+}
+
+describe("Save and leave: the save request (requestSave)", () => {
+  it("reports a save the browser sent", () => {
+    const form = new StandInForm(true);
+    expect(requestSave(form)).toBe(true);
+    expect(form.submits).toBe(1);
+  });
+
+  it("reports a save that constraint validation kept from starting", () => {
+    // No submit event, so no fetcher and no new save state: waiting for one
+    // would leave the dialog on "Saving…" for good.
+    const form = new StandInForm(false);
+    expect(requestSave(form)).toBe(false);
+  });
+});
+
+describe("Save and leave: the unsent message", () => {
+  it("names the field the browser refused", () => {
+    expect(unsentMessage(" Preview starts (seconds) ")).toBe(
+      "“Preview starts (seconds)” has a value this form cannot save. Stay to correct it, or discard the changes.",
+    );
+  });
+
+  it("still explains when the field has no label", () => {
+    expect(unsentMessage(null)).toBe(
+      "A field has a value this form cannot save. Stay to correct it, or discard the changes.",
+    );
+    expect(unsentMessage("  ")).toBe(unsentMessage(null));
   });
 });
