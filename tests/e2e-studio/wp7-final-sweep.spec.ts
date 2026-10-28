@@ -76,9 +76,10 @@ test.describe("C3 c: Save and leave from an error state", () => {
       await expect(page).toHaveURL(/\/studio\/music$/);
       await expect(dialog).toBeHidden();
 
+      // Stored as 195 s; the editor shows durations as mm:ss.
       await openStudio(page, editorPath);
       await expect(page.getByRole("textbox", { name: "Duration" })).toHaveValue(
-        "3:15",
+        "03:15",
       );
     } finally {
       await archiveEntry(page, editorPath);
