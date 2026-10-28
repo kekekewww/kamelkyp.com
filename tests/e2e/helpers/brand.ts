@@ -31,8 +31,26 @@ export function withoutContactAddresses(html: string): string {
   return result;
 }
 
+/**
+ * A deployed Preview is served from `<worker>.<account subdomain>.workers.dev`;
+ * that subdomain is infrastructure, not public copy, and the absolute
+ * canonical and hreflang URLs repeat it. Production is served from
+ * kamelkyp.com, so the scan ignores only the Preview's own host.
+ */
+const previewHost = (() => {
+  try {
+    return process.env.PREVIEW_URL ? new URL(process.env.PREVIEW_URL).host : "";
+  } catch {
+    return "";
+  }
+})();
+
+export function withoutOwnHost(html: string): string {
+  return previewHost ? html.split(previewHost).join("") : html;
+}
+
 export function personalNameHits(html: string): string[] {
-  const text = withoutContactAddresses(html);
+  const text = withoutOwnHost(withoutContactAddresses(html));
   return PERSONAL_NAME_VARIANTS.flatMap((pattern) => {
     const match = text.match(pattern);
     return match ? [match[0]] : [];
