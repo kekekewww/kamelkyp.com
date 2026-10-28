@@ -173,9 +173,6 @@ permanent redirect would outlive a rollback) and `X-Robots-Tag: noindex, nofollo
 | `/admin/cases`, `/admin/cases/status`, `/student-discount`, `/cleanup` | `/studio/commissions` plus the original query (`?status&service&cursor`, the inbox's own names) | 410 |
 | anything else reaching `admin/*` | `/studio` | 410 |
 
-Pending wp3: until Studio → Footer is merged, `/admin/links` is still answered by the legacy footer link editor
-(the last legacy panel, retired together with its layout and `admin.css`).
-
 React Router matches routes case-insensitively, so `/ADMIN/Works` and `/Admin/Cases?status=paused` reach the
 redirect too; the target helpers (`app/lib/cms/studio/legacy-admin.ts`) match case-insensitively for that reason.
 `requiresNoStore()` compares `/admin` case-sensitively, which is why the module sets `no-store` itself.
@@ -631,7 +628,7 @@ radius 0 with 2 px for controls, hairline rules, accent budget, focus ring (desi
 changes **density and motion**, not identity: smaller type steps, tighter rhythm, visible controls, no ambient
 motion, no display-size headings. Styles live in `app/styles/studio/base.css` (foundation) and per-area files, all
 scoped under `.studio` and loaded by Studio route `links` only (public pages never load them). The legacy global
-`admin.css` is removed by the integration package.
+`admin.css` was removed in WP5 (2026-10).
 
 ### 5.2 Density tokens (defined on `.studio`)
 

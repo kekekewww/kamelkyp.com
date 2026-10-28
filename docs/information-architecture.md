@@ -57,7 +57,7 @@ URLs with separately authored copy.
 | `/language/:locale` | unchanged | Sets `kamel_locale` cookie, redirects to `returnTo` | Switch language | — |
 | `/health`, `/api/commission/*` | unchanged | Infrastructure | — | — |
 | `/studio/**` | Content Studio (KAMEL STUDIO) | Owner-only CMS behind Cloudflare Access, noindex, `no-store` (admin-architecture) | Manage content, settings and commissions | — |
-| `/admin/**` | retired | Owner check, then GET → 301 to the Studio equivalent, other methods → 410 (admin-architecture §2.3); `/admin/links` stays the legacy footer link editor until Studio → Footer lands | — | `/studio` |
+| `/admin/**` | retired | Owner check, then GET → 301 to the Studio equivalent, other methods → 410 (admin-architecture §2.3) | — | `/studio` |
 | any unmatched path | redesigned | Error page (404 vs generic) | Recover | Home; Work; START A PROJECT |
 
 Notes:
@@ -67,7 +67,7 @@ Notes:
   redirect helper (`/zh/other?x=1 → /zh/writing?x=1`, `/en/other/abc →
   /en/writing/abc`).
 - Production D1 `links` rows that still point to `/other` keep working via the
-  301; the admin should update them, but it is not a blocker.
+  301; update them in Studio → Settings → Footer, but it is not a blocker.
 - `?category=` with an unknown value renders the "All" view (no 404) and the
   canonical link points to `/:lang/works`.
 

@@ -26,7 +26,7 @@ Starting from the brief (§5). Changes from the brief are marked **Δ**.
 | --- | --- | --- |
 | `--color-bg` | `#090D12` | Page background. Never `#000`. |
 | `--color-bg-2` | `#0F151D` | Secondary background: alternate zones (contact band, footer base, mobile menu panel), form field fill. |
-| `--color-surface` | `#161E28` | Elevated surface: audio player, hover preview frame, choice cards, sticky TOC, admin sidebar. |
+| `--color-surface` | `#161E28` | Elevated surface: audio player, hover preview frame, choice cards, sticky TOC, Studio sidebar. |
 | `--color-surface-hover` **Δ new** | `#1C2632` | Hover/pressed tone on `--color-surface` elements only. |
 | `--color-text` | `#E8EDF2` | Primary text, display, headings, the neutral inverse button fill. |
 | `--color-text-bright` **Δ new** | `#F5F7F9` | Hover fill of the inverse neutral button only. |
@@ -576,19 +576,11 @@ The layout is a single document column: cols 4–10 (lg+), full width < md. Exis
 - **Base row:** 1px `--color-rule` above it, Metadata `--color-text-meta`: `© 2026 Kamel` at inline-start and `TAIWAN / REMOTE` (localized) at inline-end.
 - **Mobile (< lg):** 5 `<details>` accordions. `summary` has `min-block-size: 3.5rem`, Body 500 `--color-text`, a `+` built from two 1px lines that rotates to `−` when open (`--duration-base`), and `--color-rule` between groups. The open panel lists links at 48px rows. The native disclosure triangle is hidden (`list-style: none; ::-webkit-details-marker { display: none }`). Focus: ring on summary. No prices ever.
 
-### 6.25 Admin, token-only pass
+### 6.25 Admin (retired)
 
-The layout does not change. `admin.css` keeps its selectors and gets the new values through the aliases:
-
-| Admin usage | Variable | Resolves to |
-| --- | --- | --- |
-| Shell background | `--color-mineral` | `--color-bg` `#090D12` |
-| Sidebar / field fills | `--color-console` | `--color-bg-2` `#0F151D` |
-| Borders | `--color-line` | `--color-rule-strong` `#2A3643` |
-| Active nav border/text | `--color-accent` (previously **undefined**, so it fell back to `currentColor`) | `#A7C7E7` (now defined) |
-| Text | `--color-chalk` / `--color-cool-gray` | `--color-text` / `--color-text-secondary` |
-
-One recommended one-line follow-up (not required): switch admin form input borders from `--color-line` to `--color-control-border` for 3:1. Today they are about 1.6:1, as they were before.
+`admin.css` was deleted in WP5 (2026-10), together with the legacy `/admin` screens it styled; the legacy URLs now
+redirect to the Studio (admin-architecture §2.3). The Studio's visual spec is admin-architecture §5 and
+`app/styles/studio/*`.
 
 ---
 
