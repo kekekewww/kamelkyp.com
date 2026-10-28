@@ -6,6 +6,10 @@ export type DeploymentMode = "production" | "preview";
  *   previews for uploads, may frame its own preview route;
  * - `studio-preview`: /studio/preview/* — public CSP, framable by the Studio;
  * - `public`: everything else (unchanged).
+ *
+ * Paths compare case-insensitively: React Router and Cloudflare Access both
+ * match `/Studio/commissions` like `/studio/commissions`, so its headers must
+ * match too.
  */
 type SecuritySurface = "public" | "studio" | "studio-preview";
 
@@ -13,7 +17,8 @@ function within(pathname: string, prefix: string): boolean {
   return pathname === prefix || pathname.startsWith(`${prefix}/`);
 }
 
-export function securitySurface(pathname: string): SecuritySurface {
+export function securitySurface(rawPathname: string): SecuritySurface {
+  const pathname = rawPathname.toLowerCase();
   if (within(pathname, "/studio/preview")) return "studio-preview";
   if (within(pathname, "/studio") || within(pathname, "/api/studio")) {
     return "studio";
@@ -78,7 +83,8 @@ export function buildSecurityHeaders({
   return headers;
 }
 
-export function requiresNoStore(pathname: string, status: number): boolean {
+export function requiresNoStore(rawPathname: string, status: number): boolean {
+  const pathname = rawPathname.toLowerCase();
   return (
     status >= 400 ||
     pathname === "/admin" ||
