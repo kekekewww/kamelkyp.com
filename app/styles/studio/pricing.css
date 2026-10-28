@@ -1,0 +1,320 @@
+/* ==========================================================================
+   KAMEL STUDIO — Pricing (wp2 §4.9) and the shared tables of Pricing and
+   Terms: ruled service rows, the commission availability table, the FX
+   panel, the price editor (values, check, history). Same tokens as
+   base.css; every figure uses tabular numbers; scoped under `.studio`.
+   ========================================================================== */
+
+/* ---- Tables (shared with Terms) -------------------------------------------- */
+
+.studio .studio-scroll-region {
+  max-inline-size: 100%;
+  overflow-x: auto;
+}
+
+.studio .studio-table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.studio .studio-table__caption {
+  padding-block: 0 var(--space-2);
+  color: var(--color-text-meta);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta-xs);
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-align: start;
+  text-transform: uppercase;
+}
+
+.studio .studio-table th,
+.studio .studio-table td {
+  padding: var(--space-2);
+  border-block-end: 1px solid var(--color-rule);
+  text-align: start;
+  vertical-align: top;
+}
+
+.studio .studio-table thead th {
+  color: var(--color-text-meta);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta-xs);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.studio .studio-table th:first-child,
+.studio .studio-table td:first-child {
+  padding-inline-start: 0;
+}
+
+.studio .studio-table tbody th {
+  font-weight: 500;
+}
+
+/* ---- Pricing index ----------------------------------------------------------- */
+
+.studio .studio-pricing-list {
+  margin-block: var(--space-5) var(--space-6);
+  border-block-start: 1px solid var(--color-rule);
+}
+
+.studio .studio-pricing-row {
+  display: grid;
+  gap: var(--space-1);
+  padding-block: var(--space-4);
+  border-block-end: 1px solid var(--color-rule);
+}
+
+.studio .studio-pricing-row p {
+  margin: 0;
+}
+
+.studio .studio-pricing-row__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
+}
+
+.studio .studio-pricing-row__name {
+  margin: 0;
+  font-size: var(--text-body);
+  font-weight: 600;
+}
+
+.studio .studio-pricing-row__zh {
+  color: var(--color-text-secondary);
+}
+
+.studio .studio-pricing-row__figure {
+  font-family: var(--font-display);
+  font-size: var(--text-h3);
+  font-stretch: 112%;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.studio .studio-pricing-row__rates,
+.studio .studio-pricing-row__next {
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.studio .studio-pricing-row__meta {
+  color: var(--color-text-meta);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta-xs);
+  letter-spacing: 0.04em;
+}
+
+.studio .studio-pricing-row__missing {
+  color: var(--color-danger);
+}
+
+.studio .studio-pricing-row__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  margin-block-start: var(--space-1);
+}
+
+/* ---- Commission availability ---------------------------------------------- */
+
+.studio .studio-readiness {
+  margin-block: var(--space-6);
+}
+
+.studio .studio-readiness__word {
+  font-weight: 600;
+}
+
+.studio .studio-readiness__cell--open .studio-readiness__word {
+  color: var(--color-success);
+}
+
+.studio .studio-readiness__cell--closed .studio-readiness__word {
+  color: var(--color-warning);
+}
+
+.studio .studio-readiness__reason {
+  color: var(--color-text-secondary);
+}
+
+/* ---- Exchange rate ---------------------------------------------------------- */
+
+.studio .studio-fx {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+  margin-block: var(--space-6);
+  padding: var(--space-4) var(--space-5);
+  border-inline-start: 2px solid var(--color-rule-strong);
+  background: var(--color-bg-2);
+}
+
+.studio .studio-fx p {
+  margin: 0;
+}
+
+.studio .studio-fx__state {
+  font-weight: 600;
+}
+
+.studio .studio-fx__state--ok {
+  color: var(--color-success);
+}
+
+.studio .studio-fx__state--stale,
+.studio .studio-fx__state--missing {
+  color: var(--color-warning);
+}
+
+.studio .studio-fx__rate {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* ---- Price editor ------------------------------------------------------------ */
+
+.studio .studio-price-form {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.studio .studio-price-form__values {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  gap: var(--space-4);
+}
+
+.studio .studio-price-form__values input {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.studio .studio-price-form__carried {
+  margin: var(--space-4) 0 0;
+  color: var(--color-text-secondary);
+}
+
+.studio .studio-price-form__carried dt {
+  color: var(--color-text-meta);
+}
+
+.studio .studio-price-form__carried dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.studio .studio-price-form__effective {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-5) 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.studio .studio-price-form__mode {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: var(--studio-control-h);
+}
+
+.studio .studio-price-form__mode input {
+  accent-color: var(--color-accent);
+}
+
+.studio .studio-price-form__summary {
+  margin: 0 auto 0 0;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.studio .studio-price-form__notes {
+  margin-block-end: var(--space-5);
+}
+
+.studio .studio-quote-check {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.studio .studio-quote-check__table td {
+  white-space: nowrap;
+}
+
+.studio .studio-quote-check__warnings {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.studio .studio-quote-check__warning {
+  padding: var(--space-2) var(--space-3);
+  border-inline-start: 2px solid var(--color-warning);
+  background: var(--color-bg-2);
+}
+
+.studio .studio-quote-check__tag {
+  color: var(--color-warning);
+  font-family: var(--font-mono);
+  font-size: var(--text-meta-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ---- Price history ----------------------------------------------------------- */
+
+.studio .studio-price-history td {
+  white-space: nowrap;
+}
+
+.studio .studio-price-history__row--superseded,
+.studio .studio-price-history__row--replaced,
+.studio .studio-price-history__row--cancelled,
+.studio .studio-price-history__row--retired {
+  color: var(--color-text-secondary);
+}
+
+.studio .studio-price-state {
+  display: grid;
+  gap: var(--space-1);
+  justify-items: start;
+}
+
+.studio .studio-price-state__badge--active {
+  color: var(--color-success);
+}
+
+.studio .studio-price-state__badge--scheduled {
+  color: var(--color-accent);
+}
+
+.studio .studio-price-state__note {
+  color: var(--color-text-meta);
+  font-size: var(--text-meta-xs);
+  font-weight: 400;
+}
+
+.studio .studio-price-history__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-block-start: var(--space-2);
+}
+
+.studio .studio-price-history__cancel {
+  display: contents;
+}
+
+@media (max-width: 767px) {
+  .studio .studio-price-form__values {
+    grid-template-columns: 1fr;
+  }
+}

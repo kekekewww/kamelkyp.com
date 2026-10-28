@@ -1,11 +1,8 @@
 import { type LoaderFunctionArgs, useLoaderData } from "react-router";
 import { CommissionWizard } from "../../components/commission/commission-wizard";
 import type { PublicRouteHandle } from "../../components/layout/public-shell";
-import { getCommissionServiceNames } from "../../lib/cms/public/services.server";
-import { getActiveTerms } from "../../lib/commission/terms-repository.server";
+import { loadCommissionWizard } from "../../lib/commission/availability.server";
 import { getPublicLoaderContext } from "../../lib/content/public-loader.server";
-import { getUsableFxSnapshot } from "../../lib/pricing/fx-repository.server";
-import { getActivePriceRule } from "../../lib/pricing/price-repository.server";
 import type { ServiceId } from "../../lib/services/service-id";
 
 const ROUTE_SERVICES: Record<string, ServiceId> = {
@@ -24,14 +21,11 @@ export async function loader(args: LoaderFunctionArgs) {
   if (!serviceId) throw new Response("Not Found", { status: 404 });
 
   const { locale, db, env } = getPublicLoaderContext(args);
-  const now = new Date().toISOString();
-  const [priceRule, terms, names] = await Promise.all([
-    getActivePriceRule(db, serviceId, now),
-    getActiveTerms(db, serviceId, locale, now),
-    getCommissionServiceNames(db, locale),
-  ]);
-  const fxSnapshot =
-    locale === "en" ? await getUsableFxSnapshot(db, now.slice(0, 10)) : null;
+  // A service without an active price or effective terms is closed: 404,
+  // never a 500 (wp2 §4.6). Missing FX only hides the US$ figures.
+  const wizard = await loadCommissionWizard(db, locale, serviceId, new Date());
+  if (!wizard) throw new Response("Not Found", { status: 404 });
+  const { priceRule, terms, serviceName, fxSnapshot } = wizard;
 
   const turnstileSiteKey =
     env.TURNSTILE_SITE_KEY ||
@@ -39,7 +33,7 @@ export async function loader(args: LoaderFunctionArgs) {
   return {
     locale,
     serviceId,
-    serviceName: names[serviceId] ?? serviceId,
+    serviceName,
     priceRule,
     terms,
     fxSnapshot,

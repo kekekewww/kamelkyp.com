@@ -359,6 +359,7 @@ export function ServiceEditor({ data }: { data: ServiceEditorData }) {
           >
             <PriceFields
               commissionLinked={linked}
+              commissionServiceId={content.commissionServiceId}
               livePrice={livePrice}
               defaultMode={content.priceMode}
               defaultAmount={content.priceAmount}

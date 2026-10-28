@@ -30,7 +30,15 @@ export default [
       route("services", "routes/studio/services/list.tsx"),
       route("services/new", "routes/studio/services/new.tsx"),
       route("services/pricing", "routes/studio/services/pricing.tsx"),
+      route(
+        "services/pricing/:serviceId",
+        "routes/studio/services/pricing-edit.tsx",
+      ),
       route("services/terms", "routes/studio/services/terms.tsx"),
+      route(
+        "services/terms/:documentId/:locale",
+        "routes/studio/services/terms-edit.tsx",
+      ),
       route("services/:id", "routes/studio/services/edit.tsx"),
       route("social", "routes/studio/social.tsx"),
       route("media", "routes/studio/media/library.tsx"),
@@ -56,6 +64,7 @@ export default [
       route("recognition/:id", "routes/studio/preview/recognition.tsx"),
       route("writing/:id", "routes/studio/preview/writing.tsx"),
       route("services/:id", "routes/studio/preview/service.tsx"),
+      route("terms/:documentId", "routes/studio/preview/terms.tsx"),
     ]),
   ]),
   route("api/studio/session", "routes/api/studio/session.ts"),

@@ -24,6 +24,7 @@ function errorMessage(locale: Locale, code: string): string {
     turnstile_failed: "防機器人驗證失敗，請再試一次。",
     term_version_mismatch: "條款已更新，請重新閱讀並同意。",
     fx_rate_stale: "目前無法鎖定美金價格，請稍後再試。",
+    fx_rate_missing: "目前無法鎖定美金價格，請稍後再試。",
   };
   const en: Record<string, string> = {
     submission_rate_limited: "Too many attempts. Please try again later.",
@@ -34,6 +35,8 @@ function errorMessage(locale: Locale, code: string): string {
     term_version_mismatch:
       "The terms changed. Please review and accept them again.",
     fx_rate_stale: "The USD price cannot be locked right now. Try again later.",
+    fx_rate_missing:
+      "The USD price cannot be locked right now. Try again later.",
   };
   return (
     (locale === "zh" ? zh : en)[code] ??
@@ -55,7 +58,8 @@ const SAFE_ERROR_CODES = new Set([
   "submission_rate_limited",
   "terms_not_accepted",
   "term_version_mismatch",
-  "price_rule_not_found",
+  "active_price_rule_not_found",
+  "active_terms_unavailable",
   "fx_rate_missing",
   "fx_rate_stale",
   "turnstile_missing",

@@ -62,10 +62,15 @@ export async function getPublicContent(
   return content ? toPublicContent(content) : null;
 }
 
+/**
+ * The published legal documents of `/terms` or `/privacy` that are in effect
+ * at `at` (the same "effective now" rule as the wizard's `getActiveTerms`).
+ */
 export async function listPublishedTerms(
   db: D1Database,
   locale: Locale,
   kind: "terms" | "privacy",
+  at: string = new Date().toISOString(),
 ): Promise<PublishedTerm[]> {
   const kinds = kind === "privacy" ? ["privacy"] : ["common", "service"];
   const placeholders = kinds.map(() => "?").join(", ");
@@ -82,10 +87,10 @@ export async function listPublishedTerms(
       JOIN term_publications p
         ON p.document_id = d.id AND p.locale = ?
       JOIN term_versions v ON v.id = p.version_id
-      WHERE d.kind IN (${placeholders})
+      WHERE d.kind IN (${placeholders}) AND p.effective_from <= ?
       ORDER BY CASE d.kind WHEN 'common' THEN 0 ELSE 1 END, d.id`,
     )
-    .bind(locale, ...kinds)
+    .bind(locale, ...kinds, at)
     .all<TermRow>();
 
   return rows.results.map((row) => ({

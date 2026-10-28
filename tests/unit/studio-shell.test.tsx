@@ -54,6 +54,12 @@ describe("Studio shell", () => {
     expect(activeNavItem("/studio/projects/new")?.label).toBe("Projects");
     expect(activeNavItem("/studio/services/abc")?.label).toBe("Services");
     expect(activeNavItem("/studio/services/pricing")?.label).toBe("Pricing");
+    expect(activeNavItem("/studio/services/pricing/full_mix")?.label).toBe(
+      "Pricing",
+    );
+    expect(activeNavItem("/studio/services/terms/common/zh")?.label).toBe(
+      "Terms",
+    );
     expect(activeNavItem("/studio/settings/brand")?.label).toBe("Brand");
     expect(activeNavItem("/elsewhere")).toBeNull();
   });

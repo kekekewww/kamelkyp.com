@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import { getSiteCopy } from "../../lib/i18n/copy";
 import type { Locale } from "../../lib/i18n/locale";
 import { localePath } from "../../lib/i18n/path";
+import { taipeiDate } from "../../lib/time/taipei";
 
 export interface LegalTocEntry {
   id: string;
@@ -14,9 +15,13 @@ export function legalAnchorId(...parts: string[]): string {
   return parts.join("-").replace(/[^a-zA-Z0-9_-]/g, "-");
 }
 
-/** `2026-09-01…` → `2026.09.01` (design-system §6.19 metadata date). */
+/**
+ * `2026-09-01…` → `2026.09.01` (design-system §6.19 metadata date): the
+ * Taipei calendar day, so a version published between 00:00 and 08:00
+ * Taipei never shows the day before it took effect.
+ */
 export function formatLegalDate(value: string): string {
-  return value.slice(0, 10).replaceAll("-", ".");
+  return taipeiDate(value).replaceAll("-", ".");
 }
 
 /** Latest effective date across the published documents, or null. */

@@ -1,18 +1,26 @@
 import type { CommissionDraft } from "../../lib/commission/schema";
 import type { Locale } from "../../lib/i18n/locale";
+import { bpsToPercentLabel } from "../../lib/pricing/percent";
+import type { PriceRule } from "../../lib/pricing/types";
 
 export interface CommissionFieldProps {
   draft: CommissionDraft;
   locale: Locale;
+  /** The active price rule: rate labels always match the quoted rates. */
+  priceRule: PriceRule;
   updateField(name: string, value: unknown): void;
 }
 
 export function CommonFields({
   draft,
   locale,
+  priceRule,
   updateField,
 }: CommissionFieldProps) {
   const isZh = locale === "zh";
+  const student = bpsToPercentLabel(priceRule.studentDiscountBps);
+  const rush = bpsToPercentLabel(priceRule.rushBps);
+  const sourcePrep = bpsToPercentLabel(priceRule.sourcePrepBps);
 
   function updateContact(
     index: number,
@@ -212,8 +220,8 @@ export function CommonFields({
           }
         />
         {isZh
-          ? "申請學生優惠（所有計價 -30%）"
-          : "Request student discount (30% off)"}
+          ? `申請學生優惠（所有計價 -${student}%）`
+          : `Request student discount (${student}% off)`}
       </label>
       {draft.studentRequested ? (
         <>
@@ -245,8 +253,8 @@ export function CommonFields({
           onChange={(event) => updateField("rush", event.target.checked)}
         />
         {isZh
-          ? "詢問急件（服務基價 +50%）"
-          : "Request rush scheduling (+50% of service base)"}
+          ? `詢問急件（服務基價 +${rush}%）`
+          : `Request rush scheduling (+${rush}% of service base)`}
       </label>
       <label className="checkbox-field" htmlFor="sourcePrep">
         <input
@@ -256,8 +264,8 @@ export function CommonFields({
           onChange={(event) => updateField("sourcePrep", event.target.checked)}
         />
         {isZh
-          ? "需要素材整理（服務基價 +5%）"
-          : "Source preparation needed (+5% of service base)"}
+          ? `需要素材整理（服務基價 +${sourcePrep}%）`
+          : `Source preparation needed (+${sourcePrep}% of service base)`}
       </label>
     </fieldset>
   );

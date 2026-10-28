@@ -244,6 +244,14 @@ student, rush, consultation and source-prep fields that a single amount cannot e
   The wizard receives the service name from its route loader; `commission-success` receives it in the navigation
   state the wizard already sets.
 - Non-commission services carry their own `price_mode`, `price_amount`, `currency`; numbers are never required.
+- Publish metadata (WP2, `0009_pricing_terms_studio.sql`): each publish also inserts an immutable
+  `price_version_publications` row (`published_at`, `action` publish/replace/cancel). The active rule breaks ties at
+  the same `effective_from` by the latest `published_at` (seeds, without metadata, sort last), which makes
+  "replace a scheduled change" (publish again at the same instant) and "cancel it" (a cancellation row at that
+  instant, carrying the baseline values for the record) deterministic without updating or deleting a
+  `price_versions` row. An instant whose latest publish is a cancellation is no change at all: the active rule
+  skips it, so the rule in force before it stays in force whatever is published or cancelled later. Studio →
+  Pricing publishes now or at a Taipei time at least 5 minutes ahead; backdating is refused.
 
 ### 3.6 Public read path
 
@@ -592,6 +600,12 @@ versions: they migrate untouched, remain editable only through the legal flow (S
 fourth audit query lists any version containing a name or the personal email. Whether "Kamel" is sufficient or a
 legal name must appear is Kevin's (and his reviewer's) decision.
 
+Studio → Terms (WP2) edits a server draft per document and locale (`term_drafts`, revision-checked, never public),
+previews it inside the real `/terms` or `/privacy` page and publishes it with the legal-review checkbox: the stored
+draft becomes the next immutable `term_versions` row and the pointer moves with `effective_from = now` (terms take
+effect on publish; no scheduling, no backdating). `/terms`, `/privacy` and the commission wizard share one rule:
+a pointer counts once its `effective_from` has passed. A personal-name variant in a draft is a warning, not a block.
+
 ### 6.5 Guard rails
 
 - `brand-guard.server.ts` runs in publish validation for all public text of every entity and in settings saves
@@ -793,7 +807,8 @@ design unchanged except the removed real-name line; all commission and currency 
 **Owns:** `app/routes/studio/services/{pricing,terms}.tsx`, `app/routes/studio/settings/footer.tsx`,
 `app/routes/studio/commissions/**`, `app/components/studio/{pricing,terms,footer,commissions}/**` (ports of
 `CaseTable`, `CleanupChecklist`, `LinkGroupEditor` and the price/terms forms, reusing `app/lib/admin/{case,cleanup,
-service-catalog,term}-service.server.ts` unchanged), `app/routes.ts` (flip `/admin/*` to
+term}-service.server.ts` unchanged and `service-catalog-service.server.ts` with one additive change: `publishPriceVersion`
+also writes its publish metadata in the same batch (WP2)), `app/routes.ts` (flip `/admin/*` to
 `admin-legacy-redirect.ts`), deletion of `app/routes/admin/**`, `app/components/admin/**`, `app/styles/admin.css`
 (+ its link in `app/root.tsx`), `app/lib/admin/{content-service,media-content-service,block-form}*`,
 `app/lib/db/content-repository.server.ts`, `app/lib/media/media-repository.server.ts`,

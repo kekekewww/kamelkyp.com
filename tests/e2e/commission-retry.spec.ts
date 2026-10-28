@@ -45,16 +45,22 @@ test("mail failure preserves the draft and retry Case ID", async ({ page }) => {
       "Your form is saved in Google, but notification is still pending.",
     ),
   ).toBeVisible();
-  expect(
-    await page.evaluate(() =>
-      localStorage.getItem("kamel:commission:v1:en:full_mix"),
-    ),
-  ).not.toBeNull();
-  expect(
-    await page.evaluate(() =>
-      localStorage.getItem("kamel:commission-attempt:v1:full_mix"),
-    ),
-  ).toBe("KAM-20260810-0000000002");
+  // The draft and the attempt are written by the wizard's own effects, which
+  // may land just after the message renders: poll instead of reading once.
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        localStorage.getItem("kamel:commission:v1:en:full_mix"),
+      ),
+    )
+    .not.toBeNull();
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        localStorage.getItem("kamel:commission-attempt:v1:full_mix"),
+      ),
+    )
+    .toBe("KAM-20260810-0000000002");
 
   const retry = page.getByRole("button", { name: "Retry notification" });
   await expect(retry).toBeEnabled();

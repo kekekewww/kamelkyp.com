@@ -49,3 +49,14 @@ export function businessDaysBetween(from: string, to: string): number {
   }
   return count;
 }
+
+/** `3250000` (scale 1e8) → `"0.0325"`: the rate as stored, without float error. */
+export function formatFxRate(rateScaled: number): string {
+  const scaled = BigInt(rateScaled);
+  const whole = scaled / SCALE;
+  const fraction = (scaled % SCALE)
+    .toString()
+    .padStart(8, "0")
+    .replace(/0+$/, "");
+  return fraction ? `${whole}.${fraction}` : whole.toString();
+}

@@ -72,7 +72,14 @@ export function saveStateLabel(state: SaveState, timeZone?: string): string {
   }
 }
 
-const IGNORED_FIELDS = new Set(["csrfToken", "intent", "expectedRevision"]);
+// The legal-review confirmation is a per-publish attestation, not content:
+// it never makes a form dirty, is never backed up and never restored.
+const IGNORED_FIELDS = new Set([
+  "csrfToken",
+  "intent",
+  "expectedRevision",
+  "legalReviewConfirmed",
+]);
 
 /** Stable serialization of a form's content fields (dirty tracking, backups). */
 export function serializeForm(formData: FormData): string {

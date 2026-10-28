@@ -301,6 +301,19 @@ the existing `/admin/services` flow). `SERVICE_CATALOG.basePriceTwd` is deleted.
 and the marketing page can no longer drift from the quote (today it can: pages read the static catalog, quotes
 read D1).
 
+**Publish metadata and the tie-break (WP2).** Every Studio (and legacy `/admin/services`) publish writes, in the same
+batch as the `price_versions` row, one immutable `price_version_publications` row: `version_id` (PK, NOT NULL),
+`published_at`, `action` (`publish` | `replace` | `cancel`) and `replaces_version_id` (NULL exactly for
+`publish`). The versions at one `effective_from` form a group won by the latest `published_at`, then `id`
+(seed rows have no metadata and sort last at the same instant), so a later publish at the same effective time
+wins: that is how a scheduled change is replaced. A cancellation is a row at the scheduled instant (`action =
+'cancel'`, a copy of the baseline values for the record); `getActivePriceRule` skips a group won by a
+cancellation and returns the winner of the newest other group, so a cancelled change never takes effect and
+never reverts a price published later. No `price_versions` row is ever updated or deleted. Legal drafts live in `term_drafts` (one mutable working copy per
+document and locale, `revision`-checked, never read by a public route); publishing copies the draft into the next
+`term_versions` row and moves the `term_publications` pointer with `effective_from = now` in one batch. Both tables
+come from `0009_pricing_terms_studio.sql` (§3.5).
+
 Unpublishing a commission-linked row hides its marketing page and removes it from the commission category
 chooser; archive and delete are blocked by triggers. Public routes stay fixed in `app/routes.ts`
 (`/mixing/full`, `/mixing/vocal`, `/song-transition/simple`, `/song-transition/edit`); the slug is informational.
@@ -443,6 +456,7 @@ Numbering follows `0004_admin_revision.sql`. All statements are idempotent (`IF 
 | `migrations/0006_cms_base_seed.sql` | taxonomy terms, brand and site settings, 4 commission-linked services and 7 software services (published) |
 | `migrations/0007_cms_legacy_import.sql` | existing D1 works, posts, home showreel, media items, social link group → new tables |
 | `migrations/0008_cms_sample_drafts.sql` | file-based placeholder content → draft rows with `todo_content = 1` |
+| `migrations/0009_pricing_terms_studio.sql` | Studio Pricing and Terms: `price_version_publications`, `term_drafts`; inserts no rows (§3.5) |
 
 ### 3.1 `0005_cms_schema.sql` (complete)
 
@@ -1355,6 +1369,36 @@ INSERT OR IGNORE INTO project_categories (project_id, term_id, position) VALUES
 
 Sample rows are never featured (`featured = 0`), so a homepage cannot point at them even by accident.
 
+### 3.5 `0009_pricing_terms_studio.sql`
+
+Additive and re-runnable (`CREATE … IF NOT EXISTS` only, no `ALTER`, no data). Prices and terms are never seeded here.
+
+```sql
+CREATE TABLE IF NOT EXISTS price_version_publications (
+  version_id TEXT NOT NULL PRIMARY KEY REFERENCES price_versions(id),
+  published_at TEXT NOT NULL,
+  action TEXT NOT NULL DEFAULT 'publish' CHECK (action IN ('publish', 'replace', 'cancel')),
+  replaces_version_id TEXT REFERENCES price_versions(id),
+  CHECK ((action = 'publish') = (replaces_version_id IS NULL))
+);
+-- BEFORE UPDATE / BEFORE DELETE triggers raise 'price_version_immutable'.
+
+CREATE TABLE IF NOT EXISTS term_drafts (
+  document_id TEXT NOT NULL REFERENCES term_documents(id),
+  locale TEXT NOT NULL CHECK (locale IN ('zh', 'en')),
+  body_json TEXT NOT NULL CHECK (json_valid(body_json) AND json_type(body_json) = 'array'),
+  base_version_id TEXT,              -- live version when the draft started; no FK (fixture cleanups delete versions)
+  revision INTEGER NOT NULL CHECK (revision >= 1),
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (document_id, locale)
+);
+```
+
+The new `getActivePriceRule` joins `price_version_publications`, so code from this migration on must never run
+against a database without it (the deploy workflows apply migrations before the Worker deploy; after pulling, run
+`npx wrangler d1 migrations apply kamelkyp-com --local --config wrangler.base.jsonc` for hand-run dev servers).
+
 ---
 
 ## 4. Typed models (zod shapes)
@@ -1573,6 +1617,23 @@ saveBrandSettings(db, expectedRevision: number, value: BrandSettings): Promise<{
 saveSiteSettings(db, expectedRevision: number, value: SiteSettings): Promise<{ revision: number }>;
 getHomepageModel(db, locale?: Locale): Promise<HomepageModel>;   // featured lists per type, showreel, hero, sections
 getStudioHome(db, now: Date): Promise<StudioHomeModel>;           // counts, recent changes, attention, commission queue
+
+// pricing.server.ts (WP2: Studio → Pricing; writes through the reused publishPriceVersion)
+listPriceHistory(db, serviceId: ServiceId, now: Date): Promise<StudioPriceVersion[]>;      // classified: active | scheduled | superseded | replaced | cancelled | retired (cancelled: every row at an instant whose winning row is a cancellation)
+loadPricingIndex(db, now: Date): Promise<PricingIndexData>;                               // services, commission readiness, FX status
+loadPriceEditor(db, serviceId: string, now: Date): Promise<PriceEditorData>;              // 404 Response for an unknown service
+parsePriceVersionForm(formData, ctx: { serviceId; history; now }): ParsedPriceVersion;   // percent → bps by string arithmetic; carried fields from the baseline
+handlePriceEditorAction({ db, serviceId, formData, intent, now });                       // publish-price-version | cancel-scheduled (only a scheduled change; inserts an action = 'cancel' row at that instant with the baseline values, so the rule before it stays active; nothing is updated or deleted)
+handlePricingIndexAction({ db, env, intent, now, fetcher = fetch });                     // refresh-fx
+
+// terms.server.ts (WP2: Studio → Terms)
+loadTermsIndex(db, now: Date): Promise<TermsIndexData>;
+loadTermEditor(db, documentId: string, locale: string, now: Date): Promise<TermEditorData>; // 404 Response when unknown
+parseTermDraftForm(formData): { parsed; expectedRevision: number | null; legalReviewConfirmed: boolean };
+saveTermDraft(db, { documentId, locale, clauses, expectedRevision, now }): Promise<{ revision; updatedAt; changed }>;
+publishTermDraft(db, { documentId, locale, revision, now }): Promise<{ versionId; versionNumber; effectiveFrom }>;
+discardTermDraft(db, { documentId, locale, revision }): Promise<void>;
+handleTermEditorAction({ db, documentId, locale, formData, intent, now });              // save | publish-term-version | discard-draft
 ```
 
 ### 5.4 Public reads (foundation builds, P5 owns after foundation; `app/lib/cms/public/*.server.ts`)
@@ -1659,4 +1720,6 @@ Status legend: **Pub** = published by the migration, **Draft/TODO** = `status='d
 | other `link_groups` (workRepository, otherWebsite, footer, postReference) | stay in `link_groups` | Stays | edited in Studio → Settings → Footer |
 | `service_definitions`, `price_versions` | unchanged | Stays (canonical) | mixing/transition prices from Kevin's 2026-08-10 spec migrate as-is: **Kevin confirms** |
 | `term_documents`/`term_versions`/`term_publications` | unchanged | Stays (canonical) | edited in Studio → Services → Terms; audited, not rewritten |
+| (new) `price_version_publications` | created empty by `0009_pricing_terms_studio.sql` | New | seed price versions get no row; every later publish writes one |
+| (new) `term_drafts` | created empty by `0009_pricing_terms_studio.sql` | New | Studio working copies; never public |
 | `cases`, `case_runtime`, `submission_attempts`, `fx_rates` | unchanged | Stays | Studio → Commissions |

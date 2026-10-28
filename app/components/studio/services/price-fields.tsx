@@ -14,6 +14,7 @@ import { CURRENCY_OPTIONS, formatMoney, PRICE_MODE_OPTIONS } from "./price";
 
 export function PriceFields({
   commissionLinked,
+  commissionServiceId,
   livePrice,
   defaultMode,
   defaultAmount,
@@ -21,6 +22,8 @@ export function PriceFields({
   errors = {},
 }: {
   commissionLinked: boolean;
+  /** The linked commission service; its own Pricing page when present. */
+  commissionServiceId?: string | null;
   livePrice: { baseTwd: number; versionId: string } | null;
   defaultMode: PriceMode;
   defaultAmount: number | null;
@@ -57,7 +60,14 @@ export function PriceFields({
             "Publish a price version before visitors can start a commission."
           )}
         </p>
-        <Link className="studio-link" to="/studio/services/pricing">
+        <Link
+          className="studio-link"
+          to={
+            commissionServiceId
+              ? `/studio/services/pricing/${commissionServiceId}`
+              : "/studio/services/pricing"
+          }
+        >
           Change in Pricing
         </Link>
       </div>

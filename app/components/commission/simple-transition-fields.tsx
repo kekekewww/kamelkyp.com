@@ -1,12 +1,15 @@
+import { bpsToPercentLabel } from "../../lib/pricing/percent";
 import type { CommissionFieldProps } from "./common-fields";
 
 export function SimpleTransitionFields({
   draft,
   locale,
+  priceRule,
   updateField,
 }: CommissionFieldProps) {
   if (draft.serviceId !== "simple_transition") return null;
   const isZh = locale === "zh";
+  const consultation = bpsToPercentLabel(priceRule.consultationBps);
   return (
     <fieldset className="commission-fields">
       <legend>{isZh ? "歌曲與銜接" : "Songs and transitions"}</legend>
@@ -113,8 +116,8 @@ export function SimpleTransitionFields({
           }
         />
         {isZh
-          ? "需要協助決定順序或銜接點（服務基價 +50%）"
-          : "Need help choosing order or transition points (+50% of service base)"}
+          ? `需要協助決定順序或銜接點（服務基價 +${consultation}%）`
+          : `Need help choosing order or transition points (+${consultation}% of service base)`}
       </label>
     </fieldset>
   );

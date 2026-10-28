@@ -12,9 +12,14 @@ const STUDIO_PATHS = [
   "/studio/projects",
   "/studio/projects/seed-p-001",
   "/studio/projects/seed-p-001.data",
+  "/studio/services/pricing",
+  "/studio/services/pricing/full_mix",
+  "/studio/services/terms",
+  "/studio/services/terms/common/zh",
   "/studio/settings/brand",
   "/studio/preview/home?drafts=1",
   "/studio/preview/projects/seed-p-001?locale=en",
+  "/studio/preview/terms/common?locale=zh",
   "/api/studio/session",
   "/api/studio/slug-check?type=project&slug=x",
   "/api/studio/media-search?q=x",
@@ -61,6 +66,18 @@ test("Studio mutations are refused without an owner identity", async ({
     maxRedirects: 0,
   });
   await expectOwnerGate(upload, "upload");
+
+  const price = await request.post("/studio/services/pricing/full_mix", {
+    form: { intent: "publish-price-version", "baseTwd:number": "1" },
+    maxRedirects: 0,
+  });
+  expectOwnerGate(price);
+
+  const terms = await request.post("/studio/services/terms/common/zh", {
+    form: { intent: "publish-term-version", legalReviewConfirmed: "on" },
+    maxRedirects: 0,
+  });
+  expectOwnerGate(terms);
 
   const register = await request.post("/api/studio/media-register", {
     data: { url: "https://example.com/a.jpg" },
