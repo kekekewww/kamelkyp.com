@@ -1,71 +1,12 @@
 import { env } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
-import {
-  createDraft,
-  ensureContentEntry,
-  publishDraft,
-} from "../../app/lib/admin/content-service.server";
-import {
-  replaceDraftMedia,
-  replaceLinkGroup,
-} from "../../app/lib/admin/media-content-service.server";
+import { replaceLinkGroup } from "../../app/lib/admin/media-content-service.server";
 import { getPublicSiteContext } from "../../app/lib/cms/public/site.server";
-import { getPublishedContent } from "../../app/lib/db/content-repository.server";
 import { createTestEnv } from "../helpers/test-env";
 
-describe("admin external media and links", () => {
-  it("stores URL metadata only on drafts and keeps published versions immutable", async () => {
-    await ensureContentEntry({
-      db: env.DB,
-      entryId: "empty-work",
-      kind: "work",
-      slug: "empty-work",
-    });
-    const draft = await createDraft({
-      db: env.DB,
-      entryId: "empty-work",
-      locale: "zh",
-    });
-    await replaceDraftMedia({
-      db: env.DB,
-      versionId: draft.id,
-      r2Hosts: new Set(["media.kamelkyp.com"]),
-      items: [
-        { url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", title: "Video" },
-        {
-          url: "https://www.dropbox.com/s/example/demo.wav",
-          title: "Download",
-        },
-      ],
-    });
-    const stored = await env.DB.prepare(
-      "SELECT kind, url, title FROM media_items WHERE content_version_id = ? ORDER BY sort_order",
-    )
-      .bind(draft.id)
-      .all<{ kind: string; url: string; title: string }>();
-    expect(stored.results.map((item) => item.kind)).toEqual([
-      "youtube",
-      "external_link",
-    ]);
-
-    await publishDraft({
-      db: env.DB,
-      versionId: draft.id,
-      now: new Date("2026-08-19T00:00:00Z"),
-    });
-    expect(
-      await getPublishedContent(env.DB, "work", "empty-work", "zh"),
-    ).toMatchObject({ title: "", body: [] });
-    await expect(
-      replaceDraftMedia({
-        db: env.DB,
-        versionId: draft.id,
-        r2Hosts: new Set(),
-        items: [],
-      }),
-    ).rejects.toThrow("draft_version_not_found");
-  });
-
+// The legacy /admin/links writer, live until Studio -> Footer (wp3) replaces
+// it; the legacy media half was retired with /admin/works (wp5 §4.7).
+describe("legacy footer link groups", () => {
   it("shows more than three Footer links publicly and skips empty groups", async () => {
     await replaceLinkGroup({
       db: env.DB,

@@ -1,26 +1,10 @@
+/**
+ * Legacy /admin/links writer. Pending wp3: deleted once Studio -> Footer
+ * replaces the panel (wp5 §4.7); the media half went with /admin/works.
+ */
 import { z } from "zod";
 import type { Locale } from "../i18n/locale";
-import type { MediaKind } from "../media/media-schema";
-import { parseMediaUrl } from "../media/parse-media-url";
 import type { LocalizedText } from "../services/catalog";
-
-const OptionalText = z.string().trim().max(2000).optional();
-const OptionalHttpsUrl = z
-  .url()
-  .refine((value) => new URL(value).protocol === "https:")
-  .optional();
-
-const AdminMediaInputSchema = z.strictObject({
-  url: z.string().trim().min(1).max(3000),
-  title: z.string().trim().max(200).optional(),
-  description: OptionalText,
-  thumbnailUrl: OptionalHttpsUrl,
-  credit: z.string().trim().max(300).optional(),
-  publishedAt: z.iso.datetime().optional(),
-  tags: z.array(z.string().trim().min(1).max(60)).max(30).optional(),
-  startSeconds: z.number().int().nonnegative().nullable().optional(),
-  endSeconds: z.number().int().positive().nullable().optional(),
-});
 
 const ExternalLinkSchema = z.strictObject({
   label: z.string().trim().min(1).max(200),
@@ -45,95 +29,10 @@ const LinkGroupSchema = z.strictObject({
   links: z.array(ExternalLinkSchema).max(200),
 });
 
-export interface ParsedAdminMediaInput {
-  url: string;
-  kind: MediaKind;
-  title: string;
-  description: string | null;
-  thumbnailUrl: string | null;
-  credit: string | null;
-  publishedAt: string | null;
-  tags: string[];
-  startSeconds: number | null;
-  endSeconds: number | null;
-  embedUrl: string | null;
-}
-
 export type AdminLinkGroup = z.infer<typeof LinkGroupSchema>;
-
-export function parseAdminMediaInput(
-  input: unknown | null,
-  r2Hosts: ReadonlySet<string>,
-): ParsedAdminMediaInput | null {
-  if (input === null || input === undefined) return null;
-  const value = AdminMediaInputSchema.parse(input);
-  const parsed = parseMediaUrl(value.url, {
-    startSeconds: value.startSeconds ?? null,
-    endSeconds: value.endSeconds ?? null,
-    r2Hosts,
-  });
-  return {
-    url: parsed.canonicalUrl,
-    kind: parsed.kind,
-    title: value.title || "Untitled",
-    description: value.description || null,
-    thumbnailUrl: value.thumbnailUrl ?? null,
-    credit: value.credit || null,
-    publishedAt: value.publishedAt ?? null,
-    tags: value.tags ?? [],
-    startSeconds: value.startSeconds ?? null,
-    endSeconds: value.endSeconds ?? null,
-    embedUrl: parsed.embedUrl,
-  };
-}
 
 export function parseAdminLinkGroup(input: unknown): AdminLinkGroup {
   return LinkGroupSchema.parse(input);
-}
-
-export async function replaceDraftMedia(input: {
-  db: D1Database;
-  versionId: string;
-  items: unknown[];
-  r2Hosts: ReadonlySet<string>;
-}): Promise<void> {
-  const version = await input.db
-    .prepare("SELECT state FROM content_versions WHERE id = ?")
-    .bind(input.versionId)
-    .first<{ state: string }>();
-  if (version?.state !== "draft") throw new Error("draft_version_not_found");
-  const items = input.items
-    .map((item) => parseAdminMediaInput(item, input.r2Hosts))
-    .filter((item): item is ParsedAdminMediaInput => item !== null);
-  await input.db.batch([
-    input.db
-      .prepare("DELETE FROM media_items WHERE content_version_id = ?")
-      .bind(input.versionId),
-    ...items.map((item, sortOrder) =>
-      input.db
-        .prepare(
-          "INSERT INTO media_items " +
-            "(id, content_version_id, kind, url, title, start_seconds, end_seconds, " +
-            "sort_order, description, thumbnail_url, credit, published_at, tags_json) " +
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        )
-        .bind(
-          crypto.randomUUID(),
-          input.versionId,
-          item.kind,
-          item.url,
-          item.title,
-          item.startSeconds,
-          item.endSeconds,
-          sortOrder,
-          item.description,
-          item.thumbnailUrl,
-          item.credit,
-          item.publishedAt,
-          JSON.stringify(item.tags),
-        ),
-    ),
-  ]);
 }
 
 export async function replaceLinkGroup(input: {
