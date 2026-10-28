@@ -44,28 +44,35 @@ const CSRF_LIFETIME_MS = 30 * 60 * 1000;
 const DRAIN_LIMIT_BYTES = 1024 * 1024;
 
 /**
+ * Discards a request body that will never be parsed. Answering while a body
+ * is still unread (or cancelled) drops the local runtime's connection under
+ * `wrangler dev`, so small bodies are drained; larger or unsized ones are
+ * cancelled (Access stops those before the Worker in production). A missing
+ * or already used body is left alone; errors are swallowed.
+ */
+export async function discardRequestBody(request: Request): Promise<void> {
+  if (!request.body || request.bodyUsed) return;
+  const length = Number(request.headers.get("Content-Length") ?? NaN);
+  try {
+    if (Number.isFinite(length) && length <= DRAIN_LIMIT_BYTES) {
+      await request.arrayBuffer();
+    } else {
+      await request.body.cancel();
+    }
+  } catch {
+    // Already closed: nothing left to discard.
+  }
+}
+
+/**
  * Runs a guard; when it refuses, the request body is discarded before the
- * refusal propagates. Answering while a body is still unread (or cancelled)
- * drops the local runtime's connection under `wrangler dev`, so small bodies
- * are drained; larger or unsized ones are cancelled (Access stops those
- * before the Worker in production). The discarded bytes are never parsed.
+ * refusal propagates (`discardRequestBody`).
  */
 async function refusing<T>(request: Request, guard: () => Promise<T>) {
   try {
     return await guard();
   } catch (error) {
-    if (request.body && !request.bodyUsed) {
-      const length = Number(request.headers.get("Content-Length") ?? NaN);
-      try {
-        if (Number.isFinite(length) && length <= DRAIN_LIMIT_BYTES) {
-          await request.arrayBuffer();
-        } else {
-          await request.body.cancel();
-        }
-      } catch {
-        // Already closed: nothing left to discard.
-      }
-    }
+    await discardRequestBody(request);
     throw error;
   }
 }
