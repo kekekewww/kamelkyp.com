@@ -577,8 +577,12 @@ the checklist opens.
   changes no server data, so `useKeyboardReorder` (`ui/list.tsx`) would keep the refused order; every list whose
   reorder can fail therefore passes a failure counter as the hook's `resetKey` (`useFailureCount(fetcher)` from
   `ui/use-fetcher-settled.ts`, or the list's own counter), and a new key restarts the order from the server order
-  during render. The rows stay mounted: focus, open editors and unsaved row edits survive. Lists: projects (homepage
-  strip and manual order), music, services (per group), taxonomies, homepage featured lists, social links. On the
+  during render, in a list that has sent an order since its last restart; a list that has sent nothing (another
+  services group or the other projects list on the same counter, a failed row action) keeps its order and a pick in
+  progress. The restart clears the list's live-region announcement, so the same move tried again is announced. The
+  rows stay mounted: focus, open editors and unsaved row edits survive. Lists: projects (homepage strip and manual
+  order), music, services (per group), taxonomies, homepage featured lists, social links; the Studio e2e
+  (`tests/e2e-studio/wp7-final-sweep.spec.ts`) makes each one's reorder fail and checks the order comes back. On the
   same counter, the recognition and writing tie groups (`list-kit.tsx`, rows without inline edits) remount instead,
   and Settings → Footer remounts only its reorder state (`ReorderState`), so its rows stay mounted too.
 - Pointer drag-and-drop is not required. No library is added; if pointer dragging is wanted later, a ~150-line

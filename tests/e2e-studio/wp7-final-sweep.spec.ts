@@ -5,7 +5,7 @@
  * Nothing a run creates stays live: every entry ends archived (drafts never
  * reach the public site), also when a step fails.
  */
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import {
   expect as baseExpect,
   openStudio,
@@ -38,6 +38,62 @@ async function archiveEntry(page: Page, path: string) {
       page.getByRole("button", { name: "Restore to draft" }),
     ).toBeVisible();
   }
+}
+
+/**
+ * Holds every reorder POST (`intent`) of `page` until `release()`, so a test
+ * sees the moved order on screen before the answer. With `refuse`, the ids are
+ * swapped for an unreadable value on the way: the screen's own action answers
+ * 422 `ok: false` and writes nothing. React Router does not revalidate after a
+ * 4xx action answer, so only the list's reset key can bring the order back.
+ */
+async function holdReorders(
+  page: Page,
+  intent: string,
+  { refuse }: { refuse: boolean },
+) {
+  let release = () => {};
+  const released = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let markSent = () => {};
+  const sent = new Promise<void>((resolve) => {
+    markSent = resolve;
+  });
+  const studio = (url: URL) => url.pathname.startsWith("/studio/");
+  await page.route(studio, async (route) => {
+    const request = route.request();
+    const body = new URLSearchParams(request.postData() ?? "");
+    if (request.method() !== "POST" || body.get("intent") !== intent) {
+      await route.fallback();
+      return;
+    }
+    markSent();
+    await released;
+    if (refuse) body.set("ids", "not json");
+    await route.continue({ postData: body.toString() });
+  });
+  return { sent, release, stop: () => page.unroute(studio) };
+}
+
+/** A reorder list's row labels, top to bottom, read from its handles. */
+function orderOf(list: Locator): Promise<string[]> {
+  return list
+    .locator(".studio-order__handle")
+    .evaluateAll((handles) =>
+      handles.map((handle) =>
+        (handle.getAttribute("aria-label") ?? "")
+          .replace(/^Reorder: /, "")
+          .replace(/, position \d+ of \d+$/, ""),
+      ),
+    );
+}
+
+/** The hidden reorder live regions that announce a move. */
+function moveAnnouncements(page: Page) {
+  return page.locator('[aria-live="assertive"]', {
+    hasText: "moved to position",
+  });
 }
 
 test.describe("C3 c: Save and leave from an error state", () => {
@@ -366,16 +422,27 @@ test.describe("C3 d: a failed reorder restores the server order", () => {
       await other.close();
 
       // Moving a link here sends the old list: 409, error toast, and the
-      // list back in the server order.
+      // list back in the server order. The request is held until the moved
+      // order is on screen, so "restored" cannot pass as "never moved".
+      const held = await holdReorders(page, "reorder", { refuse: false });
+      const moved = [...recorded.slice(0, -2), second, first];
       await row(page, first).getByRole("button", { name: "Move down" }).click();
+      await held.sent;
+      await expect.poll(() => names(page)).toEqual(moved);
+      await expect(moveAnnouncements(page)).toHaveCount(1);
+      held.release();
       await expect(
         page.locator(".studio-toasts .studio-toast--error").filter({
           hasText: "The order changed elsewhere. Reload and try again.",
         }),
       ).toBeVisible();
-      await expect
-        .poll(async () => (await names(page)).filter((name) => name !== stale))
-        .toEqual(recorded);
+      // Not filtered: this tab never loaded the stale link, so the order came
+      // back through the reset key, not through a revalidation.
+      await expect.poll(() => names(page)).toEqual(recorded);
+      expect(await names(page)).not.toContain(stale);
+      // The restore clears the announcement (the same move retried is heard).
+      await expect(moveAnnouncements(page)).toHaveCount(0);
+      await held.stop();
       // The restore keeps the rows mounted: the unsaved edit is still there.
       await expect(username).toHaveValue(`draft-${token}`);
       await expect(state).toHaveText("Unsaved changes");
@@ -390,5 +457,169 @@ test.describe("C3 d: a failed reorder restores the server order", () => {
     } finally {
       await deleteSpecLinks(page);
     }
+  });
+});
+
+test.describe("C3 d: every reorder list restores the server order after a refused save", () => {
+  /**
+   * The first row whose label differs from the next one's (so moving it down
+   * changes the labels on screen) and the order after that move.
+   */
+  function moveDownOnce(recorded: string[], what: string) {
+    const at = recorded.findIndex(
+      (label, index) =>
+        index + 1 < recorded.length && label !== recorded[index + 1],
+    );
+    expect(at, `${what} lists two rows to swap`).toBeGreaterThanOrEqual(0);
+    const moved = [...recorded];
+    moved.splice(at, 2, recorded[at + 1] ?? "", recorded[at] ?? "");
+    return { at, moved };
+  }
+
+  /**
+   * Moves a row of `list` down with Move down while its save is held, checks
+   * the moved order (and its announcement) on screen, then lets the server
+   * refuse it: an error toast, the order back, the announcement cleared, and a
+   * reload shows that nothing was written.
+   */
+  async function refusedMoveRestores(
+    page: Page,
+    {
+      path,
+      list,
+      intent,
+    }: { path: string; list: (page: Page) => Locator; intent: string },
+  ) {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await openStudio(page, path);
+    const recorded = await orderOf(list(page));
+    const { at, moved } = moveDownOnce(recorded, path);
+
+    const held = await holdReorders(page, intent, { refuse: true });
+    try {
+      await list(page)
+        .locator(".studio-order")
+        .nth(at)
+        .getByRole("button", { name: "Move down" })
+        .click();
+      await held.sent;
+      await expect.poll(() => orderOf(list(page))).toEqual(moved);
+      await expect(moveAnnouncements(page)).toHaveCount(1);
+      held.release();
+      await expect(
+        page.locator(".studio-toasts .studio-toast--error").filter({
+          hasText: "The new order could not be read.",
+        }),
+      ).toBeVisible();
+      await expect.poll(() => orderOf(list(page))).toEqual(recorded);
+      await expect(moveAnnouncements(page)).toHaveCount(0);
+    } finally {
+      held.release();
+      await held.stop();
+    }
+    await openStudio(page, path);
+    expect(await orderOf(list(page))).toEqual(recorded);
+  }
+
+  /** The first list matched by `selector` that has at least two handles. */
+  const firstOrderable = (selector: string) => (page: Page) =>
+    page
+      .locator(selector)
+      .filter({ has: page.locator("li:nth-child(2) .studio-order__handle") })
+      .first();
+
+  test("/studio/music: the manual order", async ({ page }) => {
+    await refusedMoveRestores(page, {
+      path: "/studio/music",
+      list: (page) => page.getByRole("list", { name: "Music entries" }),
+      intent: "reorder",
+    });
+  });
+
+  test("/studio/services: one group's order", async ({ page }) => {
+    await refusedMoveRestores(page, {
+      path: "/studio/services",
+      list: firstOrderable("section.studio-service-group"),
+      intent: "reorder",
+    });
+  });
+
+  test("/studio/settings/taxonomies: the terms", async ({ page }) => {
+    await refusedMoveRestores(page, {
+      path: "/studio/settings/taxonomies",
+      list: (page) => page.locator("ol.studio-taxonomy__list").first(),
+      intent: "reorder",
+    });
+  });
+
+  test("/studio/homepage: a featured list", async ({ page }) => {
+    await refusedMoveRestores(page, {
+      path: "/studio/homepage",
+      list: firstOrderable("ol.studio-featured__list"),
+      intent: "reorder-featured",
+    });
+  });
+
+  test("/studio/projects: the manual order", async ({ page }) => {
+    await refusedMoveRestores(page, {
+      path: "/studio/projects",
+      list: (page) => page.getByRole("list", { name: "Projects" }),
+      intent: "reorder",
+    });
+  });
+
+  test("/studio/projects: the homepage strip, while the rows keep a pick in progress", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await openStudio(page, "/studio/projects");
+    const strip = page.locator("ol.projects-home__list");
+    const rows = page.getByRole("list", { name: "Projects" });
+    const recordedStrip = await orderOf(strip);
+    const recordedRows = await orderOf(rows);
+    const stripMove = moveDownOnce(recordedStrip, "the strip");
+    const rowsMove = moveDownOnce(recordedRows, "the rows");
+
+    const held = await holdReorders(page, "reorder", { refuse: true });
+    try {
+      await strip
+        .locator(".studio-order")
+        .nth(stripMove.at)
+        .getByRole("button", { name: "Move down" })
+        .click();
+      await held.sent;
+      await expect.poll(() => orderOf(strip)).toEqual(stripMove.moved);
+
+      // Meanwhile a row of the list below is picked up and moved, not dropped.
+      const handle = rows.locator(".studio-order__handle").nth(rowsMove.at);
+      await handle.press("Space");
+      await handle.press("ArrowDown");
+      await expect.poll(() => orderOf(rows)).toEqual(rowsMove.moved);
+
+      held.release();
+      await expect(
+        page.locator(".studio-toasts .studio-toast--error").filter({
+          hasText: "The new order could not be read.",
+        }),
+      ).toBeVisible();
+      // The strip sent the refused order: back to the server order.
+      await expect.poll(() => orderOf(strip)).toEqual(recordedStrip);
+      // The rows sent nothing: the pick and its moved position stay.
+      expect(await orderOf(rows)).toEqual(rowsMove.moved);
+      await expect(
+        rows.locator('.studio-order__handle[aria-pressed="true"]'),
+      ).toHaveCount(1);
+      // Escape cancels the pick without sending anything.
+      await rows
+        .locator('.studio-order__handle[aria-pressed="true"]')
+        .press("Escape");
+      await expect.poll(() => orderOf(rows)).toEqual(recordedRows);
+    } finally {
+      held.release();
+      await held.stop();
+    }
+    await openStudio(page, "/studio/projects");
+    expect(await orderOf(strip)).toEqual(recordedStrip);
+    expect(await orderOf(rows)).toEqual(recordedRows);
   });
 });
