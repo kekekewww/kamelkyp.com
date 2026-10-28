@@ -1,7 +1,9 @@
 /**
  * Ordering logic (admin-architecture §4.12), dependency-free. Explicit Move
  * up / Move down controls plus a keyboard pick-up / move / drop model; each
- * drop saves the full ordered id list in one request.
+ * drop saves the full ordered id list in one request. The order restarts from
+ * the server order when that order changes or when the caller's reset key
+ * does (a failed save), so a refused order never stays on screen.
  */
 
 export function moveItem<T>(list: readonly T[], from: number, to: number): T[] {
@@ -13,11 +15,24 @@ export function moveItem<T>(list: readonly T[], from: number, to: number): T[] {
   return next;
 }
 
+/**
+ * Names one server order plus the caller's reset key. A different value means
+ * the local order must restart from the server order.
+ */
+export function reorderSource(
+  ids: readonly string[],
+  resetKey: string | number,
+): string {
+  return JSON.stringify([resetKey, ids]);
+}
+
 export interface KeyboardReorderState {
   order: string[];
   picked: string | null;
   /** Where the picked row started (Escape restores it). */
   originIndex: number | null;
+  /** The `reorderSource` the order started from (absent: never synced). */
+  source?: string;
 }
 
 export type KeyboardReorderAction =
@@ -25,7 +40,10 @@ export type KeyboardReorderAction =
   | { type: "move"; delta: number }
   | { type: "drop" }
   | { type: "cancel" }
-  | { type: "reset"; order: string[] };
+  /** A local order set at once (Alt+arrows, Move up / Move down). */
+  | { type: "reset"; order: string[] }
+  /** The server order and reset key of this render. */
+  | { type: "sync"; order: string[]; source: string };
 
 export function keyboardReorderReducer(
   state: KeyboardReorderState,
@@ -51,13 +69,22 @@ export function keyboardReorderReducer(
       if (!state.picked || state.originIndex === null) return state;
       const index = state.order.indexOf(state.picked);
       return {
+        ...state,
         order: moveItem(state.order, index, state.originIndex),
         picked: null,
         originIndex: null,
       };
     }
     case "reset":
-      return { order: action.order, picked: null, originIndex: null };
+      return { ...state, order: action.order, picked: null, originIndex: null };
+    case "sync":
+      if (state.source === action.source) return state;
+      return {
+        order: action.order,
+        picked: null,
+        originIndex: null,
+        source: action.source,
+      };
   }
 }
 

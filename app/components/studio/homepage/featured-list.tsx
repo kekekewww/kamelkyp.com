@@ -4,7 +4,7 @@
  * Alt+arrows), remove, and "Add…" from the other entries. Every change
  * saves at once; a failed reorder restores the saved order.
  */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Link, useFetcher } from "react-router";
 import type {
   FeaturedGroup,
@@ -15,6 +15,7 @@ import { type ActionData, useActionToasts } from "../settings/form-kit";
 import {
   OrderControls,
   StatusBadge,
+  useFailureCount,
   useKeyboardReorder,
   useStudioSession,
 } from "../ui";
@@ -61,11 +62,14 @@ function OrderedItems({
   items,
   limit,
   submit,
+  resetKey,
 }: {
   type: EntityType;
   items: HomepageEntry[];
   limit?: number;
   submit: (fields: Record<string, string>) => void;
+  /** Bumps after a failed change: the order goes back to the saved list. */
+  resetKey: number;
 }) {
   const ids = useMemo(() => items.map((item) => item.id), [items]);
   const byId = useMemo(
@@ -81,7 +85,7 @@ function OrderedItems({
       submit({ intent: "reorder-featured", type, ids: JSON.stringify(order) }),
     [submit, type],
   );
-  const reorder = useKeyboardReorder({ ids, labelOf, onCommit });
+  const reorder = useKeyboardReorder({ ids, labelOf, onCommit, resetKey });
 
   return (
     <>
@@ -156,7 +160,8 @@ export function FeaturedList({
   const fetcher = useFetcher<ActionData>();
   useActionToasts(fetcher);
   const { csrfToken } = useStudioSession();
-  const [epoch, setEpoch] = useState(0);
+  // A failed change (for example a stale order) falls back to the saved list.
+  const failures = useFailureCount(fetcher);
   const [choice, setChoice] = useState("");
   const info = FEATURED_INFO[group.type];
 
@@ -165,13 +170,6 @@ export function FeaturedList({
       fetcher.submit({ csrfToken, ...fields }, { method: "post" }),
     [fetcher, csrfToken],
   );
-
-  // A failed change (for example a stale order) falls back to the saved list.
-  useEffect(() => {
-    if (fetcher.state === "idle" && fetcher.data?.ok === false) {
-      setEpoch((value) => value + 1);
-    }
-  }, [fetcher.state, fetcher.data]);
 
   return (
     <div className="studio-featured">
@@ -185,11 +183,11 @@ export function FeaturedList({
         <p className="studio-featured__empty">{info.empty}</p>
       ) : (
         <OrderedItems
-          key={epoch}
           type={group.type}
           items={group.items}
           limit={limit}
           submit={submit}
+          resetKey={failures}
         />
       )}
       {group.candidates.length > 0 ? (

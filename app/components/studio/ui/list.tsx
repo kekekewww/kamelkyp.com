@@ -11,6 +11,7 @@ import {
   keyboardReorderReducer,
   moveItem,
   reorderAnnouncement,
+  reorderSource,
 } from "./reorder";
 
 export const STATUS_FILTERS = [
@@ -262,28 +263,37 @@ export function OrderControls({
  * Keyboard reorder: Space/Enter on a handle picks up and drops, arrows move,
  * Escape cancels, Alt+↑/↓ moves at once. `onCommit` receives the full ordered
  * id list after each drop (one request per drop).
+ *
+ * The order restarts from `ids` (the server order) when that list changes or
+ * when `resetKey` does. A failed save changes neither list, so a caller whose
+ * reorder can fail passes a counter it bumps on every failed answer: the list
+ * goes back to the server order while the rows stay mounted.
  */
 export function useKeyboardReorder({
   ids,
   labelOf,
   onCommit,
+  resetKey = 0,
 }: {
   ids: string[];
   labelOf: (id: string) => string;
   onCommit: (order: string[]) => void;
+  resetKey?: string | number;
 }) {
+  const source = reorderSource(ids, resetKey);
   const [state, dispatch] = useReducer(keyboardReorderReducer, {
     order: ids,
     picked: null,
     originIndex: null,
+    source,
   });
   const [announcement, setAnnouncement] = useState("");
-  const idsKey = ids.join("\u0000");
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: reset only when the server order changes
-  useEffect(() => {
-    dispatch({ type: "reset", order: ids });
-  }, [idsKey]);
+  // During render (not in an effect), so no frame shows an order the server
+  // has refused or replaced; the reducer ignores an unchanged source.
+  if (state.source !== source) {
+    dispatch({ type: "sync", order: ids, source });
+  }
 
   const move = useCallback(
     (id: string, delta: number) => {

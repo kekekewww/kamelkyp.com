@@ -144,7 +144,8 @@ function useRowFeedback(
 export function ProjectsListView({ data }: { data: ProjectsListData }) {
   const navigate = useNavigate();
   const toast = useToast();
-  const [listEpoch, setListEpoch] = useState(0);
+  // Bumps after a failed reorder; both ordered lists reset to the server's.
+  const [orderFailures, setOrderFailures] = useState(0);
   const filtered = hasActiveFilters(data.query);
   const rowsById = useMemo(
     () => new Map([...data.rows, ...data.featured].map((row) => [row.id, row])),
@@ -165,7 +166,7 @@ export function ProjectsListView({ data }: { data: ProjectsListData }) {
         tone: "error",
         message: result.message ?? "The order was not saved. Try again.",
       });
-      setListEpoch((epoch) => epoch + 1);
+      setOrderFailures((count) => count + 1);
     }
   });
 
@@ -209,7 +210,7 @@ export function ProjectsListView({ data }: { data: ProjectsListData }) {
       }
     >
       <FeaturedStrip
-        key={`home-${listEpoch}`}
+        resetKey={orderFailures}
         rows={data.featured}
         limit={data.featuredLimit}
         busy={orderAction.busy}
@@ -250,7 +251,7 @@ export function ProjectsListView({ data }: { data: ProjectsListData }) {
       ) : null}
 
       <ProjectRows
-        key={`rows-${listEpoch}`}
+        resetKey={orderFailures}
         data={data}
         filtered={filtered}
         onRowAction={rowAction.submit}
@@ -271,11 +272,14 @@ function ProjectRows({
   filtered,
   onRowAction,
   onReorder,
+  resetKey,
 }: {
   data: ProjectsListData;
   filtered: boolean;
   onRowAction: (fields: SentFields) => void;
   onReorder: (ids: string[]) => void;
+  /** Bumps after a failed reorder: the rows go back to the saved order. */
+  resetKey: number;
 }) {
   const byId = useMemo(
     () => new Map(data.rows.map((row) => [row.id, row])),
@@ -289,6 +293,7 @@ function ProjectRows({
     ids: data.rows.map((row) => row.id),
     labelOf,
     onCommit: onReorder,
+    resetKey,
   });
   const [moved, setMoved] = useState<string | null>(null);
   useEffect(() => {

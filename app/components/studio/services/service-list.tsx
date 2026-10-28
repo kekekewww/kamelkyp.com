@@ -21,6 +21,7 @@ import {
   type Flag,
   OrderControls,
   RowList,
+  useFailureCount,
   useKeyboardReorder,
   useStudioSession,
 } from "../ui";
@@ -177,12 +178,15 @@ function GroupBlock({
   now,
   manual,
   submit,
+  resetKey,
 }: {
   term: Term | null;
   rows: StudioServiceRow[];
   now: string;
   manual: boolean;
   submit: Submit;
+  /** Bumps after a failed action: the group goes back to the saved order. */
+  resetKey: number;
 }) {
   const ids = useMemo(() => rows.map((row) => row.id), [rows]);
   const byId = useMemo(
@@ -201,7 +205,7 @@ function GroupBlock({
       submit({ intent: "reorder", ids: JSON.stringify(order) }),
     [submit],
   );
-  const reorder = useKeyboardReorder({ ids, labelOf, onCommit });
+  const reorder = useKeyboardReorder({ ids, labelOf, onCommit, resetKey });
   const ordered = reorder.order
     .map((id) => byId.get(id))
     .filter((row): row is StudioServiceRow => Boolean(row));
@@ -273,6 +277,7 @@ export function ServiceList({
   const navigate = useNavigate();
   const { csrfToken } = useStudioSession();
   useActionToasts(fetcher);
+  const failures = useFailureCount(fetcher);
 
   const submit = useCallback<Submit>(
     (fields) => fetcher.submit({ csrfToken, ...fields }, { method: "post" }),
@@ -388,6 +393,7 @@ export function ServiceList({
               now={now}
               manual={!filtered}
               submit={submit}
+              resetKey={failures}
             />
           ))}
         </div>

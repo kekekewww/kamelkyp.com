@@ -14,6 +14,7 @@ import {
   ConfirmDialog,
   CsrfField,
   OrderControls,
+  useFailureCount,
   useKeyboardReorder,
   useStudioSession,
 } from "../ui";
@@ -249,6 +250,8 @@ export function TaxonomyManager({
   const deleteFetcher = useFetcher<ActionData>();
   useActionToasts(orderFetcher);
   useActionToasts(deleteFetcher);
+  // A failed reorder puts the terms back in the saved order.
+  const orderFailures = useFailureCount(orderFetcher);
   const { csrfToken } = useStudioSession();
   const [deleting, setDeleting] = useState<TaxonomyTermRow | null>(null);
 
@@ -279,7 +282,12 @@ export function TaxonomyManager({
       ),
     [orderFetcher, csrfToken, vocabulary],
   );
-  const reorder = useKeyboardReorder({ ids, labelOf, onCommit });
+  const reorder = useKeyboardReorder({
+    ids,
+    labelOf,
+    onCommit,
+    resetKey: orderFailures,
+  });
   const current = vocabularies.find((item) => item.key === vocabulary);
 
   return (

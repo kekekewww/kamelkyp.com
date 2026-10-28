@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 import {
   createSettleTracker,
   type FetcherPhase,
+  isFailedAnswer,
   observeFetcher,
 } from "../../app/components/studio/ui/fetcher-settle";
 
@@ -175,6 +176,17 @@ const BUSY_STATE_ONLY: readonly RegExp[] = [
   /\.current\s*!==\s*"idle"\s*&&\s*[\w.]+\.state\s*===\s*"idle"/g,
   /\.current\s*===\s*"idle"\s*&&\s*[\w.]+\.state\s*===\s*"submitting"/g,
 ];
+
+describe("failed answers", () => {
+  it("counts only an answer that says ok: false", () => {
+    expect(isFailedAnswer({ ok: false, code: "stale_revision" })).toBe(true);
+    expect(isFailedAnswer({ ok: true })).toBe(false);
+    expect(isFailedAnswer({ message: "Order saved" })).toBe(false);
+    expect(isFailedAnswer(undefined)).toBe(false);
+    expect(isFailedAnswer(null)).toBe(false);
+    expect(isFailedAnswer("ok: false")).toBe(false);
+  });
+});
 
 describe("studio fetcher handlers", () => {
   it("finds the Studio modules", () => {

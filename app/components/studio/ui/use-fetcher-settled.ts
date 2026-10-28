@@ -1,7 +1,8 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   createSettleTracker,
   type FetcherPhase,
+  isFailedAnswer,
   observeFetcher,
 } from "./fetcher-settle";
 
@@ -30,4 +31,19 @@ export function useFetcherSettled<D>(
     if (event === "start") latest.current.onStart?.();
     else if (event === "settled") latest.current.onSettled(fetcher.data);
   }, [fetcher.state, fetcher.data]);
+}
+
+/**
+ * How many of this fetcher's submissions have finished with a failed answer.
+ * A list passes it as `useKeyboardReorder`'s `resetKey`, so a refused order
+ * goes back to the server order (admin-architecture §4.12).
+ */
+export function useFailureCount(fetcher: FetcherLike<unknown>): number {
+  const [failures, setFailures] = useState(0);
+  useFetcherSettled(fetcher, {
+    onSettled: (data) => {
+      if (isFailedAnswer(data)) setFailures((count) => count + 1);
+    },
+  });
+  return failures;
 }

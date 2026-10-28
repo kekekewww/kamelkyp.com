@@ -37,9 +37,9 @@ type Reorder = ReturnType<typeof useKeyboardReorder>;
 /**
  * Owns only the reorder state and hands it to the list. The list keys it by
  * the failed-reorder count, so a failed reorder restarts it from the server
- * order (the hook's reducer resets only when the server id list changes,
- * which a failure does not do) while the rows stay mounted: open editors
- * keep their unsaved edits and a save in flight still gets its answer.
+ * order (a failure leaves the server id list unchanged; other lists pass the
+ * count as the hook's `resetKey` instead) while the rows stay mounted: open
+ * editors keep their unsaved edits and a save in flight still gets its answer.
  */
 function ReorderState({
   ids,

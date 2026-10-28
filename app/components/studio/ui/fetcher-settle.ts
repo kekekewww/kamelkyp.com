@@ -64,3 +64,12 @@ export function observeFetcher(
   tracker.open = false;
   return "settled";
 }
+
+/** A Studio action answer that reports a failure (`{ ok: false, … }`). */
+export function isFailedAnswer(data: unknown): boolean {
+  return (
+    typeof data === "object" &&
+    data !== null &&
+    (data as { ok?: unknown }).ok === false
+  );
+}
