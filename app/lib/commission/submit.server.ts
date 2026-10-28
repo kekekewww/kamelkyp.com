@@ -6,7 +6,7 @@ import {
 } from "../cases/case-repository.server";
 import { sendToGoogle } from "../integrations/google-submission-gateway.server";
 import { convertTwdToUsdCents } from "../pricing/fx";
-import { prepareSubmission } from "./prepare-submission.server";
+import { prepareSubmission, sameVersions } from "./prepare-submission.server";
 
 export interface SubmissionSuccess {
   caseId: string;
@@ -62,7 +62,22 @@ export async function submitCommission(input: {
     fetcher: input.turnstileFetcher,
     allowedHostnames: input.allowedHostnames,
     expectedAction: input.expectedAction,
+    // A retry finishes the stored case under the term versions recorded on
+    // it, also after a later publication (checked below, after Turnstile).
+    retry: input.existingCaseId !== undefined,
   });
+
+  const existing = input.existingCaseId
+    ? await getSubmissionAttempt(input.db, input.existingCaseId)
+    : null;
+  if (input.existingCaseId && !existing) throw new Error("case_not_found");
+  if (
+    existing &&
+    !sameVersions(prepared.termVersionIds, existing.termVersionIds)
+  ) {
+    throw new Error("case_payload_mismatch");
+  }
+  const termVersionIds = existing?.termVersionIds ?? prepared.termVersionIds;
 
   const hashBasis = {
     locale: input.locale,
@@ -70,13 +85,9 @@ export async function submitCommission(input: {
     quote: prepared.quote,
     displayPrice: prepared.displayPrice,
     fx: prepared.fx,
-    termVersionIds: prepared.termVersionIds,
+    termVersionIds,
   };
   const payloadHash = await sha256Json(hashBasis);
-  const existing = input.existingCaseId
-    ? await getSubmissionAttempt(input.db, input.existingCaseId)
-    : null;
-  if (input.existingCaseId && !existing) throw new Error("case_not_found");
   if (existing && existing.payloadHash !== payloadHash) {
     throw new Error("case_payload_mismatch");
   }
@@ -114,7 +125,7 @@ export async function submitCommission(input: {
       currency,
       submittedAt,
       payloadHash,
-      termVersionIds: prepared.termVersionIds,
+      termVersionIds,
       termsAcceptedAt,
       studentReviewState: studentRequested ? "pending" : "none",
       standardPriceMinor: studentRequested ? standardPriceMinor : null,
@@ -132,7 +143,7 @@ export async function submitCommission(input: {
     quote: prepared.quote,
     fx: prepared.fx,
     terms: {
-      versionIds: prepared.termVersionIds,
+      versionIds: termVersionIds,
       acceptedAt: termsAcceptedAt,
     },
   };

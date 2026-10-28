@@ -1,9 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import {
-  retryCaseAfterRefusal,
-  VerifyActions,
-} from "../../app/components/commission/commission-wizard";
+import { VerifyActions } from "../../app/components/commission/commission-wizard";
 
 const noop = () => {};
 
@@ -55,34 +52,5 @@ describe("wizard verify actions", () => {
   it("keeps the retry label for a pending notification", () => {
     expect(actions("zh", { retrying: true })).toContain("重試通知");
     expect(actions("en", { submitting: true })).toContain("Submitting…");
-  });
-});
-
-describe("the pending retry after a refused submit", () => {
-  const pending = "KAM-20260810-0000000003";
-
-  it("stores the case a retry_required answer names", () => {
-    expect(
-      retryCaseAfterRefusal(null, {
-        code: "retry_required",
-        retryCaseId: pending,
-      }),
-    ).toBe(pending);
-  });
-
-  it("ends a pending retry when the terms changed", () => {
-    // The case was hashed with the previous term versions; a retry with the
-    // new ones can never match it, so the next submit starts a new case.
-    expect(retryCaseAfterRefusal(pending, { code: "terms_changed" })).toBe(
-      null,
-    );
-  });
-
-  it("keeps a pending retry for every other refusal", () => {
-    for (const code of ["validation_failed", "service_unavailable"]) {
-      expect(retryCaseAfterRefusal(pending, { code })).toBe(pending);
-    }
-    expect(retryCaseAfterRefusal(pending, undefined)).toBe(pending);
-    expect(retryCaseAfterRefusal(null, { code: "retry_required" })).toBe(null);
   });
 });

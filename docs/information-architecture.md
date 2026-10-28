@@ -461,9 +461,10 @@ project. Unknown slug → 404.
   then submit again. The verify step then offers
   重新整理 / Reload in place of the submit button: it reloads the page data,
   keeps the draft, resets the acceptance and reopens the `terms` step. A
-  pending notification retry (Retry notification) ends with that answer: its
-  case was stored with the previous terms, so the next submit is a new case,
-  and the daily orphan cleanup removes the unfinished one.
+  pending notification retry (Retry notification) never gets that answer:
+  its case is already stored (and may already be in the Google Form), so the
+  retry finishes that case under the term versions recorded on it, as long
+  as it carries them; a new publication does not start a second case.
 - `/commission/success`: unchanged copy, reskinned; link 返回主頁 / Back home.
 
 ### 4.11 Terms / Privacy
