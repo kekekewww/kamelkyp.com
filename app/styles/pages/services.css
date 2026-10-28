@@ -166,12 +166,6 @@
 /* ==========================================================================
    Mixing / Song Transition selection pages (design-system §6.13 choice)
    ========================================================================== */
-/* Neutralise the legacy two-column border box on the section wrapper. */
-.service-select-page .service-choice {
-  display: block;
-  border-block: 0;
-}
-
 .service-select__list {
   display: grid;
   margin: 0;
