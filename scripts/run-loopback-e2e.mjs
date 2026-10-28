@@ -1,5 +1,10 @@
 import { spawnSync } from "node:child_process";
 import { readFile, rm, writeFile } from "node:fs/promises";
+import {
+  cleanupFixtures,
+  E2E_DATABASE,
+  seedFixtures,
+} from "./e2e-fixtures.mjs";
 
 const wranglerCli = "node_modules/wrangler/bin/wrangler.js";
 const playwrightCli = "node_modules/@playwright/test/cli.js";
@@ -30,19 +35,9 @@ function run(command, args, env = testEnvironment) {
 
 const databaseArgs = [wranglerCli, "d1"];
 // Content Studio rows (migrations 0005–0008 run with `migrations apply`);
-// the fixtures publish through the snapshot views, like the engine.
-const fixtureFiles = [
-  "tests/fixtures/media-e2e.sql",
-  "tests/fixtures/cms-e2e.sql",
-  "tests/fixtures/fx-e2e.sql",
-  "tests/fixtures/terms-e2e.sql",
-];
-const cleanupFiles = [
-  "tests/fixtures/cms-e2e-cleanup.sql",
-  "tests/fixtures/media-e2e-cleanup.sql",
-  "tests/fixtures/fx-e2e-cleanup.sql",
-  "tests/fixtures/terms-e2e-cleanup.sql",
-];
+// the fixtures (scripts/e2e-fixtures.mjs, the same list the preview workflow
+// applies) publish through the snapshot views, like the engine.
+const localDatabase = ["--local", "--config", generatedConfig];
 
 try {
   run(process.execPath, ["scripts/render-wrangler-config.mjs", "preview"]);
@@ -69,23 +64,10 @@ try {
     ...databaseArgs,
     "migrations",
     "apply",
-    "kamelkyp-preview",
-    "--local",
-    "--config",
-    generatedConfig,
+    E2E_DATABASE,
+    ...localDatabase,
   ]);
-  for (const file of fixtureFiles) {
-    run(process.execPath, [
-      ...databaseArgs,
-      "execute",
-      "kamelkyp-preview",
-      "--local",
-      "--config",
-      generatedConfig,
-      "--file",
-      file,
-    ]);
-  }
+  seedFixtures(localDatabase, testEnvironment);
   run(
     process.execPath,
     [
@@ -97,22 +79,8 @@ try {
     { ...testEnvironment, E2E_LOOPBACK: "1" },
   );
 } finally {
-  for (const file of cleanupFiles) {
-    try {
-      run(process.execPath, [
-        ...databaseArgs,
-        "execute",
-        "kamelkyp-preview",
-        "--local",
-        "--config",
-        generatedConfig,
-        "--file",
-        file,
-      ]);
-    } catch {
-      // The runner is ephemeral; a failed cleanup must not mask the test failure.
-    }
-  }
+  // The runner is ephemeral; a failed cleanup must not mask the test failure.
+  cleanupFixtures(localDatabase, testEnvironment);
   await Promise.all([
     rm(generatedConfig, { force: true }),
     rm(loopbackVarsFile, { force: true }),
