@@ -24,11 +24,11 @@ import {
   type JwtVerifier,
   verifyAccessRequest,
 } from "../../auth/access-jwt.server";
+import { createCsrfToken } from "../../auth/csrf.server";
 import {
   assertMutationMethod,
   verifyMutationToken,
-} from "../../auth/admin.server";
-import { createCsrfToken } from "../../auth/csrf.server";
+} from "../../auth/mutation-guard.server";
 import { cloudflareContext } from "../../cloudflare/context";
 import type { Env } from "../../env.server";
 import { readIntent } from "../forms";

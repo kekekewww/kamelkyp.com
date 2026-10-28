@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { JwtVerifier } from "../../app/lib/auth/access-jwt.server";
+import { createCsrfToken } from "../../app/lib/auth/csrf.server";
 import {
   requireAdmin,
   requireAdminMutation,
-} from "../../app/lib/auth/admin.server";
-import { createCsrfToken } from "../../app/lib/auth/csrf.server";
+} from "../../app/lib/auth/mutation-guard.server";
 import { createTestEnv } from "../helpers/test-env";
 
 const verifier: JwtVerifier = async () => ({

@@ -14,7 +14,7 @@ import {
 import {
   requireAdmin,
   requireAdminMutation,
-} from "../../lib/auth/admin.server";
+} from "../../lib/auth/mutation-guard.server";
 import { cloudflareContext } from "../../lib/cloudflare/context";
 
 export async function loader({ request, context }: LoaderFunctionArgs) {

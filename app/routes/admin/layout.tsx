@@ -1,7 +1,7 @@
 import { type LoaderFunctionArgs, Outlet, useLoaderData } from "react-router";
 import { AdminShell } from "../../components/admin/AdminShell";
-import { requireAdmin } from "../../lib/auth/admin.server";
 import { createCsrfToken } from "../../lib/auth/csrf.server";
+import { requireAdmin } from "../../lib/auth/mutation-guard.server";
 import { cloudflareContext } from "../../lib/cloudflare/context";
 
 export async function loader({ request, context }: LoaderFunctionArgs) {

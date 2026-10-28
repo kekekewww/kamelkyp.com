@@ -8,6 +8,10 @@ import { verifyCsrfToken } from "./csrf.server";
 
 export const MUTATION_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
+/**
+ * Pending wp3: the legacy footer link editor (/admin/links) is the last user
+ * of `requireAdmin` / `requireAdminMutation`; both go with it (wp5 §4.6).
+ */
 export async function requireAdmin(
   request: Request,
   env: Env,
@@ -64,18 +68,5 @@ export async function requireAdminMutation(
     identity,
     typeof token === "string" ? token : null,
   );
-  return identity;
-}
-
-/** Header-token variant (JSON and streamed-upload requests). */
-export async function requireAdminMutationWithToken(
-  request: Request,
-  env: Env,
-  token: string | null,
-  verifier?: JwtVerifier,
-): Promise<AdminIdentity> {
-  assertMutationMethod(request);
-  const identity = await requireAdmin(request, env, verifier);
-  await verifyMutationToken(request, env, identity, token);
   return identity;
 }
