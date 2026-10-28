@@ -107,7 +107,10 @@ test.describe("C3 e: project body blocks", () => {
     await expect(page).toHaveURL(/\/studio\/projects\/[0-9a-f-]{36}$/);
     await expect(topSaveState(page)).toHaveText(/SAVED|NO CHANGES/);
     const editorPath = new URL(page.url()).pathname;
-    const story = `案例背景 ${token}`;
+    const story = {
+      zh: `案例背景 ${token}`,
+      en: `Case study context ${token}`,
+    };
     const zh = `案例之後的段落 ${token}`;
     const en = `A paragraph after the case study ${token}`;
     try {
@@ -118,7 +121,8 @@ test.describe("C3 e: project body blocks", () => {
         }
       };
       await openSection();
-      await section.locator('textarea[name="story.context.zh"]').fill(story);
+      await section.locator('textarea[name="story.context.zh"]').fill(story.zh);
+      await section.locator('textarea[name="story.context.en"]').fill(story.en);
       const blocks = section.getByRole("group", {
         name: "Additional content blocks",
       });
@@ -148,7 +152,8 @@ test.describe("C3 e: project body blocks", () => {
         blocks.getByRole("textbox", { name: "Paragraph" }),
       ).toHaveValue(en);
 
-      // The preview renders the working copy: the blocks follow the story.
+      // The preview renders the working copy: in each locale the blocks
+      // follow that locale's case study.
       const id = editorPath.split("/").pop();
       for (const [locale, text] of [
         ["zh", zh],
@@ -156,12 +161,12 @@ test.describe("C3 e: project body blocks", () => {
       ] as const) {
         await page.goto(`/studio/preview/projects/${id}?locale=${locale}`);
         const body = page.locator(".project-doc__body");
+        await expect(body).toContainText(story[locale]);
         await expect(body).toContainText(text);
-        if (locale === "zh") {
-          const content = await body.innerText();
-          expect(content.indexOf(story)).toBeGreaterThanOrEqual(0);
-          expect(content.indexOf(story)).toBeLessThan(content.indexOf(text));
-        }
+        const content = await body.innerText();
+        expect(content.indexOf(story[locale])).toBeLessThan(
+          content.indexOf(text),
+        );
       }
     } finally {
       await archiveEntry(page, editorPath);
