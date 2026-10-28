@@ -3,11 +3,17 @@
  * not analytics. Counts per type and status, the 15 latest edits, what needs
  * attention (each row links to the fix), the homepage as it is curated now,
  * and the commission queue. Every table is read here with its own queries
- * (read-only); one `db.batch` per page load.
+ * (read-only); one `db.batch` per page load, plus the commission readiness
+ * reads (`getCommissionReadiness`, the one definition of an open form).
  *
  * `collectAttention` also feeds the sidebar badge (`getStudioCounts`), so the
  * number next to HOME always equals the rows on the home list.
  */
+import {
+  type CommissionReadiness,
+  getCommissionReadiness,
+} from "../../commission/availability.server";
+import type { TermDocumentId } from "../../commission/term-outline";
 import { studioLabel } from "../localized";
 import {
   HOMEPAGE_SECTIONS,
@@ -259,7 +265,58 @@ function first<T>(result: D1Result | undefined): T | undefined {
   return rows<T>(result)[0];
 }
 
-function buildAttention(results: D1Result[]): AttentionFacts {
+// The words of the Studio readiness table (pricing/commission-readiness.tsx).
+const TERM_LABEL: Record<TermDocumentId, string> = {
+  common: "General terms",
+  privacy: "Privacy notice",
+  "full-mix": "Service terms",
+  "vocal-mix": "Service terms",
+  "simple-transition": "Service terms",
+  "edit-transition": "Service terms",
+};
+
+/**
+ * One row for every commission form that is closed in a locale while its
+ * service page is published (wp2 §4.6): no active price, or a term document
+ * not in effect. Production starts without terms, so this is the first row.
+ */
+function commissionClosedRow(
+  readiness: readonly CommissionReadiness[],
+): AttentionItem | null {
+  const closed = readiness.filter(
+    (item) =>
+      item.serviceStatus === "published" && (!item.open.zh || !item.open.en),
+  );
+  if (closed.length === 0) return null;
+  const priceMissing = closed.some((item) => item.price === null);
+  const documents: string[] = [];
+  for (const locale of ["zh", "en"] as const) {
+    for (const item of closed) {
+      for (const id of item.terms[locale].missing) {
+        const entry = `${TERM_LABEL[id]} (${locale.toUpperCase()})`;
+        if (!documents.includes(entry)) documents.push(entry);
+      }
+    }
+  }
+  const reasons = [
+    ...(priceMissing ? ["no active price"] : []),
+    ...(documents.length > 0 ? [`terms missing: ${documents.join(", ")}`] : []),
+  ];
+  return {
+    key: "commission-closed",
+    severity: "high",
+    title: `Commission form closed: ${closed.length} ${closed.length === 1 ? "service" : "services"}`,
+    detail: reasons.join("; "),
+    href: priceMissing ? "/studio/services/pricing" : "/studio/services/terms",
+    action: priceMissing ? "Open pricing" : "Open terms",
+    count: closed.length,
+  };
+}
+
+function buildAttention(
+  results: D1Result[],
+  readiness: readonly CommissionReadiness[],
+): AttentionFacts {
   const [
     settingsResult,
     showreelResult,
@@ -424,6 +481,9 @@ function buildAttention(results: D1Result[]): AttentionFacts {
     studentReviews: runtime?.student ?? 0,
     cleanupDue: runtime?.cleanup ?? 0,
   };
+  const closedForms = commissionClosedRow(readiness);
+  if (closedForms) items.push(closedForms);
+
   // Each commissions row links to the place that fixes it (admin-architecture
   // §4.2): the filtered list or one of the inbox queues.
   const caseRow = (
@@ -502,7 +562,11 @@ export async function collectAttention(
   db: D1Database,
   now: Date,
 ): Promise<AttentionFacts> {
-  return buildAttention(await db.batch(attentionStatements(db, now)));
+  const [results, readiness] = await Promise.all([
+    db.batch(attentionStatements(db, now)),
+    getCommissionReadiness(db, now),
+  ]);
+  return buildAttention(results, readiness);
 }
 
 // ---- Studio home ------------------------------------------------------------------
@@ -565,8 +629,14 @@ export async function getStudioHome(
   now: Date,
 ): Promise<StudioHomeModel> {
   const attentionPart = attentionStatements(db, now);
-  const results = await db.batch([...attentionPart, ...homeStatements(db)]);
-  const facts = buildAttention(results.slice(0, attentionPart.length));
+  const [results, readiness] = await Promise.all([
+    db.batch([...attentionPart, ...homeStatements(db)]),
+    getCommissionReadiness(db, now),
+  ]);
+  const facts = buildAttention(
+    results.slice(0, attentionPart.length),
+    readiness,
+  );
   const [
     countsResult,
     recentContentResult,
