@@ -681,6 +681,7 @@ export function SocialLinks({
   const { csrfToken } = useStudioSession();
   const toast = useToast();
   const [dirtyRows, setDirtyRows] = useState<ReadonlySet<string>>(new Set());
+  // Bumps after a failed reorder: the list goes back to the server order.
   const [resetKey, setResetKey] = useState(0);
   const handled = useRef<unknown>(null);
   const byId = new Map(links.map((link) => [link.id, link]));
@@ -712,6 +713,7 @@ export function SocialLinks({
     ids: links.map((link) => link.id),
     labelOf,
     onCommit: commit,
+    resetKey,
   });
 
   useEffect(() => {
@@ -793,11 +795,7 @@ export function SocialLinks({
                 <span>Username</span>
                 <span>Icon</span>
               </div>
-              <ol
-                className="p3-social__list"
-                aria-label="Social links"
-                key={resetKey}
-              >
+              <ol className="p3-social__list" aria-label="Social links">
                 {ordered.map((link, index) => (
                   <LinkRow
                     key={link.id}

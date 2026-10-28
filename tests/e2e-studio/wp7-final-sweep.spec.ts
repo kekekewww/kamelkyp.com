@@ -6,7 +6,12 @@
  * reach the public site), also when a step fails.
  */
 import type { Page } from "@playwright/test";
-import { expect as baseExpect, openStudio, test } from "./harness";
+import {
+  expect as baseExpect,
+  openStudio,
+  STUDIO_E2E_ORIGIN,
+  test,
+} from "./harness";
 
 const token = Date.now().toString(36);
 const expect = baseExpect.configure({ timeout: 20_000 });
@@ -259,6 +264,131 @@ test.describe("C3 e: project body blocks", () => {
       await expect(frame.locator(".project-doc__body")).toContainText(zh);
     } finally {
       await archiveEntry(page, editorPath);
+    }
+  });
+});
+
+test.describe("C3 d: a failed reorder restores the server order", () => {
+  const SOCIAL = "/studio/social";
+  const PREFIX = "wp7 social ";
+  const first = `${PREFIX}A ${token}`;
+  const second = `${PREFIX}B ${token}`;
+  const stale = `${PREFIX}stale ${token}`;
+
+  /** Row names in screen order (each row form is labelled "Link: name"). */
+  const names = async (page: Page) =>
+    (
+      await page
+        .locator('form[data-social-row][aria-label^="Link: "]')
+        .evaluateAll((forms) =>
+          forms.map((form) => form.getAttribute("aria-label") ?? ""),
+        )
+    ).map((name) => name.slice("Link: ".length));
+
+  const row = (page: Page, name: string) =>
+    page.locator("li.p3-social__row").filter({
+      has: page.locator(`form[aria-label="Link: ${name}"]`),
+    });
+
+  /** Adds a hidden link (nothing this spec adds reaches the footer). */
+  async function addHiddenLink(page: Page, name: string) {
+    const form = page.locator("form.p3-social__form--new");
+    await form.locator('select[name="platform"]').selectOption("other");
+    await form.locator('input[name="label.zh"]').fill(name);
+    await form.locator('input[name="label.en"]').fill(name);
+    await form
+      .locator('input[name="url"]')
+      .fill(`https://example.com/${name.replaceAll(" ", "-")}`);
+    await form.getByRole("checkbox", { name: "Show on the site" }).uncheck();
+    await form.getByRole("button", { name: "Add link" }).click();
+    await expect(page.locator(".studio-toasts")).toContainText(
+      `Added “${name}”`,
+    );
+    await expect(row(page, name)).toHaveCount(1);
+  }
+
+  /** Deletes this spec's links (also a failed run's) with the screen's intent. */
+  async function deleteSpecLinks(page: Page) {
+    await openStudio(page, SOCIAL);
+    const csrfToken = await page
+      .locator('input[name="csrfToken"]')
+      .first()
+      .inputValue();
+    const ids = await page
+      .locator("li.p3-social__row")
+      .filter({
+        has: page.locator(`form[aria-label^="Link: ${PREFIX}"]`),
+      })
+      .locator('input[name="id"]')
+      .evaluateAll((inputs) =>
+        inputs.map((input) => (input as HTMLInputElement).value),
+      );
+    for (const id of ids) {
+      const response = await page.request.post(SOCIAL, {
+        headers: { Origin: STUDIO_E2E_ORIGIN },
+        form: { csrfToken, intent: "delete", id },
+      });
+      expect(response.status()).toBe(200);
+    }
+    await openStudio(page, SOCIAL);
+    expect(
+      (await names(page)).filter((name) => name.startsWith(PREFIX)),
+    ).toEqual([]);
+  }
+
+  test("/studio/social: a stale order answers an error toast and the list returns to the server order", async ({
+    page,
+    context,
+  }) => {
+    test.setTimeout(120_000);
+    acceptDialogs(page);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await deleteSpecLinks(page);
+    try {
+      await addHiddenLink(page, first);
+      await addHiddenLink(page, second);
+      await openStudio(page, SOCIAL);
+      const recorded = await names(page);
+      expect(recorded.slice(-2)).toEqual([first, second]);
+
+      // An unsaved edit in another row survives the restore.
+      const draftRow = row(page, second);
+      const username = draftRow.locator('input[name="username"]');
+      await username.fill(`draft-${token}`);
+      const state = draftRow.locator(".p3-social__state");
+      await expect(state).toHaveText("Unsaved changes");
+
+      // Another tab adds a link, so this tab's list is stale.
+      const other = await context.newPage();
+      await other.setViewportSize({ width: 1440, height: 900 });
+      await openStudio(other, SOCIAL);
+      await addHiddenLink(other, stale);
+      await other.close();
+
+      // Moving a link here sends the old list: 409, error toast, and the
+      // list back in the server order.
+      await row(page, first).getByRole("button", { name: "Move down" }).click();
+      await expect(
+        page.locator(".studio-toasts .studio-toast--error").filter({
+          hasText: "The order changed elsewhere. Reload and try again.",
+        }),
+      ).toBeVisible();
+      await expect
+        .poll(async () => (await names(page)).filter((name) => name !== stale))
+        .toEqual(recorded);
+      // The restore keeps the rows mounted: the unsaved edit is still there.
+      await expect(username).toHaveValue(`draft-${token}`);
+      await expect(state).toHaveText("Unsaved changes");
+      await username.fill("");
+      await expect(state).toHaveText("Saved");
+
+      // A fresh page shows the stored order: nothing was written.
+      await openStudio(page, SOCIAL);
+      expect((await names(page)).filter((name) => name !== stale)).toEqual(
+        recorded,
+      );
+    } finally {
+      await deleteSpecLinks(page);
     }
   });
 });
