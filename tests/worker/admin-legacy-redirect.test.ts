@@ -259,40 +259,81 @@ describe("legacy /admin action", () => {
   });
 });
 
+/**
+ * A request body of `chunks` 16-byte chunks that records how far it was
+ * read: `bodyUsed` alone is true after a cancel too, so it cannot tell a
+ * drained body from a cancelled one.
+ */
+function trackedBody(chunks: number) {
+  const seen = { pulled: 0, done: false, cancelled: false };
+  const stream = new ReadableStream<Uint8Array>({
+    pull(controller) {
+      if (seen.pulled === chunks) {
+        seen.done = true;
+        controller.close();
+        return;
+      }
+      seen.pulled += 1;
+      controller.enqueue(new Uint8Array(16));
+    },
+    cancel() {
+      seen.cancelled = true;
+    },
+  });
+  return { stream, seen };
+}
+
 describe("discardRequestBody", () => {
-  it("drains a small body", async () => {
+  it("reads a small sized body to the end instead of cancelling it", async () => {
+    const { stream, seen } = trackedBody(4);
     const request = new Request(url("/admin/links"), {
       method: "POST",
-      headers: { "Content-Length": "5" },
-      body: "hello",
+      headers: { "Content-Length": "64" },
+      body: stream,
     });
     await discardRequestBody(request);
     expect(request.bodyUsed).toBe(true);
+    expect(seen).toEqual({ pulled: 4, done: true, cancelled: false });
   });
 
-  it("cancels an unsized or oversized stream instead of reading it", async () => {
-    let pulled = 0;
-    const stream = new ReadableStream<Uint8Array>({
-      pull(controller) {
-        pulled += 1;
-        controller.enqueue(new Uint8Array(16));
-      },
+  it("drains a body of exactly the limit", async () => {
+    const { stream, seen } = trackedBody(4);
+    const request = new Request(url("/admin/links"), {
+      method: "POST",
+      headers: { "Content-Length": String(1024 * 1024) },
+      body: stream,
     });
-    const unsized = new Request(url("/admin/links"), {
+    await discardRequestBody(request);
+    expect(seen.done).toBe(true);
+    expect(seen.cancelled).toBe(false);
+  });
+
+  it("cancels an oversized body without reading it to the end", async () => {
+    const { stream, seen } = trackedBody(64);
+    const request = new Request(url("/admin/links"), {
+      method: "PUT",
+      headers: { "Content-Length": String(1024 * 1024 + 1) },
+      body: stream,
+    });
+    await discardRequestBody(request);
+    expect(request.bodyUsed).toBe(true);
+    expect(seen.cancelled).toBe(true);
+    expect(seen.done).toBe(false);
+    expect(seen.pulled).toBeLessThan(4);
+  });
+
+  it("cancels an unsized stream without reading it to the end", async () => {
+    const { stream, seen } = trackedBody(64);
+    const request = new Request(url("/admin/links"), {
       method: "PUT",
       body: stream,
     });
-    await discardRequestBody(unsized);
-    expect(unsized.bodyUsed).toBe(true);
-    expect(pulled).toBeLessThan(4);
-
-    const oversized = new Request(url("/admin/links"), {
-      method: "PUT",
-      headers: { "Content-Length": String(2 * 1024 * 1024) },
-      body: "x",
-    });
-    await discardRequestBody(oversized);
-    expect(oversized.bodyUsed).toBe(true);
+    expect(request.headers.get("Content-Length")).toBeNull();
+    await discardRequestBody(request);
+    expect(request.bodyUsed).toBe(true);
+    expect(seen.cancelled).toBe(true);
+    expect(seen.done).toBe(false);
+    expect(seen.pulled).toBeLessThan(4);
   });
 
   it("is a no-op without a body or after the body was read", async () => {
