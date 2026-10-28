@@ -90,11 +90,17 @@ test("keyboard focus on a row shows its preview", async ({ page }) => {
   const row = page.locator(
     '.project-row[data-preview-id="fixture-booking-console"]',
   );
-  await row.focus();
-  await expect(page.locator(".hover-preview")).toHaveAttribute(
-    "data-visible",
-    "",
-  );
+  // The preview is client state: a focus that lands before hydration does
+  // nothing, so move focus away and back until the preview reports visible.
+  await expect(async () => {
+    await row.blur();
+    await row.focus();
+    await expect(page.locator(".hover-preview")).toHaveAttribute(
+      "data-visible",
+      "",
+      { timeout: 1_000 },
+    );
+  }).toPass();
   await expect(
     page.locator(
       '.hover-preview__item[data-preview-for="fixture-booking-console"]',
