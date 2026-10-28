@@ -141,7 +141,6 @@ export function fixtureSiteContext(
       { key: "writing", visible: true },
     ],
     footerGroups: [],
-    socialLinks: [],
     mediaConfig: DEFAULT_MEDIA_CONFIG,
     ...overrides,
   };

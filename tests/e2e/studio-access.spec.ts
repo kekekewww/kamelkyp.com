@@ -17,6 +17,7 @@ const STUDIO_PATHS = [
   "/studio/services/terms",
   "/studio/services/terms/common/zh",
   "/studio/settings/brand",
+  "/studio/settings/footer",
   "/studio/preview/home?drafts=1",
   "/studio/preview/projects/seed-p-001?locale=en",
   "/studio/preview/terms/common?locale=zh",
@@ -84,6 +85,12 @@ test("Studio mutations are refused without an owner identity", async ({
     maxRedirects: 0,
   });
   await expectOwnerGate(register, "media-register");
+
+  const footer = await request.post("/studio/settings/footer", {
+    form: { intent: "reorder", ids: "[]" },
+    maxRedirects: 0,
+  });
+  expectOwnerGate(footer);
 
   const status = await request.post("/studio/commissions/status", {
     form: { caseId: "x", status: "accepted" },

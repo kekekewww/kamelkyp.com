@@ -20,8 +20,8 @@ const SCREENS = [
   },
   {
     to: "/studio/settings/footer",
-    title: "Footer links",
-    body: "Link groups shown in the site footer.",
+    title: "Footer",
+    body: "Order, visibility and labels of the footer groups, and custom link groups.",
   },
 ];
 

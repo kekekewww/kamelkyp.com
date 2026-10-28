@@ -121,7 +121,8 @@ describe("site context", () => {
     expect(findMe?.links).toEqual([
       { id: "s-ig", label: "IG", url: "https://instagram.com/kamel" },
     ]);
-    expect(context.socialLinks).toHaveLength(1);
+    // The social links reach the page only as the Find Me group's links.
+    expect(context).not.toHaveProperty("socialLinks");
     await env.DB.prepare("DELETE FROM social_links").run();
   });
 });

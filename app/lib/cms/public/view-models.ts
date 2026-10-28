@@ -270,14 +270,11 @@ export interface PublicSiteContext {
   brand: PublicBrand;
   site: PublicSite;
   navigation: Array<{ key: NavKey; visible: boolean }>;
+  /**
+   * The composed footer. The enabled social links reach the page only as the
+   * Find Me group's links, so a hidden Find Me group sends none of them.
+   */
   footerGroups: FooterGroup[];
-  socialLinks: Array<{
-    id: string;
-    platform: string;
-    label: string;
-    url: string;
-    username: string | null;
-  }>;
   mediaConfig: MediaConfig;
 }
 

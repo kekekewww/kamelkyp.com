@@ -17,6 +17,17 @@ export type NavSection =
   | "writing"
   | "cta";
 
+/**
+ * Site structure: each navigation key's page (after `/:lang`). Labels stay UI
+ * copy; the header and the footer's Navigate group both read it.
+ */
+export const NAV_PATHS: Record<Exclude<NavSection, "home" | "cta">, string> = {
+  work: "/works",
+  services: "/services",
+  about: "/about",
+  writing: "/writing",
+};
+
 /** Path prefixes (after `/:lang`) that mark each primary-nav item active (IA §2.1). */
 const NAV_PREFIXES: Record<Exclude<NavSection, "home" | "cta">, string[]> = {
   work: ["/works"],

@@ -395,4 +395,32 @@ describe("social links", () => {
   it("invites the first link", () => {
     expect(render(<SocialLinks links={[]} />)).toContain("No social links yet");
   });
+
+  it("previews the Find Me group as Settings → Footer names it", () => {
+    const html = render(
+      <SocialLinks
+        links={[social("profile", true, "GitHub")]}
+        findMe={{ label: text("找我", "Elsewhere"), enabled: true }}
+      />,
+    );
+    const preview = html.slice(html.indexOf("p3-footer-preview"));
+    expect(preview).toContain("Elsewhere");
+    expect(preview).toContain('href="/studio/settings/footer"');
+    expect(preview).toContain(
+      "Rename, move or hide this group in Settings → Footer.",
+    );
+    expect(preview).not.toContain("This group is hidden");
+  });
+
+  it("says when Settings → Footer hides the Find Me group", () => {
+    const html = render(
+      <SocialLinks
+        links={[social("profile", true, "GitHub")]}
+        findMe={{ label: text("", ""), enabled: false }}
+      />,
+    );
+    const preview = html.slice(html.indexOf("p3-footer-preview"));
+    expect(preview).toContain("Find Me");
+    expect(preview).toContain("This group is hidden in Settings → Footer.");
+  });
 });

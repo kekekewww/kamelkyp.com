@@ -1,14 +1,15 @@
 /**
  * Public site context (content-architecture §3.6): brand, site settings,
- * navigation, footer groups, social links and media config for one locale,
- * read with one `db.batch` plus one asset lookup.
+ * navigation, footer groups and media config for one locale, read with one
+ * `db.batch` plus one asset lookup.
  *
- * Footer composition: site-structure groups from code (navigate, services,
- * legal), editable D1 link groups (except the legacy "social" group, which
- * became `social_links`), "Find me" from enabled social links (omitted when
- * none) and "Contact" computed from `brand.contactEmail`.
+ * Footer: `composeFooterGroups` (`footer.ts`) builds it from the
+ * `link_groups` rows (order, visibility, labels; custom groups' `links`), the
+ * site navigation and service areas, the enabled social links and
+ * `brand.contactEmail`. Only the composed groups enter the loader data (the
+ * social links too: they reach the page only as Find Me links), so hidden
+ * groups and links never reach the served HTML.
  */
-import { getDefaultFooterGroups } from "../../content/footer-repository.server";
 import type { Env } from "../../env.server";
 import { localize } from "../localized";
 import { getAssets } from "../media/assets.server";
@@ -20,9 +21,13 @@ import { settingsFromRows, settingsStatement } from "../settings.server";
 import { parseFormattedText } from "../text-format";
 import type { Locale } from "../types";
 import { imageView, localizeHref, termRef } from "./build-views";
+import {
+  composeFooterGroups,
+  type FooterGroupRecord,
+  isSafeFooterUrl,
+} from "./footer";
 import { termsFromRows, termsStatement } from "./read.server";
 import type {
-  FooterGroup,
   PublicBrand,
   PublicCta,
   PublicSite,
@@ -34,28 +39,15 @@ import type {
 type FooterRow = {
   group_id: string;
   stable_key: string;
+  sort_order: number;
+  group_enabled: number;
   group_label: string | null;
-  link_id: string;
-  label: string;
-  url: string;
+  link_id: string | null;
+  link_label: string | null;
+  link_url: string | null;
 };
 
-type SocialRow = {
-  id: string;
-  platform: string;
-  label_i18n: string;
-  url: string;
-  username: string | null;
-};
-
-function isSafeFooterUrl(url: string): boolean {
-  if (url.startsWith("/") && !url.startsWith("//")) return true;
-  try {
-    return ["https:", "mailto:"].includes(new URL(url).protocol);
-  } catch {
-    return false;
-  }
-}
+type SocialRow = { id: string; label_i18n: string; url: string };
 
 function cta(
   value: BrandSettings["primaryCta"] | null,
@@ -182,66 +174,28 @@ function siteView(
   };
 }
 
-function composeFooter(input: {
-  locale: Locale;
-  rows: FooterRow[];
-  socialLinks: PublicSiteContext["socialLinks"];
-  contactEmail: string;
-}): FooterGroup[] {
-  const defaults = getDefaultFooterGroups(input.locale);
-  const fallback = (id: string) => defaults.find((group) => group.id === id);
-  const groups: FooterGroup[] = [];
-  const push = (group: FooterGroup | undefined) => {
-    if (group && group.links.length > 0) groups.push(group);
-  };
-
-  push(fallback("navigate"));
-  push(fallback("services"));
-
-  const stored = new Map<string, FooterGroup>();
-  for (const row of input.rows) {
-    if (!isSafeFooterUrl(row.url)) continue;
-    const group = stored.get(row.group_id) ?? {
+/** Footer rows (one per group, plus one per link of a shown group) → records. */
+function footerRecords(rows: readonly FooterRow[]): FooterGroupRecord[] {
+  const records = new Map<string, FooterGroupRecord>();
+  for (const row of rows) {
+    const record = records.get(row.group_id) ?? {
       id: row.group_id,
-      label:
-        row.group_label ??
-        fallback(row.stable_key)?.label ??
-        row.stable_key.replaceAll("_", " "),
+      key: row.stable_key,
+      sortOrder: row.sort_order,
+      enabled: row.group_enabled === 1,
+      label: row.group_label ?? "",
       links: [],
     };
-    group.links.push({ id: row.link_id, label: row.label, url: row.url });
-    stored.set(row.group_id, group);
+    if (row.link_id !== null) {
+      record.links.push({
+        id: row.link_id,
+        label: row.link_label ?? "",
+        url: row.link_url ?? "",
+      });
+    }
+    records.set(row.group_id, record);
   }
-  for (const group of stored.values()) push(group);
-
-  const findMeLabel = input.locale === "zh" ? "社群" : "Find Me";
-  push({
-    id: "find_me",
-    label: findMeLabel,
-    links: input.socialLinks.map((link) => ({
-      id: link.id,
-      label: link.label,
-      url: link.url,
-    })),
-  });
-
-  const contact = fallback("contact");
-  if (contact && input.contactEmail) {
-    push({
-      id: "contact",
-      label: contact.label,
-      links: [
-        {
-          id: "email",
-          label: input.contactEmail,
-          url: `mailto:${input.contactEmail}`,
-        },
-      ],
-    });
-  }
-
-  push(fallback("legal"));
-  return groups;
+  return [...records.values()];
 }
 
 /**
@@ -273,13 +227,14 @@ export function fallbackSiteContext(
       options.now ?? new Date(),
     ),
     navigation: site.value.navigation.items.map((item) => ({ ...item })),
-    footerGroups: composeFooter({
+    footerGroups: composeFooterGroups({
       locale,
-      rows: [],
+      groups: [],
+      navigation: site.value.navigation.items,
+      serviceAreas: site.value.serviceAreas,
       socialLinks: [],
       contactEmail: brand.value.contactEmail,
     }),
-    socialLinks: [],
     mediaConfig: context.mediaConfig,
   };
 }
@@ -295,17 +250,17 @@ export async function getPublicSiteContext(
       settingsStatement(db),
       termsStatement(db),
       db.prepare(
-        "SELECT id, platform, label_i18n, url, username FROM social_links WHERE enabled = 1 ORDER BY sort_order, id",
+        "SELECT id, label_i18n, url FROM social_links WHERE enabled = 1 ORDER BY sort_order, id",
       ),
       db
         .prepare(
-          `SELECT g.id AS group_id, g.stable_key, gl.label AS group_label,
-                  l.id AS link_id, l.label, l.url
+          `SELECT g.id AS group_id, g.stable_key, g.sort_order, g.enabled AS group_enabled,
+                  gl.label AS group_label, l.id AS link_id, l.label AS link_label, l.url AS link_url
            FROM link_groups g
-           JOIN links l ON l.group_id = g.id
-           LEFT JOIN link_group_labels gl ON gl.group_id = g.id AND gl.locale = l.locale
-           WHERE g.enabled = 1 AND l.enabled = 1 AND l.locale = ? AND g.stable_key <> 'social'
-           ORDER BY g.sort_order, l.sort_order`,
+           LEFT JOIN link_group_labels gl ON gl.group_id = g.id AND gl.locale = ?1
+           LEFT JOIN links l ON l.group_id = g.id AND g.enabled = 1 AND l.locale = ?1 AND l.enabled = 1
+           WHERE g.stable_key <> 'social'
+           ORDER BY g.sort_order, g.id, l.sort_order, l.id`,
         )
         .bind(locale),
     ]);
@@ -332,13 +287,12 @@ export async function getPublicSiteContext(
   };
 
   const brandPublic = brandView(brand.value, locale, context);
+  // Only the Find Me group's links carry them to the page.
   const socialLinks = ((socialResult?.results ?? []) as SocialRow[])
     .map((row) => ({
       id: row.id,
-      platform: row.platform,
       label: localize(JSON.parse(row.label_i18n), locale),
       url: row.url,
-      username: row.username,
     }))
     .filter((link) => link.label && isSafeFooterUrl(link.url));
 
@@ -353,13 +307,14 @@ export async function getPublicSiteContext(
       options.now ?? new Date(),
     ),
     navigation: site.value.navigation.items.map((item) => ({ ...item })),
-    footerGroups: composeFooter({
+    footerGroups: composeFooterGroups({
       locale,
-      rows: (footerResult?.results ?? []) as FooterRow[],
+      groups: footerRecords((footerResult?.results ?? []) as FooterRow[]),
+      navigation: site.value.navigation.items,
+      serviceAreas: site.value.serviceAreas,
       socialLinks,
       contactEmail: brand.value.contactEmail,
     }),
-    socialLinks,
     mediaConfig: context.mediaConfig,
   };
 }

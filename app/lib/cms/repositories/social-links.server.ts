@@ -11,6 +11,7 @@
 import { CmsError } from "../db/errors";
 import { formDataToObject, readString } from "../forms";
 import { parseLocalizedText } from "../localized";
+import { FOOTER_SYSTEM_GROUPS } from "../public/footer";
 import {
   SOCIAL_PLATFORMS,
   type SocialLink,
@@ -344,8 +345,38 @@ export function parseSocialLinkForm(formData: FormData): SocialLinkDraft {
   };
 }
 
+/**
+ * How Settings → Footer sets the "Find me" group these links fill: its label
+ * per locale (the default when none is stored) and whether it is shown.
+ */
+export async function getFindMeGroup(
+  db: D1Database,
+): Promise<{ label: LocalizedText; enabled: boolean }> {
+  const rows = await db
+    .prepare(
+      `SELECT g.enabled, gl.locale, gl.label FROM link_groups g
+       LEFT JOIN link_group_labels gl ON gl.group_id = g.id
+       WHERE g.stable_key = 'find_me'`,
+    )
+    .all<{ enabled: number; locale: string | null; label: string | null }>();
+  const defaults = FOOTER_SYSTEM_GROUPS.find_me.label;
+  const stored = (locale: "zh" | "en") =>
+    rows.results.find((row) => row.locale === locale)?.label?.trim() ?? "";
+  return {
+    label: {
+      zh: stored("zh") || defaults.zh,
+      en: stored("en") || defaults.en,
+    },
+    enabled: rows.results[0] ? rows.results[0].enabled === 1 : true,
+  };
+}
+
 export async function loadSocialLinks({ db }: { db: D1Database }) {
-  return { links: await listSocialLinks(db) };
+  const [links, findMe] = await Promise.all([
+    listSocialLinks(db),
+    getFindMeGroup(db),
+  ]);
+  return { links, findMe };
 }
 
 export async function handleSocialAction({

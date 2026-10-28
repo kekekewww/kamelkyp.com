@@ -50,6 +50,9 @@ async function fixtureRows(): Promise<number> {
           + (SELECT COUNT(*) FROM recognitions WHERE id GLOB 'e2e-*')
           + (SELECT COUNT(*) FROM writings WHERE id GLOB 'e2e-*')
           + (SELECT COUNT(*) FROM social_links WHERE id GLOB 'e2e-*')
+          + (SELECT COUNT(*) FROM link_groups WHERE id GLOB 'e2e-*')
+          + (SELECT COUNT(*) FROM link_group_labels WHERE group_id GLOB 'e2e-*')
+          + (SELECT COUNT(*) FROM links WHERE group_id GLOB 'e2e-*')
           + (SELECT COUNT(*) FROM slug_redirects WHERE entity_id GLOB 'e2e-*') AS total`,
   ).first<{ total: number }>();
   return row?.total ?? 0;
@@ -210,8 +213,27 @@ describe("cms e2e fixture", () => {
 
   it("shows only the enabled social link in the footer", async () => {
     const site = await getPublicSiteContext(env.DB, testEnv, "en");
-    expect(site.socialLinks.map((link) => link.label)).toEqual(["Instagram"]);
-    expect(site.footerGroups.map((group) => group.id)).toContain("find_me");
+    const findMe = site.footerGroups.find((group) => group.id === "find_me");
+    expect(findMe?.links.map((link) => link.label)).toEqual(["Instagram"]);
+  });
+
+  it("keeps the hidden fixture footer group out of the footer", async () => {
+    for (const locale of ["en", "zh"] as const) {
+      const site = await getPublicSiteContext(env.DB, testEnv, locale);
+      expect(site.footerGroups.map((group) => group.id)).not.toContain(
+        "e2e-cms-footer-hidden",
+      );
+      const serialized = JSON.stringify(site);
+      expect(serialized).not.toContain("e2e-hidden-footer");
+      expect(serialized).not.toContain("Fixture hidden group");
+      expect(serialized).not.toContain("隱藏測試群組");
+      // Six groups, as the loopback footer assertions expect.
+      expect(site.footerGroups).toHaveLength(6);
+    }
+    const stored = await env.DB.prepare(
+      "SELECT enabled FROM link_groups WHERE id = 'e2e-cms-footer-hidden'",
+    ).first<{ enabled: number }>();
+    expect(stored?.enabled).toBe(0);
   });
 
   it("carries no personal name and no sample prefix", () => {

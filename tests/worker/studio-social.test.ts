@@ -240,7 +240,9 @@ describe("social links store", () => {
       now,
     );
     const context = await getPublicSiteContext(env.DB, createTestEnv(), "en");
-    const urls = context.socialLinks.map((link) => link.url);
+    // Enabled social links reach the page as the Find Me group's links.
+    const findMe = context.footerGroups.find((group) => group.id === "find_me");
+    const urls = (findMe?.links ?? []).map((link) => link.url);
     expect(urls).toContain(shown.url);
     expect(urls).not.toContain(hidden.url);
   });

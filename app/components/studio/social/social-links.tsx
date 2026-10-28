@@ -5,9 +5,10 @@
  * preview shows exactly what the public "Find me / 社群" group lists.
  */
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import { useBlocker, useFetcher } from "react-router";
+import { Link, useBlocker, useFetcher } from "react-router";
+import { FOOTER_SYSTEM_GROUPS } from "../../../lib/cms/public/footer";
 import type { SocialLink } from "../../../lib/cms/schemas/social-link";
-import type { ValidationIssue } from "../../../lib/cms/types";
+import type { LocalizedText, ValidationIssue } from "../../../lib/cms/types";
 import { StudioPage } from "../shell/studio-page";
 import {
   ConfirmDialog,
@@ -588,9 +589,20 @@ function AddLink({
   );
 }
 
-function FooterPreview({ links }: { links: readonly SocialLink[] }) {
+/** The footer group these links fill, as Settings → Footer sets it. */
+export type FindMeGroup = { label: LocalizedText; enabled: boolean };
+
+function FooterPreview({
+  links,
+  findMe,
+}: {
+  links: readonly SocialLink[];
+  findMe?: FindMeGroup;
+}) {
   const [locale, setLocale] = useState<"zh" | "en">("en");
   const items = footerLinks(links, locale);
+  const heading =
+    findMe?.label[locale].trim() || FOOTER_SYSTEM_GROUPS.find_me.label[locale];
   return (
     <aside className="p3-footer-preview" aria-labelledby="p3-footer-preview">
       <div className="p3-footer-preview__head">
@@ -615,8 +627,13 @@ function FooterPreview({ links }: { links: readonly SocialLink[] }) {
         className="p3-footer-preview__group"
         lang={locale === "zh" ? "zh-Hant" : "en"}
       >
-        {locale === "zh" ? "社群" : "Find me"}
+        {heading}
       </p>
+      {findMe && !findMe.enabled ? (
+        <p className="studio-hint">
+          This group is hidden in Settings → Footer.
+        </p>
+      ) : null}
       {items.length === 0 ? (
         <p className="studio-hint">
           No link is shown, so the footer leaves this group out.
@@ -637,14 +654,22 @@ function FooterPreview({ links }: { links: readonly SocialLink[] }) {
         </ul>
       )}
       <p className="studio-hint">
-        Only links switched to Shown appear, in this order. The footer’s Work &
-        Resources links live in Settings → Footer.
+        Only links switched to Shown appear, in this order.{" "}
+        <Link className="studio-link" to="/studio/settings/footer">
+          Rename, move or hide this group in Settings → Footer.
+        </Link>
       </p>
     </aside>
   );
 }
 
-export function SocialLinks({ links }: { links: readonly SocialLink[] }) {
+export function SocialLinks({
+  links,
+  findMe,
+}: {
+  links: readonly SocialLink[];
+  findMe?: FindMeGroup;
+}) {
   const reorderFetcher = useFetcher<SocialResult>();
   const { csrfToken } = useStudioSession();
   const toast = useToast();
@@ -788,7 +813,7 @@ export function SocialLinks({ links }: { links: readonly SocialLink[] }) {
           )}
           <AddLink onDirty={onDirty} />
         </div>
-        <FooterPreview links={ordered} />
+        <FooterPreview links={ordered} findMe={findMe} />
       </div>
       <ConfirmDialog
         open={blocker.state === "blocked"}
