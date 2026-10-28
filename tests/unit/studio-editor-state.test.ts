@@ -120,57 +120,72 @@ describe("ordering", () => {
     state = keyboardReorderReducer(state, { type: "move", delta: 1 });
     state = keyboardReorderReducer(state, { type: "move", delta: 1 });
     expect(state.order).toEqual(["b", "c", "a"]);
+    expect(state.sent).toBeFalsy();
+    // The caller sends the order on a drop.
     const dropped = keyboardReorderReducer(state, { type: "drop" });
     expect(dropped).toEqual({
       order: ["b", "c", "a"],
       picked: null,
       originIndex: null,
+      sent: true,
     });
     const cancelled = keyboardReorderReducer(state, { type: "cancel" });
     expect(cancelled.order).toEqual(["a", "b", "c"]);
     expect(cancelled.picked).toBeNull();
+    expect(cancelled.sent).toBeFalsy();
   });
 
-  it("restarts from the server order on a new server order or reset key", () => {
-    const server = ["a", "b", "c"];
-    const source = reorderSource(server, 0);
-    const initial: KeyboardReorderState = {
+  /** A list as `useKeyboardReorder` starts it: the server order, key 0. */
+  function startedAt(server: string[]): KeyboardReorderState {
+    return {
       order: server,
       picked: null,
       originIndex: null,
-      source,
+      source: reorderSource(server),
+      resetKey: 0,
+      sent: false,
+      announcement: "",
     };
+  }
+
+  it("restarts from the server order on a new server order or reset key", () => {
+    const server = ["a", "b", "c"];
+    const source = reorderSource(server);
+    const initial = startedAt(server);
     // A drop the server then refuses leaves the local order behind.
     let state = keyboardReorderReducer(initial, { type: "pick", id: "a" });
     state = keyboardReorderReducer(state, { type: "move", delta: 1 });
     state = keyboardReorderReducer(state, { type: "drop" });
     expect(state.order).toEqual(["b", "a", "c"]);
     expect(state.source).toBe(source);
-    // Alt+arrow moves set the order at once and keep the source too.
-    expect(
-      keyboardReorderReducer(initial, { type: "reset", order: ["c", "a", "b"] })
-        .source,
-    ).toBe(source);
+    expect(state.sent).toBe(true);
+    // Alt+arrow moves set and send the order at once and keep the source too.
+    const altMoved = keyboardReorderReducer(initial, {
+      type: "reset",
+      order: ["c", "a", "b"],
+    });
+    expect(altMoved.source).toBe(source);
+    expect(altMoved.sent).toBe(true);
 
     // Same server order, same key (the request is in flight): kept as is.
-    expect(
-      keyboardReorderReducer(state, { type: "sync", order: server, source }),
-    ).toBe(state);
-
-    // The caller bumps its key after the failure: back to the server order.
-    const failed = reorderSource(server, 1);
     expect(
       keyboardReorderReducer(state, {
         type: "sync",
         order: server,
-        source: failed,
+        source,
+        resetKey: 0,
       }),
-    ).toEqual({
-      order: server,
-      picked: null,
-      originIndex: null,
-      source: failed,
-    });
+    ).toBe(state);
+
+    // The caller bumps its key after the failure: back to the server order.
+    expect(
+      keyboardReorderReducer(state, {
+        type: "sync",
+        order: server,
+        source,
+        resetKey: 1,
+      }),
+    ).toEqual({ ...initial, resetKey: 1 });
 
     // A new server order (a saved reorder, another tab) restarts it as well,
     // also while a row is picked up.
@@ -180,22 +195,95 @@ describe("ordering", () => {
       keyboardReorderReducer(picked, {
         type: "sync",
         order: saved,
-        source: reorderSource(saved, 0),
+        source: reorderSource(saved),
+        resetKey: 0,
       }),
-    ).toEqual({
-      order: saved,
-      picked: null,
-      originIndex: null,
-      source: reorderSource(saved, 0),
-    });
+    ).toEqual(startedAt(saved));
   });
 
-  it("tells server orders and reset keys apart", () => {
-    expect(reorderSource(["a", "b"], 0)).toBe(reorderSource(["a", "b"], 0));
-    expect(reorderSource(["a", "b"], 0)).not.toBe(reorderSource(["a", "b"], 1));
-    expect(reorderSource(["a", "b"], 0)).not.toBe(reorderSource(["b", "a"], 0));
-    expect(reorderSource(["ab"], 0)).not.toBe(reorderSource(["a", "b"], 0));
-    expect(reorderSource([], 0)).not.toBe(reorderSource([""], 0));
+  it("a new reset key leaves a list alone that sent no order since it restarted", () => {
+    // Another group on the same fetcher failed, or a row action did, while
+    // this list has a row picked up and moved but not dropped.
+    const server = ["a", "b", "c"];
+    let state = keyboardReorderReducer(startedAt(server), {
+      type: "pick",
+      id: "a",
+    });
+    state = keyboardReorderReducer(state, { type: "move", delta: 1 });
+    state = keyboardReorderReducer(state, {
+      type: "announce",
+      text: "a moved to position 2 of 3.",
+    });
+    const synced = keyboardReorderReducer(state, {
+      type: "sync",
+      order: server,
+      source: reorderSource(server),
+      resetKey: 1,
+    });
+    expect(synced).toEqual({ ...state, resetKey: 1 });
+    expect(synced.picked).toBe("a");
+    expect(synced.order).toEqual(["b", "a", "c"]);
+
+    // Once it drops, its own failure restarts it.
+    const dropped = keyboardReorderReducer(synced, { type: "drop" });
+    expect(
+      keyboardReorderReducer(dropped, {
+        type: "sync",
+        order: server,
+        source: reorderSource(server),
+        resetKey: 2,
+      }).order,
+    ).toEqual(server);
+  });
+
+  it("a restore after a failure clears the announcement, so the same move retried is announced", () => {
+    const server = ["a", "b", "c"];
+    const moved = "c moved to position 2 of 3.";
+    let state = keyboardReorderReducer(startedAt(server), {
+      type: "reset",
+      order: ["a", "c", "b"],
+    });
+    state = keyboardReorderReducer(state, { type: "announce", text: moved });
+    expect(state.announcement).toBe(moved);
+    // The same text again is no change.
+    expect(
+      keyboardReorderReducer(state, { type: "announce", text: moved }),
+    ).toBe(state);
+
+    const restored = keyboardReorderReducer(state, {
+      type: "sync",
+      order: server,
+      source: reorderSource(server),
+      resetKey: 1,
+    });
+    expect(restored.order).toEqual(server);
+    expect(restored.announcement).toBe("");
+    const retried = keyboardReorderReducer(
+      keyboardReorderReducer(restored, {
+        type: "reset",
+        order: ["a", "c", "b"],
+      }),
+      { type: "announce", text: moved },
+    );
+    expect(retried.announcement).toBe(moved);
+
+    // A saved order keeps what was last announced: it describes the list.
+    const saved = ["a", "c", "b"];
+    expect(
+      keyboardReorderReducer(state, {
+        type: "sync",
+        order: saved,
+        source: reorderSource(saved),
+        resetKey: 0,
+      }).announcement,
+    ).toBe(moved);
+  });
+
+  it("tells server orders apart", () => {
+    expect(reorderSource(["a", "b"])).toBe(reorderSource(["a", "b"]));
+    expect(reorderSource(["a", "b"])).not.toBe(reorderSource(["b", "a"]));
+    expect(reorderSource(["ab"])).not.toBe(reorderSource(["a", "b"]));
+    expect(reorderSource([])).not.toBe(reorderSource([""]));
   });
 
   it("announces pick-ups and positions", () => {

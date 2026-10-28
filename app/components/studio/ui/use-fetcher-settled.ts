@@ -36,7 +36,9 @@ export function useFetcherSettled<D>(
 /**
  * How many of this fetcher's submissions have finished with a failed answer.
  * A list passes it as `useKeyboardReorder`'s `resetKey`, so a refused order
- * goes back to the server order (admin-architecture §4.12).
+ * goes back to the server order (admin-architecture §4.12). Every failure
+ * counts; the hook restarts only a list that has sent an order since its last
+ * restart, so lists and row actions may share the fetcher.
  */
 export function useFailureCount(fetcher: FetcherLike<unknown>): number {
   const [failures, setFailures] = useState(0);

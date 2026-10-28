@@ -185,7 +185,10 @@ function GroupBlock({
   now: string;
   manual: boolean;
   submit: Submit;
-  /** Bumps after a failed action: the group goes back to the saved order. */
+  /**
+   * Bumps after a failed action on the shared fetcher: the group goes back to
+   * the saved order if it sent an order since its last restart.
+   */
   resetKey: number;
 }) {
   const ids = useMemo(() => rows.map((row) => row.id), [rows]);

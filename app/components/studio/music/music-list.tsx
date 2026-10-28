@@ -94,7 +94,8 @@ function useListActions() {
       }
     },
   });
-  // Bumps after a failed action, so the manual order resets to the server's.
+  // Bumps after a failed action; a manual order sent since the last restart
+  // goes back to the server's (a failed row action leaves the list alone).
   const failures = useFailureCount(fetcher);
   return { submit, busy: fetcher.state !== "idle", failures };
 }

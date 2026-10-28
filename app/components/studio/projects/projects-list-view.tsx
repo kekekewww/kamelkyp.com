@@ -144,7 +144,8 @@ function useRowFeedback(
 export function ProjectsListView({ data }: { data: ProjectsListData }) {
   const navigate = useNavigate();
   const toast = useToast();
-  // Bumps after a failed reorder; both ordered lists reset to the server's.
+  // Bumps after a failed reorder; the list that sent it (strip or rows) goes
+  // back to the server order, the other keeps a pick in progress.
   const [orderFailures, setOrderFailures] = useState(0);
   const filtered = hasActiveFilters(data.query);
   const rowsById = useMemo(
