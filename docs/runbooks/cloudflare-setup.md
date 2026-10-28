@@ -51,12 +51,15 @@ Preview 與 Production 使用不同的 Self-hosted application、Audience tag；
 
 1. Zero Trust → **Settings** → **Authentication** → **Login methods** → **Add new** → **One-time PIN**。
 2. Zero Trust → **Access controls** → **Applications** → **Add an application** → **Self-hosted**。
-3. Production hostname 使用 `kamelkyp.com`；Preview 使用實際 Preview workers.dev hostname。
-4. 加入三個受保護 path：
+3. Production hostname 使用 `kamelkyp.com`；Preview 每個 PR 是獨立 Worker，subdomain 填 `kamelkyp-com-pr-*`、domain 選 `<WORKERS_DEV_SUBDOMAIN>.workers.dev`（Access 支援 subdomain 尾端萬用字元，一個 application 涵蓋所有 PR）。
+4. 加入六個受保護 path（Worker 對這些路徑都要求 Access JWT，缺一個該路徑就只會回 403）：
+   - `/studio`
+   - `/studio/*`
+   - `/api/studio/*`
    - `/admin`
    - `/admin/*`
    - `/api/admin/*`
-5. Application session duration 設為 8 hours。
+5. Application session duration 設為 8 hours（Dashboard 沒有 8 hours 選項時選 **Custom duration** 填 `8h`）。
 6. 建立 **Allow** policy：
    - Include selector：**Emails**
    - Value：`kevinyaungputra@gmail.com`
@@ -65,6 +68,8 @@ Preview 與 Production 使用不同的 Self-hosted application、Audience tag；
 8. 確認沒有 Bypass policy、Everyone rule 或全網域 email rule。
 9. Application 頁面複製 Audience tag，設為對應 GitHub Environment variable `ACCESS_AUD`。
 10. Zero Trust 顯示的 team domain 必須以完整 HTTPS issuer 保存，例如 `https://<team>.cloudflareaccess.com`，設為 `ACCESS_TEAM_DOMAIN`。
+
+設定後，部署的 Preview 對未登入的 Studio／admin 請求由 Access 回 302 到 `*.cloudflareaccess.com`，Worker 收不到請求；preview workflow 以 `E2E_ACCESS_GATE=1` 驗證這個 302。loopback E2E 前面沒有 Access，仍由 Worker 回 403。
 
 官方文件：<https://developers.cloudflare.com/cloudflare-one/access-controls/policies/app-paths/>、<https://developers.cloudflare.com/cloudflare-one/access-controls/policies/>、<https://developers.cloudflare.com/cloudflare-one/access-controls/access-settings/session-management/>。
 
@@ -91,7 +96,10 @@ Variables：
 - `TURNSTILE_SITE_KEY`
 - `RATE_LIMIT_NAMESPACE_ID`：Preview 建議 `41004`，Production 建議 `41005`
 - `WORKERS_DEV_SUBDOMAIN`：只需 Preview
-- `LEGAL_REVIEW_CONFIRMED`：只需 Production；法務確認前保持 `false`
+- `LEGAL_REVIEW_CONFIRMED`：只需 Production；法務確認前保持 `false`（production verifier 會拒絕 `false`，因此法務確認前不會部署）
+- `R2_MEDIA_BUCKET`：Production 必填（`scripts/verify-production-config.mjs`）；Content Studio 媒體 bucket，例如 `kamelkyp-media`。Preview 不設定時上傳功能關閉。
+- `MEDIA_PUBLIC_BASE_URL`：Production 必填；媒體公開 HTTPS 網址，建議以 R2 custom domain 提供，例如 `https://media.kamelkyp.com`。
+- `MEDIA_CORS_HOSTS`、`IMAGE_TRANSFORMATIONS`：選填；未設定時不加 CORS host，image transformations 為 `off`。
 
 `RATE_LIMIT_NAMESPACE_ID` 必須是正整數、兩環境不同；生成設定只允許一個 `SUBMISSION_RATE_LIMITER`，每 60 秒 10 次。
 

@@ -13,6 +13,7 @@
  */
 import { expect, test } from "@playwright/test";
 import { expectNoPersonalName } from "./helpers/brand";
+import { expectOwnerGate } from "./helpers/owner-gate";
 
 test("language preference, identity and responsive introduction meet the brief", async ({
   browser,
@@ -120,9 +121,8 @@ test("public safety boundaries remain explicit", async ({ page, request }) => {
   await expect(page.locator("footer summary")).toHaveCount(6);
   expect(await page.locator("footer a").count()).toBeGreaterThan(3);
 
-  const admin = await request.get("/admin");
-  expect(admin.status()).toBe(403);
-  expect(admin.headers()["cache-control"]).toContain("no-store");
+  const admin = await request.get("/admin", { maxRedirects: 0 });
+  expectOwnerGate(admin);
 
   await page.goto("/en/does-not-exist");
   await expect(
