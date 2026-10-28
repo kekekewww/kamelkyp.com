@@ -29,9 +29,6 @@ import type { LocalizedText, ValidationIssue } from "../types";
 
 export type { SocialLink, SocialPlatform };
 
-/** Icon keys (a fixed set; `null` = the platform's own icon). */
-export const SOCIAL_ICON_KEYS: readonly SocialPlatform[] = SOCIAL_PLATFORMS;
-
 export type SocialLinkDraft = {
   id?: string;
   platform: string;

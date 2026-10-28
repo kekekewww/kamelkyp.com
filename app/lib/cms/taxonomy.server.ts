@@ -99,24 +99,6 @@ export async function getTerm(
   return row ? termFromRow(row) : null;
 }
 
-/** Terms by id (one statement), e.g. to label categories on public pages. */
-export async function getTermsByIds(
-  db: D1Database,
-  ids: readonly string[],
-): Promise<Map<string, Term>> {
-  const unique = [...new Set(ids.filter(Boolean))];
-  if (unique.length === 0) return new Map();
-  const rows = await db
-    .prepare(
-      `SELECT ${COLUMNS} FROM taxonomy_terms WHERE id IN (SELECT value FROM json_each(?))`,
-    )
-    .bind(JSON.stringify(unique))
-    .all<TermRow>();
-  return new Map(
-    rows.results.map((row) => [row.id, termFromRow(row)] as const),
-  );
-}
-
 async function takenSlugs(
   db: D1Database,
   vocabulary: Vocabulary,

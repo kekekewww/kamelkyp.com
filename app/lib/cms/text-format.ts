@@ -51,14 +51,3 @@ export function parseFormattedText(
 
   return blocks;
 }
-
-/** Plain text with list markers removed (search snippets, meta descriptions). */
-export function formattedTextToPlain(input: string | null | undefined): string {
-  return parseFormattedText(input)
-    .map((block) =>
-      block.type === "paragraph" ? block.text : block.items.join(" · "),
-    )
-    .join(" ")
-    .replace(/\s+/g, " ")
-    .trim();
-}

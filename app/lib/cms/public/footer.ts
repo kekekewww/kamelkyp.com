@@ -80,12 +80,6 @@ export const FOOTER_SYSTEM_GROUPS: Readonly<
   },
 };
 
-/** Keys no custom group may use: the built-in keys and the legacy `social`. */
-export const FOOTER_RESERVED_KEYS: readonly string[] = [
-  ...FOOTER_SYSTEM_KEYS,
-  "social",
-];
-
 export function isFooterSystemKey(key: string): key is FooterSystemKey {
   return (FOOTER_SYSTEM_KEYS as readonly string[]).includes(key);
 }

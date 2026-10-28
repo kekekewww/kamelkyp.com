@@ -112,8 +112,6 @@ export const UploadDeclarationSchema = z.object({
   kind: z.enum(MEDIA_KINDS).optional(),
 });
 
-export type UploadDeclaration = z.input<typeof UploadDeclarationSchema>;
-
 const MAX_DIMENSION = 30_000;
 const MAX_DURATION_MS = 24 * 60 * 60 * 1000;
 

@@ -15,8 +15,6 @@ import {
 import { isValidSlug } from "../slug";
 import type { LocalizedBlocks, LocalizedText } from "../types";
 
-export const EMPTY_TEXT: LocalizedText = Object.freeze({ zh: "", en: "" });
-
 /** `{zh, en}` with a per-locale length cap; missing locales become "". */
 export function localizedText(max: number) {
   return z

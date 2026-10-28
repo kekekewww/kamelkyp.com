@@ -28,14 +28,6 @@ export type ActionError = {
 
 export type ActionResult<T extends object = object> = ActionOk<T> | ActionError;
 
-export function isActionError(value: unknown): value is ActionError {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    (value as { ok?: unknown }).ok === false
-  );
-}
-
 /** Success for route actions (serialized by React Router; fetchers read it). */
 export function actionOk<T extends object>(payload?: T, init?: ResponseInit) {
   return data({ ok: true as const, ...(payload ?? ({} as T)) }, init);

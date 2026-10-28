@@ -152,23 +152,3 @@ export type CommissionsModel = {
   /** Every due cleanup, independent of filters and page. */
   cleanupDue: CleanupDueItem[];
 };
-
-// ---- Action payloads ------------------------------------------------------------
-
-export type SetStatusPayload = {
-  intent: "set-status";
-  caseId: string;
-  status: CaseStatus;
-  previousStatus: CaseStatus;
-  cleanupDueAt: string | null;
-  unchanged: boolean;
-};
-
-export type StudentDecisionPayload = {
-  intent: "accept-student-price" | "reject-student-price";
-  caseId: string;
-  lockedPriceMinor: number;
-  currency: "TWD" | "USD";
-};
-
-export type CleanupPayload = { intent: "confirm-cleanup"; caseId: string };
