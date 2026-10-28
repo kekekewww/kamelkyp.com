@@ -112,10 +112,11 @@ test.describe("C3 c: Save and leave from an error state", () => {
       });
       await start.fill("12.5");
       await expect(topSaveState(page)).toHaveText("UNSAVED CHANGES");
-      const music = page
+      // The breadcrumb back to the library.
+      const library = page
         .locator("header")
-        .getByRole("link", { name: "Music", exact: true });
-      await music.click();
+        .getByRole("link", { name: "Media", exact: true });
+      await library.click();
       const dialog = page.getByRole("dialog", {
         name: "Leave without saving?",
       });
@@ -133,10 +134,10 @@ test.describe("C3 c: Save and leave from an error state", () => {
       await expect(dialog).toBeHidden();
 
       await start.fill("12");
-      await music.click();
+      await library.click();
       await expect(dialog.getByRole("alert")).toHaveCount(0);
       await saveAndLeave.click();
-      await expect(page).toHaveURL(/\/studio\/music$/);
+      await expect(page).toHaveURL(/\/studio\/media$/);
       await expect(dialog).toBeHidden();
       await openStudio(page, detailPath);
       await expect(start).toHaveValue("12");
