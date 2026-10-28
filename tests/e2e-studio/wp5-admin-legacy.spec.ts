@@ -73,6 +73,7 @@ const SCREENS: Array<[string, RegExp, string]> = [
   ["/admin/cases", /\/studio\/commissions$/, "Commissions"],
   ["/admin/services", /\/studio\/services\/pricing$/, "Pricing"],
   ["/admin/terms", /\/studio\/services\/terms$/, "Terms"],
+  ["/admin/links", /\/studio\/settings\/footer$/, "Footer"],
 ];
 
 for (const [path, url, heading] of SCREENS) {
@@ -87,14 +88,3 @@ for (const [path, url, heading] of SCREENS) {
     await expect(page.locator('a[href^="/admin"]')).toHaveCount(0);
   });
 }
-
-test("a /admin/links bookmark opens Studio → Footer", async ({ page }) => {
-  // Pending wp3: once Studio → Footer replaces its stub, this case also
-  // asserts no "Not built yet" and no link back to the retired admin, like
-  // the screens above.
-  await openStudio(page, "/admin/links");
-  await expect(page).toHaveURL(/\/studio\/settings\/footer$/);
-  await expect(
-    page.getByRole("heading", { level: 1, name: "Footer", exact: true }),
-  ).toBeVisible();
-});

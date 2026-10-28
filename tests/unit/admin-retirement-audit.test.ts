@@ -19,20 +19,6 @@ const sources: Record<string, string> = Object.fromEntries(
 );
 const files = Object.keys(sources).sort();
 
-// Pending wp3: Studio → Footer is still the stub panel, which links to the
-// retired legacy editor. The exemption holds only while a route renders the
-// stub; once none does, the stub must be deleted (wp5 §4.7, last case).
-const FOOTER_ROUTE = "app/routes/studio/settings/footer.tsx";
-const STUB_PANEL = "app/components/studio/shell/stub-panel.tsx";
-const stubImporters = files.filter(
-  (file) => file !== STUB_PANEL && /shell\/stub-panel["']/.test(sources[file]),
-);
-const FOOTER_STUB = new Set(
-  stubImporters.includes(FOOTER_ROUTE) ? [FOOTER_ROUTE, STUB_PANEL] : [],
-);
-
-const exempt = (file: string) => FOOTER_STUB.has(file);
-
 /** Files that answer or refuse the legacy URLs on purpose (plan §2.6). */
 const ADMIN_LITERAL_ALLOWLIST = new Set([
   "app/routes.ts",
@@ -71,22 +57,25 @@ describe("admin retirement audit", () => {
       /^app\/lib\/db\//,
       /^app\/lib\/media\/media-repository\.server\.ts$/,
       /^app\/lib\/auth\/admin\.server\.ts$/,
+      // The "Not built yet" panel that pointed to the legacy screens.
+      /^app\/components\/studio\/shell\/stub-panel\.tsx$/,
     ];
-    const left = files.filter(
-      (file) => !exempt(file) && retired.some((pattern) => pattern.test(file)),
+    const left = files.filter((file) =>
+      retired.some((pattern) => pattern.test(file)),
     );
     expect(left).toEqual([]);
   });
 
-  it("names no legacy admin module, stylesheet or guard", () => {
+  it("names no legacy admin module, stylesheet, guard or stub panel", () => {
     const names = [
       /admin\.css/,
       /components\/admin\//,
       /auth\/admin\.server/,
       /\brequireAdmin/,
+      /stub-panel/,
+      /\bStubPanel\b/,
     ];
     for (const file of files) {
-      if (exempt(file)) continue;
       for (const name of names) {
         expect(sources[file], `${file} ${name}`).not.toMatch(name);
       }
@@ -96,7 +85,6 @@ describe("admin retirement audit", () => {
   it("has no Studio copy about the legacy admin", () => {
     for (const file of files) {
       if (!/^app\/(routes|components)\/studio\//.test(file)) continue;
-      if (exempt(file)) continue;
       expect(withoutComments(sources[file]), file).not.toMatch(/legacy admin/i);
     }
   });
@@ -105,7 +93,6 @@ describe("admin retirement audit", () => {
     const hits = files.filter(
       (file) =>
         !ADMIN_LITERAL_ALLOWLIST.has(file) &&
-        !exempt(file) &&
         ADMIN_LITERAL.test(withoutComments(sources[file])),
     );
     expect(hits).toEqual([]);
@@ -126,7 +113,7 @@ describe("admin retirement audit", () => {
   it("uses no admin-* class name", () => {
     const value = /className=(?:"([^"]*)"|\{`([^`]*)`\}|\{"([^"]*)"\})/g;
     for (const file of files) {
-      if (!file.endsWith(".tsx") || exempt(file)) continue;
+      if (!file.endsWith(".tsx")) continue;
       for (const match of sources[file].matchAll(value)) {
         const tokens = (match[1] ?? match[2] ?? match[3] ?? "").split(/\s+/);
         expect(
@@ -143,14 +130,5 @@ describe("admin retirement audit", () => {
     );
     expect(targets.length).toBeGreaterThan(10);
     expect(targets.filter((to) => to.startsWith("/admin"))).toEqual([]);
-  });
-
-  it("deletes the stub panel once no Studio route renders it", () => {
-    // Today only Studio → Footer may still render it (pending wp3).
-    expect(
-      stubImporters.filter((file) => !file.startsWith("app/routes/studio/")),
-    ).toEqual([]);
-    expect(stubImporters.filter((file) => file !== FOOTER_ROUTE)).toEqual([]);
-    if (stubImporters.length === 0) expect(files).not.toContain(STUB_PANEL);
   });
 });
