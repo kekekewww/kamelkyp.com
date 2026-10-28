@@ -24,7 +24,7 @@ test("preview routes fail closed without the owner: 403, no-store, noindex", asy
 }) => {
   for (const url of PREVIEW_URLS) {
     const response = await request.get(url, { maxRedirects: 0 });
-    expectOwnerGate(response, url);
+    await expectOwnerGate(response, url);
     if (!behindAccess) {
       expect(response.headers()["x-robots-tag"], url).toContain("noindex");
     }
@@ -47,7 +47,7 @@ test("an unsaved-form preview POST is refused before it is read", async ({
       maxRedirects: 0,
     },
   );
-  expectOwnerGate(response);
+  await expectOwnerGate(response);
   expect(await response.text()).not.toContain("Injected title");
 });
 

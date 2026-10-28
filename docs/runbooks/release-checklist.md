@@ -16,7 +16,7 @@
 - [ ] 四步委託表單、local draft、統一條款、review、Turnstile、成功頁有限資訊。
 - [ ] YouTube／Drive click-to-load、外部下載連結、單一音訊播放與錯誤降級。
 - [ ] Cloudflare Access：未登入阻擋、正確 email OTP 可登入、錯誤 email 不能登入、8 小時 session。
-- [ ] `/admin` 無上傳、無 audit page，案件只顯示六項有限欄位，不顯示證明或完整表單。
+- [ ] `/admin` 無上傳、無 audit page；Studio → Commissions（`/studio/commissions`；切換前仍有 `/admin/cases`）案件只顯示六項有限欄位，不顯示證明或完整表單，清理只能透過三項確認清單。
 
 ## C. 外部設定 gate
 

@@ -9,7 +9,8 @@
  *   commission form (labels, totals) are unchanged; names come from the
  *   services rows, prices from the active price rules.
  * - Footer: six groups with the e2e fixture (one enabled social link adds
- *   "Find me"), footer links > 3; /admin 403.
+ *   "Find me"), footer links > 3; /admin 403 (on a deployed Preview, the
+ *   Access login redirect: helpers/owner-gate.ts).
  */
 import { expect, test } from "@playwright/test";
 import { expectNoPersonalName } from "./helpers/brand";
@@ -122,7 +123,7 @@ test("public safety boundaries remain explicit", async ({ page, request }) => {
   expect(await page.locator("footer a").count()).toBeGreaterThan(3);
 
   const admin = await request.get("/admin", { maxRedirects: 0 });
-  expectOwnerGate(admin);
+  await expectOwnerGate(admin);
 
   await page.goto("/en/does-not-exist");
   await expect(

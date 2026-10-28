@@ -424,20 +424,24 @@ function buildAttention(results: D1Result[]): AttentionFacts {
     studentReviews: runtime?.student ?? 0,
     cleanupDue: runtime?.cleanup ?? 0,
   };
+  // Each commissions row links to the place that fixes it (admin-architecture
+  // §4.2): the filtered list or one of the inbox queues.
   const caseRow = (
     key: string,
     count: number,
     severity: AttentionSeverity,
     one: string,
     many: string,
+    link: { href: string; action: string; detail: string },
   ) => {
     if (count > 0) {
       items.push({
         key,
         severity,
         title: `${count} ${count === 1 ? one : many}`,
-        href: "/studio/commissions",
-        action: "Open commissions",
+        detail: link.detail,
+        href: link.href,
+        action: link.action,
         count,
       });
     }
@@ -448,6 +452,12 @@ function buildAttention(results: D1Result[]): AttentionFacts {
     "high",
     "commission waiting for review",
     "commissions waiting for review",
+    {
+      href: "/studio/commissions?status=pending_review",
+      action: "Review cases",
+      detail:
+        "Read the request in Gmail or the Google Form, then set the status.",
+    },
   );
   caseRow(
     "student-review",
@@ -455,6 +465,12 @@ function buildAttention(results: D1Result[]): AttentionFacts {
     "high",
     "student discount to check",
     "student discounts to check",
+    {
+      href: "/studio/commissions#student-reviews",
+      action: "Check student prices",
+      detail:
+        "Check the proof in the Google Form, then keep the student price or charge the standard price.",
+    },
   );
   caseRow(
     "cleanup-due",
@@ -462,6 +478,11 @@ function buildAttention(results: D1Result[]): AttentionFacts {
     "medium",
     "case file cleanup due",
     "case file cleanups due",
+    {
+      href: "/studio/commissions#cleanup-due",
+      action: "Confirm cleanups",
+      detail: "Delete the Google and Gmail records, then confirm the cleanup.",
+    },
   );
 
   const attention = items
