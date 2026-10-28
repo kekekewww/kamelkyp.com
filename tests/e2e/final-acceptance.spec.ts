@@ -9,9 +9,11 @@
  *   commission form (labels, totals) are unchanged; names come from the
  *   services rows, prices from the active price rules.
  * - Footer: six groups with the e2e fixture (one enabled social link adds
- *   "Find me"), footer links > 3; /admin 403.
+ *   "Find me"), footer links > 3; /admin 403 (or, on a deployed preview,
+ *   the Cloudflare Access login redirect: helpers/access.ts).
  */
 import { expect, test } from "@playwright/test";
+import { expectOwnerOnlyRefusal } from "./helpers/access";
 import { expectNoPersonalName } from "./helpers/brand";
 
 test("language preference, identity and responsive introduction meet the brief", async ({
@@ -120,9 +122,11 @@ test("public safety boundaries remain explicit", async ({ page, request }) => {
   await expect(page.locator("footer summary")).toHaveCount(6);
   expect(await page.locator("footer a").count()).toBeGreaterThan(3);
 
-  const admin = await request.get("/admin");
-  expect(admin.status()).toBe(403);
-  expect(admin.headers()["cache-control"]).toContain("no-store");
+  const admin = await request.get("/admin", { maxRedirects: 0 });
+  await expectOwnerOnlyRefusal(admin, (refusal) => {
+    expect(refusal.status()).toBe(403);
+    expect(refusal.headers()["cache-control"]).toContain("no-store");
+  });
 
   await page.goto("/en/does-not-exist");
   await expect(
