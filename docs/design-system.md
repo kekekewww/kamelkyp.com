@@ -528,7 +528,7 @@ It is rendered outside the shell, so it includes a minimal brand link at top-lef
 
 ### 6.22 Minimal audio player (showreel)
 
-Current implementation: `.showreel` with a CSS span-bar waveform (`.showreel__waveform span.wave-height-*`) and `.direct-audio` in `media.css`. No `wavesurfer` dependency is present in `package.json`. The spec below is renderer-agnostic, and the motion doc covers amplitude hand-off to the hero canvas.
+Current implementation: the hero stage (`.home-hero__stage` in `app/components/home/hero.tsx`) plays the showreel through `MediaPreview`, that is `.direct-audio` with its CSS span-bar waveform `.media-waveform` in `media.css`. Without a showreel it shows the empty player, `.home-showreel__*` in the same file (styled in `pages/home.css`). No `wavesurfer` dependency is present in `package.json`. The spec below is renderer-agnostic, and the motion doc covers amplitude hand-off to the hero canvas.
 
 - **Container:** level-2 surface, radius 0, padding `var(--space-5)`, grid `3.5rem minmax(0,1fr)`, gap `var(--space-4)`. In the hero it is `.home-hero__stage` (≥ 340px wide at 1440, full-width stacked at 390).
 - **Play button:** 56 × 56 (44 × 44 < md), `--radius-round`.
