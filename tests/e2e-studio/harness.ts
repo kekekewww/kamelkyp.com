@@ -18,7 +18,21 @@ import { spawnSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { expect, type Page, test } from "@playwright/test";
 
-export const STUDIO_E2E_PORT = 5173;
+/**
+ * 5173 unless `STUDIO_E2E_PORT` names another port, for a machine where 5173
+ * is taken (e.g. `STUDIO_E2E_PORT=5174 npm run test:e2e:studio`). The config
+ * and every worker read it from the same environment, so they agree.
+ */
+export const STUDIO_E2E_PORT = studioPort(process.env.STUDIO_E2E_PORT);
+
+function studioPort(raw: string | undefined): number {
+  if (raw === undefined || raw === "") return 5173;
+  const port = Number(raw);
+  if (!Number.isInteger(port) || port < 1024 || port > 65535) {
+    throw new Error(`STUDIO_E2E_PORT must be a port 1024-65535, got "${raw}".`);
+  }
+  return port;
+}
 export const STUDIO_E2E_ORIGIN = `http://127.0.0.1:${STUDIO_E2E_PORT}`;
 export const STUDIO_E2E_OWNER = "studio-e2e-owner@example.com";
 
