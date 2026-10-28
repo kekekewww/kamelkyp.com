@@ -259,12 +259,10 @@ function LinkRow({
   const snapshot = () =>
     formRef.current ? serializeForm(new FormData(formRef.current)) : null;
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: re-baseline when the saved link changes
-  useEffect(() => {
-    baseline.current = snapshot();
-    setDirty(false);
-    onDirty(link.id, false);
-  }, [
+  // The stored values the baseline was taken for. React may run this effect
+  // again without a save (Strict Mode reconnects a moved row's effects in
+  // development); the baseline then stays, so an unsaved edit stays unsaved.
+  const stored = JSON.stringify([
     link.url,
     link.label.zh,
     link.label.en,
@@ -272,6 +270,15 @@ function LinkRow({
     link.username,
     link.icon,
   ]);
+  const baselineOf = useRef<string | null>(null);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: re-baseline when the saved link changes
+  useEffect(() => {
+    if (baselineOf.current === stored) return;
+    baselineOf.current = stored;
+    baseline.current = snapshot();
+    setDirty(false);
+    onDirty(link.id, false);
+  }, [stored]);
 
   const onInput = () => {
     const next = snapshot() !== baseline.current;
