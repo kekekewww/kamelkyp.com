@@ -1687,7 +1687,7 @@ listStudioWriting(db, f: { q?; platform?; status?; categoryTermId? }): Promise<S
 listSocialLinks(db): Promise<SocialLink[]>;
 saveSocialLink(db, input: SocialLinkInput): Promise<SocialLink>;
 deleteSocialLink(db, id: string): Promise<void>;
-reorderSocialLinks(db, ids: string[]): Promise<void>;
+reorderSocialLinks(db, ids: string[]): Promise<boolean>; // false: not every stored link once, nothing written (409)
 
 // services.server.ts, settings-write.server.ts, homepage.server.ts, studio-home.server.ts (P4)
 listStudioServices(db, f: { q?; status?; groupTermId? }): Promise<StudioServiceRow[]>; // includes live price for commission rows
