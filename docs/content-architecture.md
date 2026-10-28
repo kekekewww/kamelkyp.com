@@ -621,7 +621,7 @@ a pointer counts once its `effective_from` has passed. A personal-name variant i
 
 | Risk | Likelihood / impact | Mitigation |
 | --- | --- | --- |
-| Access paths not added before release | High / Studio unusable (not exposed) | 403 is the designed fail-closed state; runbook step and release checklist item; `/admin/*` keeps working until the redirect flip, which is released only after Kevin confirms `/studio` loads |
+| Access paths not added before release | High / Studio unusable (not exposed) | 403 is the designed fail-closed state; runbook step and release checklist items (C: Access paths, `/studio.data` on production; D: post-deploy checks). The redirect flip shipped in WP5: production never ran the legacy `/admin`, so the flip is deployed first and checked right after (`/admin` → `/studio`, sidebar Home, a test case's status change, Pricing, Terms, Footer); a failed check rolls back to the previous Worker (wp5 spec §13 item 3) |
 | Legacy data quirks (non-conforming slugs, one-locale publications, Drive showreel) | Medium / content missing | Verification counts, attention list, legacy tables retained, rollback path |
 | Snapshot/format drift between SQL view and zod | Low / public row skipped | Single view definition; worker tests parse every seeded and fixture snapshot; skip-and-warn at read time |
 | D1 function-argument and query-count limits | Medium / runtime errors | Statement shapes in content-schema §1.4; worker tests use realistic sizes |
@@ -824,4 +824,7 @@ preview, upload, reorder, showreel, settings, commission case status change; axe
 **Status (2026-10):** delivered as WP1 commissions, WP2 pricing and terms, WP3 footer and WP5 admin retirement
 (`docs/superpowers/specs/2026-10-13-wp{1,2,3,5}-*.md`, plan `docs/superpowers/plans/2026-10-13-finish-code-work.md`).
 WP5 flipped `/admin/*` to the owner-gated redirect and deleted the legacy routes, components and admin-only
-libraries; the legacy tables stay (§5.1 step 5).
+libraries; the legacy tables stay (§5.1 step 5). On a PR preview behind Access every Studio flow can be checked except
+a client navigation to the Studio home: the Preview Access application has no `/studio.data` path, so the sidebar
+Home link answers 403 there (load `/studio` as a page instead); that check runs in production (admin-architecture
+§3.2, release checklist D).

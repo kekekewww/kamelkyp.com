@@ -234,7 +234,10 @@ the Worker would answer 403 to every Studio request. `/studio.data` is the singl
 the Studio home fetches (React Router 8 `<path>.data`); a wildcard path does not cover its parent, and the deployed
 Preview shows that `/studio` does not cover it either, so without it the sidebar Home link answers 403 after any
 in-app navigation. Every other Studio data URL (`/studio/<x>.data`) is under `/studio/*`. The Preview application
-keeps the six paths without `/studio.data`, so the deployed e2e still proves the Worker's own guard on that URL.
+keeps the six paths without `/studio.data`, so the deployed e2e still proves the Worker's own guard on that URL. The
+cost is on Preview only: there a client navigation to the Studio home (the sidebar Home link from another Studio page)
+gets that 403 and the Studio shows "Sign in to open the Studio"; loading `/studio` as a page (reload, address bar)
+works. The sidebar Home check therefore runs in production (release checklist D; wp5 spec §13 item 2).
 
 Before that change, Cloudflare forwards `/studio` requests without `Cf-Access-Jwt-Assertion`.
 `verifyAccessRequest` throws on the missing header, so **every Studio page, API and preview route answers

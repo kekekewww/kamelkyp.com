@@ -1077,3 +1077,47 @@ Integration-plan completeness review (2026-10-13, plan §9):
   the `.content-detail-page*` members.
 - The release gate depends on the owner's environment configuration (plan A10) before the first production deploy
   (A3) can run.
+
+---
+
+## 13. Implementation deviations (recorded 2026-10-28)
+
+Recorded here (plan §3.2: a package amends only its own spec, to record a deviation) so the reasons do not live only
+in commit messages and runbook notes.
+
+1. **Build-asset gate** (plan §6.2 wp5 row, §6.5, §11). The plan's wording, "no file under `build/client/assets` has
+   `admin` in its name", cannot hold. React Router's Vite plugin emits a client chunk for every route module and
+   strips server-only exports (`loader`, `action`) from it, so the redirect module (`app/routes/admin-legacy-redirect.ts`,
+   a fixed name in §4.3-§4.5, the audit allowlists and WP4's mirror) always yields one empty route chunk,
+   `admin-legacy-redirect-<hash>.js` (0 bytes). The client manifest points every `legacy-admin*` route id at it, with
+   `css: []`. The gate's intent is that the legacy stylesheet is gone, which is this spec's own check (§6.5):
+
+   ```sh
+   ls build/client/assets | grep -iE '^admin.*\.css$'   # prints nothing
+   ls build/client/assets | grep -i admin              # only admin-legacy-redirect-<hash>.js, 0 bytes
+   ```
+
+   Renaming the module to dodge the plan's wording would change §4.3-§4.5, the audit allowlists and WP4's mirror for
+   no gain, so the name stays.
+2. **`/studio.data` is a production-only Access path** (§4.1, §5 cloudflare-setup row, §6.5, §11, R12). The spec
+   lists `/studio.data` with no environment limit. Since PR #12 a deployed Preview sits behind its own Access
+   application (an anonymous Studio request gets a 302 to the Access login, `tests/e2e/helpers/owner-gate.ts`), and
+   `tests/e2e/studio-access.spec.ts` proves on that Preview that the Worker itself refuses `/studio.data` and
+   `/admin.data` ("refused by the Worker itself"). That proof needs `/studio.data` outside the Preview application's
+   paths, so the runbook (cloudflare-setup §5 step 4) adds it to the **production** application only, and the Preview
+   application keeps the six paths. The cost: on a deployed Preview a client navigation to the Studio home (the
+   sidebar Home link from another Studio page) reaches the Worker without `Cf-Access-Jwt-Assertion`, gets 403, and
+   the Studio root error boundary shows "Sign in to open the Studio". Loading `/studio` as a page (reload or the
+   address bar) works, because `/studio` is an Access path. The sidebar Home check (§6.5) is therefore a production
+   check (release-checklist D), and admin-architecture §3.2, content-architecture §9 I and the runbook say so. To
+   lift the carve-out, add `/studio.data` to the Preview application and, in the same change, move it in
+   `studio-access.spec.ts` from the "Worker itself" list to `STUDIO_PATHS` (runbook §5 note).
+3. **Release gate replaced** (§4.1 "Release gate", §8 step 2, §11; plan §4.4 step 4, D5). Owner decision (D5
+   override): production has never been deployed with the legacy `/admin` in use and holds no data in it, so the
+   intermediate production deploy with `/admin` live, the pre-merge confirmation of the Operations screens and the
+   §8.1 queries are not applicable. They are replaced by fail-closed evidence in the PR (every Studio and `/admin`
+   request without a valid Access JWT is refused: worker, loopback e2e and the deployed Preview's Access gate test)
+   and by the §6.5 post-deploy checks, which now include the Operations screens (release-checklist D: `/admin` →
+   `/studio`, an `/admin/cases` bookmark → `/studio/commissions`, sidebar Home from `/studio/projects`, one test
+   case's status changed, Pricing, Terms and Footer opened). A failed check rolls back to the previous Worker (§8
+   step 4). content-architecture §7 describes this order.

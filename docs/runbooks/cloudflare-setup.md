@@ -66,6 +66,8 @@ Preview 與 Production 使用不同的 Self-hosted application、Audience tag；
    Production 另加第七個 path `/studio.data`：從其他 Studio 頁按側欄 Home 時，React Router 會抓 `/studio.data`，
    它不在 `/studio`、`/studio/*` 內（部署的 Preview 已證實會直接到 Worker），沒有 Access header 就只會得到 403。
    Preview 保持六個 path，讓部署後的 E2E 能驗證 Worker 自己對 `/studio.data` 的 403（見下方）。
+   代價只在 Preview：從其他 Studio 頁按側欄 Home 會得到這個 403（Studio 顯示「Sign in to open the Studio」），
+   重新整理或直接開 `/studio` 則正常；側欄 Home 的檢查因此在 Production 部署後做（`release-checklist.md` D）。
 5. Application session duration 設為 8 hours（Dashboard 沒有 8 hours 選項時選 **Custom duration** 填 `8h`）。
 6. 建立 **Allow** policy：
    - Include selector：**Emails**

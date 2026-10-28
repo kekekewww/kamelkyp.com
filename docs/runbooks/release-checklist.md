@@ -39,7 +39,7 @@
 - [ ] 記錄 deployment ID、commit SHA、D1 bookmark 與發布時間。
 - [ ] 驗收 `https://kamelkyp.com/health`、`/zh`、`/en`、四服務、表單、Footer、Blog、Access、CSP/HSTS。
 - [ ] 不用真實委託資料執行 smoke test。
-- [ ] 舊 `/admin` 退場（WP5）：Production 從未以舊 `/admin` 營運、也沒有其中的資料，因此不需先部署一次含舊 `/admin` 的版本；部署後確認 `/admin` 登入後落在 `/studio`、舊 `/admin/cases` 書籤落在 `/studio/commissions`、從 `/studio/projects` 按側欄 Home 會顯示 Studio 首頁（`/studio.data` 在 Access path 內）。失敗就回到上一個 deployment。
+- [ ] 舊 `/admin` 退場（WP5）：Production 從未以舊 `/admin` 營運、也沒有其中的資料，因此不需先部署一次含舊 `/admin` 的版本；部署後確認 `/admin` 登入後落在 `/studio`、舊 `/admin/cases` 書籤落在 `/studio/commissions`、從 `/studio/projects` 按側欄 Home 會顯示 Studio 首頁（`/studio.data` 在 Access path 內）、在 Studio → Commissions 改一筆測試案件的狀態（不用真實委託資料），並開啟 Studio 的 Pricing（`/studio/services/pricing`）、Terms（`/studio/services/terms`）與 Footer（`/studio/settings/footer`）。這是 Production 唯一一次確認 Operations 畫面，失敗就回到上一個 deployment。
 
 ## E. 發生重大問題
 
