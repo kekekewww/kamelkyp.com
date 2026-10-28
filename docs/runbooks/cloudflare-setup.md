@@ -71,6 +71,8 @@ Preview 與 Production 使用不同的 Self-hosted application、Audience tag；
 
 設定後，部署的 Preview 對未登入的 Studio／admin 請求由 Access 回 302 到 `ACCESS_TEAM_DOMAIN` 的 `/cdn-cgi/access/login/<preview hostname>`，Worker 收不到請求；preview workflow 以 `E2E_ACCESS_GATE=1` 與 `ACCESS_TEAM_DOMAIN` 驗證這個 302（`tests/e2e/helpers/owner-gate.ts`：其他 team 或其他 host 的 302 都不算通過）。loopback E2E 前面沒有 Access，仍由 Worker 回 403。
 
+React Router 的 single-fetch data URL `/studio.data`、`/admin.data` 不在上述六個 path 內，部署後仍直接到 Worker，由 Worker 的 owner 檢查回 403；`tests/e2e/studio-access.spec.ts` 在 loopback 與部署的 Preview 都驗證這個 403。
+
 官方文件：<https://developers.cloudflare.com/cloudflare-one/access-controls/policies/app-paths/>、<https://developers.cloudflare.com/cloudflare-one/access-controls/policies/>、<https://developers.cloudflare.com/cloudflare-one/access-controls/access-settings/session-management/>。
 
 ## 6. GitHub Environment 完整清單

@@ -8,8 +8,10 @@ const STUDIO_PATHS = [
   "/studio",
   "/studio/commissions",
   "/studio/commissions?status=pending_review&service=full_mix",
+  "/studio/commissions.data",
   "/studio/projects",
   "/studio/projects/seed-p-001",
+  "/studio/projects/seed-p-001.data",
   "/studio/settings/brand",
   "/studio/preview/home?drafts=1",
   "/studio/preview/projects/seed-p-001?locale=en",
@@ -24,12 +26,29 @@ for (const path of STUDIO_PATHS) {
   }) => {
     const response = await request.get(path, { maxRedirects: 0 });
     await expectOwnerGate(response);
-    if (!behindAccess) {
+    // A single-fetch data answer (*.data) carries no page headers.
+    if (!behindAccess && !new URL(response.url()).pathname.endsWith(".data")) {
       expect(response.headers()["x-robots-tag"]).toBe("noindex, nofollow");
     }
     const body = await response.text();
     expect(body).not.toContain("seed-p-001");
     expect(body).not.toContain("csrfToken");
+  });
+}
+
+// The single-fetch data URLs of the two owner roots lie outside the Access
+// paths (/studio, /studio/*, /admin, /admin/*), so even on a deployed Preview
+// they reach the Worker: its own owner guard must refuse them there too.
+for (const path of ["/studio.data", "/admin.data"]) {
+  test(`GET ${path} is refused by the Worker itself`, async ({ request }) => {
+    const response = await request.get(path, { maxRedirects: 0 });
+    expect(response.status()).toBe(403);
+    expect(response.headers()["cache-control"]).toContain("no-store");
+    const body = await response.text();
+    expect(body).toContain("Forbidden");
+    expect(body).not.toContain("seed-p-001");
+    expect(body).not.toContain("csrfToken");
+    expect(body).not.toContain("@");
   });
 }
 
