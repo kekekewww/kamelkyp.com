@@ -26,13 +26,13 @@ import {
 } from "../ui/list";
 import { useStudioSession } from "../ui/studio-session";
 import { useToast } from "../ui/toast";
-import { useFetcherSettled } from "../ui/use-fetcher-settled";
+import { useFailureCount, useFetcherSettled } from "../ui/use-fetcher-settled";
 
 function label(text: LocalizedText): string {
   return text.en.trim() || text.zh.trim();
 }
 
-export function musicMeta(row: StudioMusicRow): string {
+function musicMeta(row: StudioMusicRow): string {
   return [
     label(row.artist),
     label(row.role),
@@ -94,7 +94,10 @@ function useListActions() {
       }
     },
   });
-  return { submit, busy: fetcher.state !== "idle" };
+  // Bumps after a failed action; a manual order sent since the last restart
+  // goes back to the server's (a failed row action leaves the list alone).
+  const failures = useFailureCount(fetcher);
+  return { submit, busy: fetcher.state !== "idle", failures };
 }
 
 function ShowreelSlot({
@@ -278,7 +281,7 @@ function Filters({ data }: { data: MusicListData }) {
 
 export function MusicListView({ data }: { data: MusicListData }) {
   const navigate = useNavigate();
-  const { submit } = useListActions();
+  const { submit, failures } = useListActions();
   const rows = data.rows;
   const byId = useMemo(
     () => new Map(rows.map((row) => [row.id, row] as const)),
@@ -293,6 +296,7 @@ export function MusicListView({ data }: { data: MusicListData }) {
     labelOf,
     onCommit: (order) =>
       submit({ intent: "reorder", ids: JSON.stringify(order) }),
+    resetKey: failures,
   });
   const ordered = data.manualOrder
     ? reorder.order

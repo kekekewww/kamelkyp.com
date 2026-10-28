@@ -18,16 +18,6 @@ export const EASE = {
   linear: "linear",
 } as const;
 
-/** JS easing functions for rAF / canvas lerps (t in [0, 1]). */
-export const EASE_FN = {
-  linear: (t: number) => t,
-  outQuart: (t: number) => 1 - (1 - t) ** 4,
-  outExpo: (t: number) => (t >= 1 ? 1 : 1 - 2 ** (-10 * t)),
-  inQuart: (t: number) => t ** 4,
-  inOutQuint: (t: number) =>
-    t < 0.5 ? 16 * t ** 5 : 1 - (-2 * t + 2) ** 5 / 2,
-} as const;
-
 /** Distance caps (px unless noted). */
 export const CAPS = {
   revealBlock: 24,
@@ -42,7 +32,6 @@ export const CAPS = {
 
 export const MAX_STAGGER_CHILDREN = 6;
 export const MAX_STAGGER_CHILDREN_LITE = 4;
-export const PAGE_TRANSITION_MAX = 480;
 
 /**
  * Frame-rate-independent lerp factor: `perFrame` is the factor at 60fps,

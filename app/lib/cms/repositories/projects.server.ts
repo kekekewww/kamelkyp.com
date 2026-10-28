@@ -57,8 +57,6 @@ import {
 import { createTerm, listTerms } from "../taxonomy.server";
 import type { EntityMeta, EntryStatus, LocalizedText } from "../types";
 
-export type { StudioProjectRow };
-
 const LIST_LIMIT = 500;
 const REORDER_MAX = 1000;
 
@@ -230,7 +228,7 @@ export async function getProjectFacets(
  * FormData → working copy + expected revision (throws `invalid_content`
  * with inline issues for values that cannot be stored).
  */
-export function parseProjectForm(formData: FormData): {
+function parseProjectForm(formData: FormData): {
   content: ProjectContent;
   expectedRevision: number;
   clearTodoContent: boolean;
@@ -480,11 +478,15 @@ export async function handleProjectCreate({
 }
 
 function referencedAssetIds(content: ProjectContent): string[] {
+  const bodyMedia = [...content.body.zh, ...content.body.en].flatMap((block) =>
+    block.type === "media" ? [block.mediaId] : [],
+  );
   return [
     content.coverImageId,
     content.coverVideoId,
     content.socialImageId,
     ...content.gallery.map((item) => item.assetId),
+    ...bodyMedia,
   ].filter((id): id is string => Boolean(id));
 }
 

@@ -7,6 +7,7 @@
  * blocks that cannot be stored keep their place and get an inline message, so
  * a draft never loses what the owner typed and the server still refuses it.
  */
+import { z } from "zod";
 import {
   type ContentBlock,
   ContentBlockSchema,
@@ -51,7 +52,7 @@ export const BLOCK_LABEL: Record<BlockKind, string> = Object.fromEntries(
 ) as Record<BlockKind, string>;
 
 let fallbackCounter = 0;
-export function defaultBlockKey(): string {
+function defaultBlockKey(): string {
   fallbackCounter += 1;
   return `block-${fallbackCounter}`;
 }
@@ -83,7 +84,7 @@ export function createEditorBlock(
   }
 }
 
-export function toEditorBlock(
+function toEditorBlock(
   block: ContentBlock,
   makeKey: KeyMaker = defaultBlockKey,
 ): EditorBlock {
@@ -127,6 +128,57 @@ export function toEditorBlock(
     case "divider":
       return { key, type: "divider" };
   }
+}
+
+/**
+ * Every block the editor can show, without the storage limits: what
+ * `serializeBlocks` posts while the owner is still writing (an http:// image,
+ * a link with only its label, an over-long paragraph) keeps its shape here.
+ */
+const EditableBlockSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("heading"),
+    level: z.union([z.literal(2), z.literal(3)]),
+    text: z.string(),
+  }),
+  z.object({ type: z.literal("paragraph"), text: z.string() }),
+  z.object({
+    type: z.literal("list"),
+    style: z.enum(["unordered", "ordered"]),
+    items: z.array(z.string()),
+  }),
+  z.object({
+    type: z.literal("quote"),
+    text: z.string(),
+    attribution: z.string().nullable(),
+  }),
+  z.object({
+    type: z.literal("external_image"),
+    url: z.string(),
+    alt: z.string(),
+    caption: z.string().nullable(),
+  }),
+  z.object({
+    type: z.literal("external_link"),
+    url: z.string(),
+    label: z.string(),
+  }),
+  z.object({ type: z.literal("media"), mediaId: z.string() }),
+  z.object({ type: z.literal("divider") }),
+]);
+
+/**
+ * The blocks of a posted value (e.g. a local backup) the editor can show,
+ * including ones the schema still refuses, so a restored draft keeps what
+ * the owner typed and the block gets its inline message again. Entries the
+ * editor cannot show are dropped.
+ */
+export function editableBlocks(value: unknown): ContentBlock[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((block): ContentBlock[] => {
+    const parsed = EditableBlockSchema.safeParse(block);
+    return parsed.success ? [parsed.data] : [];
+  });
 }
 
 export function toEditorBlocks(
@@ -220,7 +272,7 @@ function toBlock(item: EditorBlock): ContentBlock {
 }
 
 /** Plain-language problems with one block (empty list = storable). */
-export function blockProblems(block: ContentBlock): string[] {
+function blockProblems(block: ContentBlock): string[] {
   const problems: string[] = [];
   switch (block.type) {
     case "heading":

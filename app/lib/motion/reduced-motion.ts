@@ -26,11 +26,11 @@ export function getReducedMotionSnapshot(): boolean {
   return canMatchMedia() ? window.matchMedia(REDUCED_QUERY).matches : true;
 }
 
-export function getServerSnapshot(): true {
+function getServerSnapshot(): true {
   return true;
 }
 
-export function subscribeReducedMotion(callback: () => void): () => void {
+function subscribeReducedMotion(callback: () => void): () => void {
   if (!canMatchMedia()) return () => {};
   const query = window.matchMedia(REDUCED_QUERY);
   query.addEventListener("change", callback);
@@ -69,7 +69,7 @@ export function getMotionTier(): MotionTier {
   return lite ? "lite" : "full";
 }
 
-export function subscribeMotionTier(callback: () => void): () => void {
+function subscribeMotionTier(callback: () => void): () => void {
   if (!canMatchMedia()) return () => {};
   const queries = TIER_QUERIES.map((query) => window.matchMedia(query));
   for (const query of queries) query.addEventListener("change", callback);

@@ -17,7 +17,7 @@ import {
   SESSION_REFRESH_MS,
 } from "../../../lib/cms/studio/session.client";
 
-export interface StudioSessionValue {
+interface StudioSessionValue {
   csrfToken: string;
   ownerEmail: string;
   /** Fetches a new token now (e.g. after a 403). */

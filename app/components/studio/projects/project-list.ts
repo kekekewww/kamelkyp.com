@@ -4,8 +4,8 @@
  */
 import type { EntryStatus } from "../../../lib/cms/types";
 
-export type ProjectStatusFilter = EntryStatus | "active" | "all";
-export type ProjectSort = "order" | "updated" | "year";
+type ProjectStatusFilter = EntryStatus | "active" | "all";
+type ProjectSort = "order" | "updated" | "year";
 
 export interface ProjectListQuery {
   /** Search across titles and metadata, both locales. */
@@ -63,7 +63,7 @@ export function isManualOrder(query: ProjectListQuery): boolean {
   return query.sort === "order" && !hasActiveFilters(query);
 }
 
-export type HomepageSlot = {
+type HomepageSlot = {
   /** shown: on the homepage · over: live but past the limit · draft / unlisted: never shown. */
   state: "shown" | "over" | "draft" | "unlisted";
   /** Draw the "Homepage shows the first N" line right before this row. */

@@ -58,6 +58,11 @@ function safeCode(error: unknown): string {
 }
 
 function localizedMessage(locale: Locale, code: string): string {
+  if (code === "term_version_mismatch") {
+    return locale === "zh"
+      ? "條款已更新。請重新整理頁面，閱讀並同意新版條款後再送出。"
+      : "The terms were updated. Reload the page, read and accept the new version, then submit again.";
+  }
   if (code === "submission_rate_limited") {
     return locale === "zh"
       ? "嘗試次數過多，請稍後再試。"
@@ -151,17 +156,26 @@ export async function action({ request, context }: ActionFunctionArgs) {
   } catch (error) {
     const code = safeCode(error);
     console.error(JSON.stringify({ code, serviceId, rayId }));
+    // Terms published while the page was open: the visitor reloads to read
+    // and accept the new version (the wizard keeps the draft).
     const publicCode =
-      code === "service_unavailable" || UNAVAILABLE_CODES.has(code)
-        ? "service_unavailable"
-        : "validation_failed";
+      code === "term_version_mismatch"
+        ? "terms_changed"
+        : code === "service_unavailable" || UNAVAILABLE_CODES.has(code)
+          ? "service_unavailable"
+          : "validation_failed";
     return Response.json(
       {
         ok: false,
         error: { code: publicCode, message: localizedMessage(locale, code) },
       },
       {
-        status: code === "submission_rate_limited" ? 429 : 400,
+        status:
+          code === "submission_rate_limited"
+            ? 429
+            : code === "term_version_mismatch"
+              ? 409
+              : 400,
         headers: { "cache-control": "no-store" },
       },
     );

@@ -9,7 +9,7 @@ import { DEFAULT_MEDIA_CONFIG, LEGACY_R2_HOST, type MediaConfig } from "./urls";
 const HOST =
   /^(?=.{1,253}$)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/;
 
-export function parsePublicBaseUrl(value: string | undefined): string | null {
+function parsePublicBaseUrl(value: string | undefined): string | null {
   if (!value?.trim()) return null;
   try {
     const url = new URL(value.trim());
@@ -28,7 +28,7 @@ export function parsePublicBaseUrl(value: string | undefined): string | null {
   }
 }
 
-export function parseHostList(value: string | undefined): string[] | null {
+function parseHostList(value: string | undefined): string[] | null {
   if (value === undefined) return null;
   const hosts = value
     .split(",")

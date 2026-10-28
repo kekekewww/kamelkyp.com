@@ -194,21 +194,6 @@
   --z-header: 50;
   --z-menu: 60;
   --z-skip: 100;
-
-  /* ---- Legacy aliases (remove after every page is migrated) ---- */
-  --color-mineral: var(--color-bg);
-  --color-console: var(--color-bg-2);
-  --color-chalk: var(--color-text);
-  --color-cool-gray: var(--color-text-secondary);
-  --color-coral: var(
-    --color-accent
-  ); /* icons on a coral fill must switch to --color-on-accent */
-  --color-line: var(--color-rule-strong);
-  --color-line-soft: var(--color-rule);
-  --color-surface-raised: var(--color-surface);
-  --motion-fast: var(--duration-fast);
-  --motion-normal: var(--duration-base);
-  --motion-panel: var(--duration-slow);
 }
 
 @media (min-width: 768px) {

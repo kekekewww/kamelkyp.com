@@ -19,7 +19,6 @@ import { StudioPage } from "../../shell/studio-page";
 import {
   ConfirmDialog,
   EditorLayout,
-  EditorSection,
   FlagBadge,
   focusIssueField,
   PREVIEW_FRAME_NAME,
@@ -52,7 +51,7 @@ type EditorResult =
       issues?: ValidationIssue[];
     };
 
-export type EditorContext = {
+type EditorContext = {
   /** The checklist for the current form. */
   issues: ValidationIssue[];
   /** Inline message for a field: structural save errors, or publish blockers after a publish attempt. */
@@ -722,5 +721,3 @@ export function EntryEditorFrame({
     </StudioPage>
   );
 }
-
-export { EditorSection };

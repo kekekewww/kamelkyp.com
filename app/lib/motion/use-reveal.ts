@@ -216,7 +216,7 @@ export function revealScan(root: Element | Document): () => void {
   };
 }
 
-export interface RevealOptions {
+interface RevealOptions {
   variant?: "up" | "fade" | "mask";
   delay?: 0 | 1 | 2 | 3 | 4;
   group?: boolean;

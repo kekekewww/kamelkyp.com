@@ -6,7 +6,7 @@
  */
 import type { Term } from "../../../lib/cms/schemas/taxonomy";
 
-export type ServiceGroupBlock<T> = { term: Term | null; rows: T[] };
+type ServiceGroupBlock<T> = { term: Term | null; rows: T[] };
 
 export function groupServices<T extends { groupTermId: string | null }>(
   rows: readonly T[],

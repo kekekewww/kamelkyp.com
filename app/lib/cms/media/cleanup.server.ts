@@ -11,7 +11,7 @@
  *    referenced by an external (legacy) asset URL, are never touched.
  */
 
-export const PENDING_UPLOAD_TTL_MS = 24 * 60 * 60 * 1000;
+const PENDING_UPLOAD_TTL_MS = 24 * 60 * 60 * 1000;
 
 const ROW_BATCH = 500;
 const LIST_PAGES = 5;

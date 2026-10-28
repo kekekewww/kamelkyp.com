@@ -410,6 +410,7 @@ export function BlockEditor({
   assets,
   onChange,
   label = "Article content",
+  hint,
   errors: serverErrors,
 }: {
   name: string;
@@ -419,6 +420,8 @@ export function BlockEditor({
   /** Called after the posted value changed (dirty tracking, checklist). */
   onChange?: () => void;
   label?: string;
+  /** One line under the label (the fieldset is described by it). */
+  hint?: string;
   /** Server messages for this field per locale. */
   errors?: Partial<Record<Locale, string>>;
 }) {
@@ -480,8 +483,16 @@ export function BlockEditor({
   };
 
   return (
-    <fieldset className="studio-blocks">
+    <fieldset
+      className="studio-blocks"
+      aria-describedby={hint ? `${baseId}-hint` : undefined}
+    >
       <legend className="studio-field__label">{label}</legend>
+      {hint ? (
+        <p className="studio-hint" id={`${baseId}-hint`}>
+          {hint}
+        </p>
+      ) : null}
       {LOCALES.map((locale) => (
         <input
           key={locale.key}

@@ -26,10 +26,6 @@ export function isComplete(text: LocalizedText | null | undefined): boolean {
   return LOCALES.every((locale) => isFilled(text, locale));
 }
 
-export function isEmptyText(text: LocalizedText | null | undefined): boolean {
-  return LOCALES.every((locale) => !isFilled(text, locale));
-}
-
 export function filledLocales(
   text: LocalizedText | null | undefined,
 ): Locale[] {

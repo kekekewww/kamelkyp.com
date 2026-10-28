@@ -3,7 +3,7 @@
  * the mobile menu and the `g` + key shortcuts (§4.15).
  */
 
-export interface StudioNavItem {
+interface StudioNavItem {
   label: string;
   to: string;
   /** Second key of the `g` chord (Go to …). */
@@ -14,7 +14,7 @@ export interface StudioNavItem {
   count?: "attention" | "commissions";
 }
 
-export interface StudioNavGroup {
+interface StudioNavGroup {
   label: string;
   items: StudioNavItem[];
 }

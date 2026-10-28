@@ -4,7 +4,7 @@ const FEE_BPS = {
   project_file: 5000,
 } as const;
 
-export type PostQuoteFeeKind = keyof typeof FEE_BPS;
+type PostQuoteFeeKind = keyof typeof FEE_BPS;
 
 export function calculatePostQuoteFee(
   lockedInitialTwd: number,

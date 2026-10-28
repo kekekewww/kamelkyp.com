@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  backupBlocks,
+  blockFieldErrors,
   changedProjectSections,
   mergeIssues,
   PROJECT_SECTIONS,
+  previewFormData,
   projectPublishIssues,
   projectSectionOf,
   readProjectForm,
@@ -11,6 +14,10 @@ import {
 } from "../../app/components/studio/projects/project-form";
 import { ProjectDraftSchema } from "../../app/lib/cms/schemas/project";
 import type { ValidationIssue } from "../../app/lib/cms/types";
+import {
+  type AssetSummary,
+  validateForPublish,
+} from "../../app/lib/cms/validation";
 
 function form(entries: Array<[string, string]>): FormData {
   const data = new FormData();
@@ -20,6 +27,217 @@ function form(entries: Array<[string, string]>): FormData {
 
 const software = "term-project_category-software";
 const ai = "term-project_category-ai";
+
+describe("backupBlocks", () => {
+  const stored = {
+    zh: [{ type: "paragraph" as const, text: "已存段落" }],
+    en: [],
+  };
+
+  it("reads the block editor fields of a local backup", () => {
+    const fields = JSON.stringify([
+      ["body.en:json", JSON.stringify([{ type: "divider" }])],
+      [
+        "body.zh:json",
+        JSON.stringify([
+          { type: "paragraph", text: "備份段落" },
+          { type: "media", mediaId: "asset-body" },
+        ]),
+      ],
+      ["title.zh", "標題"],
+    ]);
+    expect(backupBlocks(fields, "body", stored)).toEqual({
+      zh: [
+        { type: "paragraph", text: "備份段落" },
+        { type: "media", mediaId: "asset-body" },
+      ],
+      en: [{ type: "divider" }],
+    });
+  });
+
+  it("keeps the stored blocks of a locale the backup lacks or garbles", () => {
+    const fields = JSON.stringify([
+      ["body.en:json", "{not json"],
+      ["title.zh", "標題"],
+    ]);
+    expect(backupBlocks(fields, "body", stored)).toEqual(stored);
+    expect(backupBlocks("not a backup", "body", stored)).toEqual(stored);
+  });
+
+  it("keeps blocks still being written, which the schema refuses", () => {
+    // What the block editor posts while the owner types: the block keeps
+    // its place and its inline message, so a restore must not lose it.
+    const typed = [
+      {
+        type: "external_image",
+        url: "http://example.com/a.png",
+        alt: "",
+        caption: null,
+      },
+      { type: "external_link", url: "", label: "Only the label" },
+      { type: "quote", text: "", attribution: "Attribution first" },
+      { type: "paragraph", text: "長".repeat(8001) },
+      { type: "list", style: "ordered", items: ["a", "a"] },
+      { type: "heading", level: 2, text: "" },
+    ];
+    const fields = JSON.stringify([["body.en:json", JSON.stringify(typed)]]);
+    expect(backupBlocks(fields, "body", stored).en).toEqual(typed);
+  });
+
+  it("drops entries the block editor cannot show", () => {
+    const fields = JSON.stringify([
+      [
+        "body.zh:json",
+        JSON.stringify([
+          { type: "paragraph", text: "留下" },
+          { type: "script", text: "x" },
+          { type: "heading", level: 4, text: "x" },
+          { type: "media" },
+          "text",
+          null,
+        ]),
+      ],
+    ]);
+    expect(backupBlocks(fields, "body", stored).zh).toEqual([
+      { type: "paragraph", text: "留下" },
+    ]);
+  });
+});
+
+describe("previewFormData", () => {
+  const typing = () =>
+    form([
+      ["title.zh", "標題"],
+      ["title.en", "Title"],
+      ["story.context.en", "Context typed while a block is unfinished"],
+      [
+        "body.zh:json",
+        JSON.stringify([
+          { type: "paragraph", text: "完成的段落" },
+          { type: "external_link", url: "", label: "Label typed first" },
+        ]),
+      ],
+      [
+        "body.en:json",
+        JSON.stringify([
+          { type: "quote", text: "", attribution: "Attribution first" },
+        ]),
+      ],
+    ]);
+
+  it("leaves out the body blocks the preview cannot read yet", () => {
+    // The form as typed cannot be read (the preview route would answer 422).
+    expect(readProjectForm(typing()).ok).toBe(false);
+    const result = readProjectForm(previewFormData(typing()));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.content.body).toEqual({
+      zh: [{ type: "paragraph", text: "完成的段落" }],
+      en: [],
+    });
+    expect(result.content.title).toEqual({ zh: "標題", en: "Title" });
+    expect(result.content.story.context.en).toBe(
+      "Context typed while a block is unfinished",
+    );
+  });
+
+  it("keeps every other field and a readable form as they are", () => {
+    const data = form([
+      ["title.zh", "標題"],
+      ["tags", "a"],
+      ["tags", "b"],
+      ["body.zh:json", JSON.stringify([{ type: "divider" }])],
+    ]);
+    expect([...previewFormData(data).entries()]).toEqual([...data.entries()]);
+  });
+});
+
+describe("blockFieldErrors", () => {
+  const asset = (
+    id: string,
+    alt: AssetSummary["alt"],
+    state: AssetSummary["state"] = "ready",
+  ): [string, AssetSummary] => [id, { id, kind: "image", state, alt }];
+
+  it("puts the server's asset findings under the locale of the block", () => {
+    // The issues the publish check really reports for body media blocks:
+    // `body.en` without a locale (an asset that is not ready) and `body.zh`
+    // with the locale of the missing alt text (here EN, for a ZH block).
+    const content = ProjectDraftSchema.parse({
+      title: { zh: "標題", en: "Title" },
+      body: {
+        zh: [{ type: "media", mediaId: "img-no-en-alt" }],
+        en: [{ type: "media", mediaId: "img-pending" }],
+      },
+    });
+    const issues = validateForPublish("project", content, {
+      todoContent: false,
+      assets: new Map([
+        asset("img-no-en-alt", { zh: "替代文字", en: "" }),
+        asset("img-pending", { zh: "替代", en: "Alt" }, "pending"),
+      ]),
+    });
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: "body.zh",
+          code: "alt_required",
+          locale: "en",
+        }),
+        expect.objectContaining({ field: "body.en", code: "missing_asset" }),
+      ]),
+    );
+    expect(blockFieldErrors(issues, "body")).toEqual({
+      zh: "Add EN alt text to this image before publishing.",
+      en: "This media asset no longer exists.",
+    });
+  });
+
+  it("puts a refused save of a block under its locale", () => {
+    const parsed = readProjectForm(
+      form([
+        ["expectedRevision", "1"],
+        [
+          "body.en:json",
+          JSON.stringify([{ type: "paragraph", text: "長".repeat(8001) }]),
+        ],
+      ]),
+    );
+    expect(parsed.ok).toBe(false);
+    if (parsed.ok) return;
+    expect(parsed.issues[0]?.field).toBe("body.en.0.text");
+    expect(blockFieldErrors(parsed.issues, "body")).toEqual({
+      en: "This text is too long.",
+    });
+  });
+
+  it("ignores warnings, other fields and a field that only starts alike", () => {
+    const issue = (overrides: Partial<ValidationIssue>): ValidationIssue => ({
+      field: "body.zh",
+      code: "missing_asset",
+      severity: "error",
+      message: "Blocks",
+      ...overrides,
+    });
+    expect(
+      blockFieldErrors(
+        [
+          issue({ severity: "warning", message: "Only a warning" }),
+          issue({ field: "story.context", locale: "zh" }),
+          issue({ field: "bodyText.zh" }),
+          issue({ field: "body.zhx" }),
+        ],
+        "body",
+      ),
+    ).toEqual({});
+    expect(
+      blockFieldErrors(
+        [issue({ field: "body", locale: "en", message: "Too many blocks" })],
+        "body",
+      ),
+    ).toEqual({ en: "Too many blocks" });
+  });
+});
 
 describe("readProjectForm", () => {
   it("parses every editor group, localized fields and lists", () => {
@@ -61,12 +279,14 @@ describe("readProjectForm", () => {
         ["credits.0.role.zh", "攝影"],
         ["credits.0.role.en", "Photography"],
         ["credits.0.name", "Studio North"],
+        // The block editor posts one field per locale.
         [
-          "body:json",
-          JSON.stringify({
-            zh: [{ type: "paragraph", text: "舊內容" }],
-            en: [],
-          }),
+          "body.zh:json",
+          JSON.stringify([{ type: "paragraph", text: "舊內容" }]),
+        ],
+        [
+          "body.en:json",
+          JSON.stringify([{ type: "media", mediaId: "asset-body" }]),
         ],
         ["listed:bool", "false"],
         ["listed:bool", "true"],
@@ -112,7 +332,10 @@ describe("readProjectForm", () => {
     expect(content.credits).toEqual([
       { role: { zh: "攝影", en: "Photography" }, name: "Studio North" },
     ]);
-    expect(content.body.zh).toHaveLength(1);
+    expect(content.body).toEqual({
+      zh: [{ type: "paragraph", text: "舊內容" }],
+      en: [{ type: "media", mediaId: "asset-body" }],
+    });
     expect(content.listed).toBe(true);
     expect(content.seo.title.en).toBe("SEO title");
   });

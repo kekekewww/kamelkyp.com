@@ -14,7 +14,7 @@ const text = (max: number) =>
     })
     .default({ zh: "", en: "" });
 
-export const NAV_KEYS = ["work", "services", "about", "writing"] as const;
+const NAV_KEYS = ["work", "services", "about", "writing"] as const;
 export type NavKey = (typeof NAV_KEYS)[number];
 
 export const HOMEPAGE_SECTIONS = [
@@ -37,11 +37,7 @@ export const AVAILABILITY_STATUSES = [
   "unavailable",
 ] as const;
 
-export const SERVICE_AREA_KEYS = [
-  "mixing",
-  "song_transition",
-  "software",
-] as const;
+const SERVICE_AREA_KEYS = ["mixing", "song_transition", "software"] as const;
 export type ServiceAreaKey = (typeof SERVICE_AREA_KEYS)[number];
 
 const AssetId = z.string().trim().min(1).max(100);

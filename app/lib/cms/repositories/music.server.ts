@@ -46,15 +46,10 @@ import type {
 } from "../types";
 import { structuralIssues } from "../validation";
 
-export type MusicStatusFilter =
-  | "active"
-  | "draft"
-  | "published"
-  | "archived"
-  | "all";
-export type MusicSort = "order" | "updated" | "year";
+type MusicStatusFilter = "active" | "draft" | "published" | "archived" | "all";
+type MusicSort = "order" | "updated" | "year";
 
-export interface MusicListFilters {
+interface MusicListFilters {
   q?: string;
   status?: MusicStatusFilter;
   artist?: string;
@@ -235,7 +230,7 @@ export async function getMusicFacets(db: D1Database) {
   };
 }
 
-export interface ShowreelSummary {
+interface ShowreelSummary {
   id: string;
   title: string;
   status: EntryStatus;
@@ -354,7 +349,7 @@ export function parseMusicForm(formData: FormData): {
 
 // ---- Handlers ------------------------------------------------------------------
 
-export interface MusicActionArgs {
+interface MusicActionArgs {
   db: D1Database;
   env: Env;
   formData: FormData | null;

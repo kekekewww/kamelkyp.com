@@ -54,7 +54,7 @@ const COPY = {
   },
 } as const satisfies Record<Locale, Record<string, string>>;
 
-export type SiteCopy = (typeof COPY)[Locale];
+type SiteCopy = (typeof COPY)[Locale];
 
 export function getSiteCopy(locale: Locale): SiteCopy {
   return COPY[locale];

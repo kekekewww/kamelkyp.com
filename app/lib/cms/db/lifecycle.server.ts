@@ -43,15 +43,13 @@ import {
 } from "./tables.server";
 import { extractAssetRefs, syncUsages } from "./usage.server";
 
-export type { ContentOf };
-
 export type Loaded<T extends EntityType> = {
   meta: EntityMeta;
   content: ContentOf<T>;
   published: ContentOf<T> | null;
 };
 
-export type PublishOutcome =
+type PublishOutcome =
   | { ok: true; meta: EntityMeta }
   | { ok: false; issues: ValidationIssue[] };
 
@@ -846,7 +844,7 @@ export async function listEntityOptions(
   }));
 }
 
-export type SlugConflict = {
+type SlugConflict = {
   id: string;
   label: string;
   status: EntryStatus;

@@ -7,7 +7,7 @@
  * (the deny list lives in `brand-guard.server.ts` and never reaches a client
  * bundle) and the serialized snapshot size. Draft saves never run this.
  */
-import { filledLocales, isComplete, isFilled, LOCALES } from "./localized";
+import { filledLocales, isFilled, LOCALES } from "./localized";
 import { isHttpsUrl } from "./schemas/common";
 import type { MediaKind } from "./schemas/media-asset";
 import { AUDIO_KINDS, IMAGE_KINDS, VIDEO_KINDS } from "./schemas/media-asset";
@@ -25,7 +25,7 @@ import type {
   ValidationIssue,
 } from "./types";
 
-export const SNAPSHOT_MAX_BYTES = 1_500_000;
+const SNAPSHOT_MAX_BYTES = 1_500_000;
 
 export type AssetSummary = {
   id: string;
@@ -36,7 +36,7 @@ export type AssetSummary = {
 
 export type BrandHit = { field: string; locale?: "zh" | "en"; term: string };
 
-export interface PublishContext {
+interface PublishContext {
   todoContent: boolean;
   /** When present, referenced assets are checked (existence, kind, alt). */
   assets?: ReadonlyMap<string, AssetSummary>;
@@ -217,7 +217,7 @@ function checkBlockAssets(
   }
 }
 
-export function validateProjectForPublish(
+function validateProjectForPublish(
   content: ProjectContent,
   context: PublishContext,
 ): ValidationIssue[] {
@@ -293,7 +293,7 @@ function hostAllowed(value: string, hosts: readonly string[]): boolean {
   }
 }
 
-export function validateMusicForPublish(
+function validateMusicForPublish(
   content: MusicContent,
   context: PublishContext,
 ): ValidationIssue[] {
@@ -435,7 +435,7 @@ export function validateWritingForPublish(
   return issues.list;
 }
 
-export function validateServiceForPublish(
+function validateServiceForPublish(
   content: ServiceContent,
   context: PublishContext,
 ): ValidationIssue[] {
@@ -576,6 +576,3 @@ export function structuralIssues(error: {
     };
   });
 }
-
-/** Convenience for list rows: is `text` complete in both locales? */
-export { isComplete };

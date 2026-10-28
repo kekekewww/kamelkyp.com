@@ -16,7 +16,7 @@ const text = (max: number) =>
     .default({ zh: "", en: "" });
 
 /** Locale-less internal path (`/commission`) or an https URL. */
-export const CtaHrefSchema = z
+const CtaHrefSchema = z
   .string()
   .trim()
   .max(500)

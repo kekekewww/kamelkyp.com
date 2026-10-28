@@ -7,7 +7,7 @@ export type DeploymentMode = "production" | "preview";
  * - `studio-preview`: /studio/preview/* — public CSP, framable by the Studio;
  * - `public`: everything else (unchanged).
  */
-export type SecuritySurface = "public" | "studio" | "studio-preview";
+type SecuritySurface = "public" | "studio" | "studio-preview";
 
 function within(pathname: string, prefix: string): boolean {
   return pathname === prefix || pathname.startsWith(`${prefix}/`);

@@ -45,15 +45,8 @@ import type { StudioActionArgs } from "../studio/auth.server";
 import { actionError, actionOk, unknownIntent } from "../studio/responses";
 import type { ValidationIssue } from "../types";
 
-export type {
-  CleanupDueItem,
-  CommissionCaseRow,
-  CommissionsModel,
-  StudentReviewItem,
-};
-
 /** The case service's maximum page size (same as the legacy list). */
-export const COMMISSION_PAGE_SIZE = 100;
+const COMMISSION_PAGE_SIZE = 100;
 
 // ---- Loader -----------------------------------------------------------------------
 
@@ -343,7 +336,7 @@ function errorResult(code: string, issues?: ValidationIssue[]) {
 }
 
 /** A coded case-service error → action result; anything else is rethrown. */
-export function commissionErrorResult(error: unknown) {
+function commissionErrorResult(error: unknown) {
   const code = errorCode(error);
   if (!code) throw error;
   return errorResult(code);

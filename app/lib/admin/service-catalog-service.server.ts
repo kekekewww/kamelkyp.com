@@ -11,9 +11,9 @@ const PriceInputSchema = z.object({
   effectiveFrom: z.iso.datetime(),
 });
 
-export type PublishAction = "publish" | "replace" | "cancel";
+type PublishAction = "publish" | "replace" | "cancel";
 
-export interface AdminPriceVersion {
+interface AdminPriceVersion {
   id: string;
   serviceId: ServiceId;
   baseTwd: number;
@@ -23,45 +23,6 @@ export interface AdminPriceVersion {
   consultationBps: number;
   sourcePrepBps: number;
   effectiveFrom: string;
-}
-
-interface PriceRow {
-  id: string;
-  service_id: ServiceId;
-  base_twd: number;
-  per_song_after_five_twd: number;
-  student_discount_bps: number;
-  rush_bps: number;
-  consultation_bps: number;
-  source_prep_bps: number;
-  effective_from: string;
-}
-
-function mapPrice(row: PriceRow): AdminPriceVersion {
-  return {
-    id: row.id,
-    serviceId: row.service_id,
-    baseTwd: row.base_twd,
-    perSongAfterFiveTwd: row.per_song_after_five_twd,
-    studentDiscountBps: row.student_discount_bps,
-    rushBps: row.rush_bps,
-    consultationBps: row.consultation_bps,
-    sourcePrepBps: row.source_prep_bps,
-    effectiveFrom: row.effective_from,
-  };
-}
-
-export async function listPriceVersions(
-  db: D1Database,
-): Promise<AdminPriceVersion[]> {
-  const rows = await db
-    .prepare(
-      "SELECT id, service_id, base_twd, per_song_after_five_twd, student_discount_bps, " +
-        "rush_bps, consultation_bps, source_prep_bps, effective_from FROM price_versions " +
-        "ORDER BY service_id, effective_from DESC, id DESC",
-    )
-    .all<PriceRow>();
-  return rows.results.map(mapPrice);
 }
 
 export async function publishPriceVersion(input: {

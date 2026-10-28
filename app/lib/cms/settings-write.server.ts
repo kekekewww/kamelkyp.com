@@ -28,7 +28,7 @@ import { actionOk, cmsErrorResult, unknownIntent } from "./studio/responses";
 import { listTerms } from "./taxonomy.server";
 import type { UsageEntityType, ValidationIssue } from "./types";
 
-export type SettingsKey = "brand" | "site";
+type SettingsKey = "brand" | "site";
 
 export type SettingsWithMeta<T> = {
   value: T;
@@ -136,9 +136,7 @@ function issueMessage(issue: ZodIssueLike): {
 }
 
 /** Zod issues → Studio field issues (dotted path, locale when zh/en). */
-export function settingsIssues(
-  issues: readonly ZodIssueLike[],
-): ValidationIssue[] {
+function settingsIssues(issues: readonly ZodIssueLike[]): ValidationIssue[] {
   return issues.map((issue) => {
     const path = issue.path.map(String);
     const last = path[path.length - 1];
@@ -345,7 +343,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
  * Deep merge for settings patches: objects merge key by key; arrays, scalars
  * and null replace. `undefined` leaves the stored value alone.
  */
-export function mergeSettings(base: unknown, patch: unknown): unknown {
+function mergeSettings(base: unknown, patch: unknown): unknown {
   if (patch === undefined) return base;
   if (!isPlainObject(base) || !isPlainObject(patch)) return patch;
   const result: Record<string, unknown> = { ...base };
@@ -507,7 +505,7 @@ const FORM_ONLY_KEYS = ["intent", "expectedRevision", "confirm"];
  * Form → settings patch: drops form plumbing, turns empty asset pickers
  * ("") into null and removes empty entries from asset lists.
  */
-export function settingsFormPatch(formData: FormData): Record<string, unknown> {
+function settingsFormPatch(formData: FormData): Record<string, unknown> {
   const tree = formDataToObject(formData);
   for (const key of FORM_ONLY_KEYS) delete tree[key];
   for (const [key, value] of Object.entries(tree)) {

@@ -49,8 +49,11 @@ import {
   SECTION_STORAGE_KEY,
 } from "./editor-sections";
 import {
+  backupBlocks,
+  blockFieldErrors,
   mergeIssues,
   PROJECT_SECTIONS,
+  previewFormData,
   projectPublishIssues,
   readProjectForm,
   sectionIssueCounts,
@@ -145,6 +148,12 @@ export function ProjectEditor({
     null,
   );
   const [story, setStory] = useState(content.story);
+  // Restoring a backup writes only the visible controls back; the block
+  // editor (hidden fields) remounts with the backup's blocks instead.
+  const [bodyRestore, setBodyRestore] = useState({
+    epoch: 0,
+    body: content.body,
+  });
   const [failure, setFailure] = useState<ProjectActionData | null>(null);
   const [pendingNav, setPendingNav] = useState<string | null>(null);
   const [leaveAfterSave, setLeaveAfterSave] = useState(false);
@@ -164,8 +173,15 @@ export function ProjectEditor({
 
   const clientCheck = useCallback(
     (form: HTMLFormElement): ValidationIssue[] => {
-      const parsed = readProjectForm(new FormData(form));
-      if (!parsed.ok) return parsed.issues;
+      const formData = new FormData(form);
+      const parsed = readProjectForm(formData);
+      if (!parsed.ok) {
+        // A body block still being written: the save refuses the form, but
+        // the story coverage keeps following the typing.
+        const readable = readProjectForm(previewFormData(formData));
+        if (readable.ok) setStory(readable.content.story);
+        return parsed.issues;
+      }
       setStory(parsed.content.story);
       return projectPublishIssues(parsed.content, {
         todoContent: meta.todoContent && !parsed.clearTodoContent,
@@ -197,7 +213,7 @@ export function ProjectEditor({
       const locale = current.includes("locale=en") ? "en" : "zh";
       poster.action = previewSrc(data.urls.preview, locale);
       poster.target = target;
-      const inputs = [...new FormData(form).entries()].flatMap(
+      const inputs = [...previewFormData(new FormData(form)).entries()].flatMap(
         ([name, value]) => {
           if (typeof value !== "string" || name === "intent") return [];
           const input = document.createElement("input");
@@ -228,7 +244,7 @@ export function ProjectEditor({
       if (!livePreview || !previewOpen || !previewWide()) return;
       window.clearTimeout(liveTimer.current);
       liveTimer.current = window.setTimeout(() => {
-        const snapshot = serializeForm(new FormData(form));
+        const snapshot = serializeForm(previewFormData(new FormData(form)));
         if (snapshot === lastLivePost.current) return;
         lastLivePost.current = snapshot;
         postPreview(PREVIEW_FRAME_NAME);
@@ -424,6 +440,17 @@ export function ProjectEditor({
     onReload?.();
   };
 
+  const restoreBackup = () => {
+    const backup = editor.backup;
+    if (backup) {
+      setBodyRestore((current) => ({
+        epoch: current.epoch + 1,
+        body: backupBlocks(backup.fields, "body", content.body),
+      }));
+    }
+    editor.restoreBackup();
+  };
+
   const saveAndLeave = () => {
     setLeaveAfterSave(true);
     const form = editor.formRef.current;
@@ -446,6 +473,13 @@ export function ProjectEditor({
           },
         ]
       : failure?.issues,
+  );
+  // The block editor marks the locale a finding names: a block a save
+  // refused, or a media block the checklist blocks (asset missing, wrong
+  // kind, alt text missing), so the owner sees which locale to fix.
+  const bodyErrors = blockFieldErrors(
+    [...(failure?.issues ?? []), ...issues],
+    "body",
   );
   const archived = meta.status === "archived";
   const canPublish =
@@ -557,7 +591,7 @@ export function ProjectEditor({
           <button
             type="button"
             className="studio-btn studio-btn--secondary studio-btn--compact"
-            onClick={editor.restoreBackup}
+            onClick={restoreBackup}
           >
             Restore
           </button>
@@ -624,7 +658,16 @@ export function ProjectEditor({
             music={data.music}
             errors={errors}
           />
-          <CaseStudySection content={content} story={story} errors={errors} />
+          <CaseStudySection
+            content={content}
+            story={story}
+            errors={errors}
+            assets={data.assets}
+            body={bodyRestore.body}
+            bodyKey={bodyRestore.epoch}
+            bodyErrors={bodyErrors}
+            onBlocksChange={onFormInput}
+          />
           <LinksSection content={content} />
           <CreditsSection content={content} />
           <PublicationSection

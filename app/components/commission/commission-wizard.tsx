@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useRevalidator } from "react-router";
 import {
   clearDraft,
   clearRetryCaseId,
@@ -104,6 +104,74 @@ function errorFieldId(path: PropertyKey[]): string {
   return field;
 }
 
+/**
+ * The verify step's buttons. After a "terms changed" answer, submitting
+ * again would fail the same way, so the forward action reloads the page data
+ * (the new term versions) instead.
+ */
+export function VerifyActions({
+  locale,
+  termsChanged,
+  reloading,
+  canSubmit,
+  submitting,
+  retrying,
+  onBack,
+  onSubmit,
+  onReload,
+}: {
+  locale: Locale;
+  termsChanged: boolean;
+  reloading: boolean;
+  /** A Turnstile token is present. */
+  canSubmit: boolean;
+  submitting: boolean;
+  /** A case waits for its notification (retry_required). */
+  retrying: boolean;
+  onBack: () => void;
+  onSubmit: () => void;
+  onReload: () => void;
+}) {
+  const isZh = locale === "zh";
+  return (
+    <div className="commission-actions">
+      <button className="button button--ghost" type="button" onClick={onBack}>
+        {isZh ? "返回複核" : "Back to review"}
+      </button>
+      {termsChanged ? (
+        <button
+          className="button button--inverse"
+          type="button"
+          aria-busy={reloading || undefined}
+          disabled={reloading}
+          onClick={onReload}
+        >
+          {isZh ? "重新整理" : "Reload"}
+        </button>
+      ) : (
+        <button
+          className="button button--primary"
+          type="button"
+          disabled={!canSubmit || submitting}
+          onClick={onSubmit}
+        >
+          {submitting
+            ? isZh
+              ? "送出中…"
+              : "Submitting…"
+            : retrying
+              ? isZh
+                ? "重試通知"
+                : "Retry notification"
+              : isZh
+                ? "送出委託"
+                : "Submit commission"}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function CommissionWizard({
   locale,
   serviceId,
@@ -136,7 +204,10 @@ export function CommissionWizard({
   const [submitState, setSubmitState] = useState<"idle" | "submitting">("idle");
   const [submitMessage, setSubmitMessage] = useState("");
   const [retryCaseId, setRetryCaseId] = useState<string | null>(null);
+  const [termsChanged, setTermsChanged] = useState(false);
+  const [reloading, setReloading] = useState(false);
   const navigate = useNavigate();
+  const revalidator = useRevalidator();
   const saveTimer = useRef<number | undefined>(undefined);
   const versionKey = terms.map((term) => term.versionId).join("|");
 
@@ -214,6 +285,7 @@ export function CommissionWizard({
     if (!turnstileToken || submitState === "submitting") return;
     setSubmitState("submitting");
     setSubmitMessage("");
+    setTermsChanged(false);
     try {
       const response = await fetch("/api/commission/submit", {
         method: "POST",
@@ -238,6 +310,8 @@ export function CommissionWizard({
         error?: { code?: string; message?: string; retryCaseId?: string };
       };
       if (!response.ok || !result.ok) {
+        // A pending retry is never answered `terms_changed`: the server
+        // finishes the stored case under the terms recorded on it.
         if (
           result.error?.code === "retry_required" &&
           result.error.retryCaseId
@@ -245,6 +319,7 @@ export function CommissionWizard({
           saveRetryCaseId(serviceId, result.error.retryCaseId);
           setRetryCaseId(result.error.retryCaseId);
         }
+        if (result.error?.code === "terms_changed") setTermsChanged(true);
         throw new Error(result.error?.message ?? "submission_failed");
       }
       if (!result.data) throw new Error("submission_failed");
@@ -268,6 +343,23 @@ export function CommissionWizard({
             : "Submission failed. Please try again.",
       );
     }
+  }
+
+  // Terms changed: load the new versions (the effect above resets the
+  // acceptance), keep the draft, and reopen the terms step to accept them.
+  async function reloadTerms() {
+    setReloading(true);
+    try {
+      await revalidator.revalidate();
+    } catch {
+      // Nothing loaded: the message and Reload stay for another try.
+      setReloading(false);
+      return;
+    }
+    setReloading(false);
+    setTermsChanged(false);
+    setSubmitMessage("");
+    setStep("terms");
   }
 
   const isZh = locale === "zh";
@@ -453,33 +545,17 @@ export function CommissionWizard({
               {submitMessage}
             </p>
           ) : null}
-          <div className="commission-actions">
-            <button
-              className="button button--ghost"
-              type="button"
-              onClick={() => setStep("review")}
-            >
-              {isZh ? "返回複核" : "Back to review"}
-            </button>
-            <button
-              className="button button--primary"
-              type="button"
-              disabled={!turnstileToken || submitState === "submitting"}
-              onClick={submitEnvelope}
-            >
-              {submitState === "submitting"
-                ? isZh
-                  ? "送出中…"
-                  : "Submitting…"
-                : retryCaseId
-                  ? isZh
-                    ? "重試通知"
-                    : "Retry notification"
-                  : isZh
-                    ? "送出委託"
-                    : "Submit commission"}
-            </button>
-          </div>
+          <VerifyActions
+            locale={locale}
+            termsChanged={termsChanged}
+            reloading={reloading}
+            canSubmit={Boolean(turnstileToken)}
+            submitting={submitState === "submitting"}
+            retrying={Boolean(retryCaseId)}
+            onBack={() => setStep("review")}
+            onSubmit={submitEnvelope}
+            onReload={reloadTerms}
+          />
         </section>
       ) : null}
     </main>

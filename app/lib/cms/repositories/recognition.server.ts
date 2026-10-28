@@ -48,21 +48,16 @@ import {
   withCmsErrors,
 } from "../studio/responses";
 import { createTerm, listTerms } from "../taxonomy.server";
-import type {
-  EntityMeta,
-  EntryStatus,
-  LocalizedText,
-  ValidationIssue,
-} from "../types";
+import type { EntityMeta, EntryStatus, LocalizedText } from "../types";
 import { structuralIssues } from "../validation";
 
 /* ---------------------------------------------------------------------------
  * Shared by recognition and writing
  * ------------------------------------------------------------------------- */
 
-export type EditorialType = "recognition" | "writing";
+type EditorialType = "recognition" | "writing";
 
-export const STATUS_FILTER_VALUES = [
+const STATUS_FILTER_VALUES = [
   "active",
   "draft",
   "published",
@@ -111,7 +106,7 @@ export function statusesFor(filter: StatusFilterValue): EntryStatus[] {
 }
 
 /** JSON with sorted keys: equal content ⇒ equal text. */
-export function stableStringify(value: unknown): string {
+function stableStringify(value: unknown): string {
   if (Array.isArray(value)) {
     return `[${value.map((item) => stableStringify(item)).join(",")}]`;
   }
@@ -136,7 +131,7 @@ export type ParsedEntryForm<T extends EditorialType> = {
   clearTodoContent: boolean;
 };
 
-export type EntryFormParser<T extends EditorialType> = (
+type EntryFormParser<T extends EditorialType> = (
   formData: FormData,
 ) => ParsedEntryForm<T>;
 
@@ -421,7 +416,7 @@ export function notFound(): never {
  * Recognition
  * ------------------------------------------------------------------------- */
 
-export type StudioRecognitionRow = {
+type StudioRecognitionRow = {
   id: string;
   status: EntryStatus;
   todoContent: boolean;
@@ -437,7 +432,7 @@ export type StudioRecognitionRow = {
   updatedAt: string;
 };
 
-export type RecognitionListFilters = {
+type RecognitionListFilters = {
   q: string;
   status: StatusFilterValue;
   year: number | null;
@@ -540,7 +535,7 @@ export async function getRecognitionFacets(
   return { years: years.results.map((row) => row.year), types };
 }
 
-export function parseRecognitionFilters(url: URL): RecognitionListFilters {
+function parseRecognitionFilters(url: URL): RecognitionListFilters {
   const params = url.searchParams;
   const year = Number(params.get("year"));
   const type = params.get("type")?.trim() ?? "";
@@ -553,7 +548,7 @@ export function parseRecognitionFilters(url: URL): RecognitionListFilters {
   };
 }
 
-export function parseRecognitionForm(
+function parseRecognitionForm(
   formData: FormData,
 ): ParsedEntryForm<"recognition"> {
   return parseDraftForm<"recognition">(formData, RecognitionDraftSchema);
@@ -640,5 +635,3 @@ export async function handleRecognitionCreate(args: ActionArgs) {
 export async function handleRecognitionEditorAction(args: ActionArgs) {
   return handleEntryEditorIntent("recognition", args, parseRecognitionForm);
 }
-
-export type { ValidationIssue };

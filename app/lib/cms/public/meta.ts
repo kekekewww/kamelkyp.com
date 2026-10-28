@@ -57,7 +57,7 @@ export function seoFromMatches(matches: MetaMatches): PublicSeoContext | null {
   return null;
 }
 
-export interface PageMeta {
+interface PageMeta {
   /** Page title; omitted on the home page (site title). */
   title?: string | null;
   description?: string | null;

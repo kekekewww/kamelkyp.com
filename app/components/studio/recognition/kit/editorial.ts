@@ -58,16 +58,15 @@ export function tieGroups<T>(
 }
 
 /** Issues only the server can judge (assets, slugs, brand, size, TODO flag). */
-export const CONTEXT_ISSUE_CODES: ReadonlySet<ValidationIssue["code"]> =
-  new Set([
-    "alt_required",
-    "missing_asset",
-    "wrong_asset_kind",
-    "slug_taken",
-    "brand_name",
-    "snapshot_too_large",
-    "todo_content",
-  ]);
+const CONTEXT_ISSUE_CODES: ReadonlySet<ValidationIssue["code"]> = new Set([
+  "alt_required",
+  "missing_asset",
+  "wrong_asset_kind",
+  "slug_taken",
+  "brand_name",
+  "snapshot_too_large",
+  "todo_content",
+]);
 
 /**
  * The checklist for a form being edited: model rules computed on the client

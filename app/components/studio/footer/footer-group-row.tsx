@@ -29,7 +29,7 @@ export type FooterResult =
   | { ok: true; intent: string; group?: StudioFooterGroup; id?: string }
   | FooterFailure;
 
-export type OrderProps = {
+type OrderProps = {
   index: number;
   total: number;
   picked: boolean;

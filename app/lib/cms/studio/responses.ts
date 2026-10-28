@@ -16,9 +16,9 @@ import {
 } from "../db/errors";
 import type { ValidationIssue } from "../types";
 
-export type ActionOk<T extends object = object> = { ok: true } & T;
+type ActionOk<T extends object = object> = { ok: true } & T;
 
-export type ActionError = {
+type ActionError = {
   ok: false;
   code: string;
   message: string;
@@ -27,14 +27,6 @@ export type ActionError = {
 };
 
 export type ActionResult<T extends object = object> = ActionOk<T> | ActionError;
-
-export function isActionError(value: unknown): value is ActionError {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    (value as { ok?: unknown }).ok === false
-  );
-}
 
 /** Success for route actions (serialized by React Router; fetchers read it). */
 export function actionOk<T extends object>(payload?: T, init?: ResponseInit) {

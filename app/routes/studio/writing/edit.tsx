@@ -10,12 +10,14 @@ import {
   withOwner,
   withOwnerMutation,
 } from "../../../lib/cms/studio/auth.server";
+import blockStyles from "../../../styles/studio/blocks.css?url";
 import recognitionStyles from "../../../styles/studio/recognition.css?url";
 import writingStyles from "../../../styles/studio/writing.css?url";
 
 export const links = () => [
   { rel: "stylesheet", href: recognitionStyles },
   { rel: "stylesheet", href: writingStyles },
+  { rel: "stylesheet", href: blockStyles },
 ];
 
 export const loader = withOwner(loadWritingEditor);

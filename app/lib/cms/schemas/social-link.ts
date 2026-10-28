@@ -66,5 +66,3 @@ export const SocialLinkInputSchema = z.object({
     .transform((value) => (value ? value : null)),
   enabled: z.boolean().default(true),
 });
-
-export type SocialLinkInput = z.input<typeof SocialLinkInputSchema>;

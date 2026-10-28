@@ -21,7 +21,6 @@ import commissionStyles from "./styles/commission.css?url";
 import componentStyles from "./styles/components.css?url";
 import globalStyles from "./styles/global.css?url";
 import layoutStyles from "./styles/layout.css?url";
-import legacyStyles from "./styles/legacy.css?url";
 import mediaStyles from "./styles/media.css?url";
 import motionStyles from "./styles/motion.css?url";
 import aboutPageStyles from "./styles/pages/about.css?url";
@@ -37,7 +36,6 @@ export const links: Route.LinksFunction = () => [
   { rel: "stylesheet", href: tokenStyles },
   { rel: "stylesheet", href: globalStyles },
   { rel: "stylesheet", href: layoutStyles },
-  { rel: "stylesheet", href: legacyStyles },
   { rel: "stylesheet", href: componentStyles },
   { rel: "stylesheet", href: homePageStyles },
   { rel: "stylesheet", href: workPageStyles },

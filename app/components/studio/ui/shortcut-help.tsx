@@ -4,7 +4,7 @@
  */
 import { useEffect, useRef } from "react";
 
-export const STUDIO_SHORTCUTS: ReadonlyArray<readonly [string, string]> = [
+const STUDIO_SHORTCUTS: ReadonlyArray<readonly [string, string]> = [
   ["Mod + S", "Save"],
   ["Mod + Shift + Enter", "Preview changes (editor)"],
   ["/", "Focus list search"],

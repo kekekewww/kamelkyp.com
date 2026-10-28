@@ -79,7 +79,7 @@ type StoredPrefill = Prefill & { forKey: string };
 
 type PriceActionData = ActionData & { versionId?: string };
 
-export function valuesOf(version: PriceValues): PriceValues {
+function valuesOf(version: PriceValues): PriceValues {
   return {
     baseTwd: version.baseTwd,
     perSongAfterFiveTwd: version.perSongAfterFiveTwd,

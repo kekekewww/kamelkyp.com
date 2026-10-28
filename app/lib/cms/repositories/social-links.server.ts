@@ -27,12 +27,7 @@ import {
 } from "../studio/responses";
 import type { LocalizedText, ValidationIssue } from "../types";
 
-export type { SocialLink, SocialPlatform };
-
-/** Icon keys (a fixed set; `null` = the platform's own icon). */
-export const SOCIAL_ICON_KEYS: readonly SocialPlatform[] = SOCIAL_PLATFORMS;
-
-export type SocialLinkDraft = {
+type SocialLinkDraft = {
   id?: string;
   platform: string;
   label: LocalizedText;
@@ -295,23 +290,40 @@ export async function deleteSocialLink(
   if (result.meta.changes === 0) throw new CmsError("not_found");
 }
 
-/** Positions = index × 10 for the listed ids (one statement, any length). */
+/**
+ * Positions = index × 10 for the listed ids (one statement, any length). The
+ * list must name every stored link exactly once; otherwise a link was added or
+ * deleted elsewhere since the screen loaded, nothing is written and the
+ * result is `false`. The check and the write are one statement.
+ */
 export async function reorderSocialLinks(
   db: D1Database,
   ids: readonly string[],
-): Promise<void> {
-  await db
+): Promise<boolean> {
+  if (new Set(ids).size !== ids.length) return false;
+  if (ids.length === 0) {
+    const row = await db
+      .prepare("SELECT COUNT(*) AS n FROM social_links")
+      .first<{ n: number }>();
+    return (row?.n ?? 0) === 0;
+  }
+  const result = await db
     .prepare(
       `UPDATE social_links
        SET sort_order = (SELECT CAST(j.key AS INTEGER) * 10 FROM json_each(?1) j WHERE j.value = social_links.id)
-       WHERE id IN (SELECT value FROM json_each(?1))`,
+       WHERE (SELECT COUNT(*) FROM social_links) = json_array_length(?1)
+         AND NOT EXISTS (
+           SELECT 1 FROM social_links s
+           WHERE s.id NOT IN (SELECT value FROM json_each(?1))
+         )`,
     )
-    .bind(JSON.stringify([...new Set(ids)]))
+    .bind(JSON.stringify(ids))
     .run();
+  return result.meta.changes === ids.length;
 }
 
 /** `ids` form field: a JSON array of up to 500 id strings, or null. */
-export function readIdList(formData: FormData): string[] | null {
+function readIdList(formData: FormData): string[] | null {
   const raw = readString(formData, "ids");
   if (!raw) return null;
   try {
@@ -330,7 +342,7 @@ export function readIdList(formData: FormData): string[] | null {
 }
 
 /** Form → draft. `enabled` is only set when the form submitted it. */
-export function parseSocialLinkForm(formData: FormData): SocialLinkDraft {
+function parseSocialLinkForm(formData: FormData): SocialLinkDraft {
   const raw = formDataToObject(formData);
   const text = (value: unknown) => (typeof value === "string" ? value : "");
   const id = text(raw.id).trim();
@@ -349,7 +361,7 @@ export function parseSocialLinkForm(formData: FormData): SocialLinkDraft {
  * How Settings → Footer sets the "Find me" group these links fill: its label
  * per locale (the default when none is stored) and whether it is shown.
  */
-export async function getFindMeGroup(
+async function getFindMeGroup(
   db: D1Database,
 ): Promise<{ label: LocalizedText; enabled: boolean }> {
   const rows = await db
@@ -427,7 +439,12 @@ export async function handleSocialAction({
             message: "The new order could not be read. Reload and try again.",
           });
         }
-        await reorderSocialLinks(db, ids);
+        if (!(await reorderSocialLinks(db, ids))) {
+          return actionError("stale_revision", {
+            status: 409,
+            message: "The order changed elsewhere. Reload and try again.",
+          });
+        }
         return actionOk({ intent });
       }
       default:

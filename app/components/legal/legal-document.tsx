@@ -5,7 +5,7 @@ import type { Locale } from "../../lib/i18n/locale";
 import { localePath } from "../../lib/i18n/path";
 import { taipeiDate } from "../../lib/time/taipei";
 
-export interface LegalTocEntry {
+interface LegalTocEntry {
   id: string;
   label: string;
 }

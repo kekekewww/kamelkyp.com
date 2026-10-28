@@ -5,7 +5,6 @@
  */
 import { env } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
-import { publishTermVersion } from "../../app/lib/admin/term-service.server";
 import { isCmsError } from "../../app/lib/cms/db/errors";
 import {
   PreviewFormError,
@@ -84,6 +83,41 @@ async function versionCount(documentId: string, locale: string) {
   )
     .bind(documentId, locale)
     .first("n")) as number;
+}
+
+/**
+ * A version that another publish made live while this draft was open: the
+ * next version number and the live pointer, written as any publish does.
+ */
+async function publishElsewhere(input: {
+  documentId: string;
+  locale: string;
+  clauses: Clause[];
+  effectiveFrom: string;
+}) {
+  const id = crypto.randomUUID();
+  await env.DB.batch([
+    env.DB.prepare(
+      "INSERT INTO term_versions " +
+        "(id, document_id, locale, version_number, body_json, created_at, effective_from) " +
+        "SELECT ?, ?, ?, COALESCE(MAX(version_number), 0) + 1, ?, ?, ? " +
+        "FROM term_versions WHERE document_id = ? AND locale = ?",
+    ).bind(
+      id,
+      input.documentId,
+      input.locale,
+      JSON.stringify(input.clauses),
+      new Date().toISOString(),
+      input.effectiveFrom,
+      input.documentId,
+      input.locale,
+    ),
+    env.DB.prepare(
+      "INSERT INTO term_publications (document_id, locale, version_id, effective_from) " +
+        "VALUES (?, ?, ?, ?) ON CONFLICT(document_id, locale) DO UPDATE SET " +
+        "version_id = excluded.version_id, effective_from = excluded.effective_from",
+    ).bind(input.documentId, input.locale, id, input.effectiveFrom),
+  ]);
 }
 
 const CLAUSE: Clause = {
@@ -441,7 +475,7 @@ describe("term drafts", () => {
     expect(JSON.parse(stored?.body_json ?? "[]")).toEqual([other]);
   });
 
-  it("takes the next number after a legacy publish in between", async () => {
+  it("takes the next number after another publish in between", async () => {
     const now = new Date("2026-10-13T06:00:00.000Z");
     await act(
       "vocal-mix",
@@ -450,13 +484,11 @@ describe("term drafts", () => {
       termForm([CLAUSE], { expectedRevision: "0" }),
       now,
     );
-    await publishTermVersion({
-      db: env.DB,
+    await publishElsewhere({
       documentId: "vocal-mix",
       locale: "en",
-      clauses: [{ key: "legacy", title: "Legacy", text: "Legacy text." }],
+      clauses: [{ key: "other", title: "Other", text: "Other text." }],
       effectiveFrom: "2026-10-13T05:30:00.000Z",
-      legalReviewConfirmed: true,
     });
     const result = await act(
       "vocal-mix",

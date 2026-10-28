@@ -15,12 +15,16 @@ import {
   withOwner,
   withOwnerMutation,
 } from "../../../lib/cms/studio/auth.server";
+import blockStyles from "../../../styles/studio/blocks.css?url";
 import projectStyles from "../../../styles/studio/projects.css?url";
 
 export const loader = withOwner(loadProjectEditor);
 export const action = withOwnerMutation(handleProjectEditorAction);
 
-export const links = () => [{ rel: "stylesheet", href: projectStyles }];
+export const links = () => [
+  { rel: "stylesheet", href: projectStyles },
+  { rel: "stylesheet", href: blockStyles },
+];
 
 /** A deleted project has nothing left to load; the editor navigates away. */
 export function shouldRevalidate({

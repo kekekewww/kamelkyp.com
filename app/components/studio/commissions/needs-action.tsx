@@ -26,8 +26,8 @@ import {
 } from "./use-commission-action";
 import { useFocusFallback } from "./use-focus-fallback";
 
-export const STUDENT_REVIEWS_ID = "student-reviews";
-export const CLEANUP_DUE_ID = "cleanup-due";
+const STUDENT_REVIEWS_ID = "student-reviews";
+const CLEANUP_DUE_ID = "cleanup-due";
 
 function QueueHeading({
   id,
@@ -171,7 +171,7 @@ function CleanupQueueItem({
   );
 }
 
-export type CleanupFeedback = {
+type CleanupFeedback = {
   /** Close the dialog; focus then moves to the queue heading. */
   close: boolean;
   /** Shown in the open dialog, so Retry is one click. */

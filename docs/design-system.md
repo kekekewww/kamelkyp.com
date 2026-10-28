@@ -45,7 +45,7 @@ Starting from the brief (§5). Changes from the brief are marked **Δ**.
 | `--color-success` **Δ new** | `#9CCDB3` | Submission success and verified states. |
 | `--color-warning` **Δ new** | `#D8C28E` | Commission notices that need attention (e.g. a Turnstile retry). |
 
-Coral (`#FF5C4D`) is removed. The legacy alias `--color-coral` now points at `--color-accent` (see §8).
+Coral (`#FF5C4D`) is removed, and so is its legacy alias `--color-coral`: `tokens.css` no longer declares any of the legacy aliases (§8). Use `--color-accent`.
 
 `<meta name="theme-color" content="#090D12">` (replaces `#071724` in `app/root.tsx`).
 
@@ -528,7 +528,7 @@ It is rendered outside the shell, so it includes a minimal brand link at top-lef
 
 ### 6.22 Minimal audio player (showreel)
 
-Current implementation: `.showreel` with a CSS span-bar waveform (`.showreel__waveform span.wave-height-*`) and `.direct-audio` in `media.css`. No `wavesurfer` dependency is present in `package.json`. The spec below is renderer-agnostic, and the motion doc covers amplitude hand-off to the hero canvas.
+Current implementation: the hero stage (`.home-hero__stage` in `app/components/home/hero.tsx`) plays the showreel through `MediaPreview`, that is `.direct-audio` with its CSS span-bar waveform `.media-waveform` in `media.css`. Without a showreel it shows the empty player, `.home-showreel__*` in the same file (styled in `pages/home.css`). No `wavesurfer` dependency is present in `package.json`. The spec below is renderer-agnostic, and the motion doc covers amplitude hand-off to the hero canvas.
 
 - **Container:** level-2 surface, radius 0, padding `var(--space-5)`, grid `3.5rem minmax(0,1fr)`, gap `var(--space-4)`. In the hero it is `.home-hero__stage` (≥ 340px wide at 1440, full-width stacked at 390).
 - **Play button:** 56 × 56 (44 × 44 < md), `--radius-round`.
@@ -545,7 +545,7 @@ Current implementation: `.showreel` with a CSS span-bar waveform (`.showreel__wa
 - **Waveform:** height 4.5rem (3.5rem < md), bars 2px wide with a 2px gap, radius 0, flat baseline at the vertical center drawn as 1px `--color-rule-strong`. Unplayed bars are `--color-trace`. Played bars are `--color-accent-2`. When idle and not started, all bars are `--color-trace` at `opacity: 0.8`. No looping pulse animation: the bars show real progress, not a fake bounce (this removes the existing `waveform-pulse`).
 - **Metadata:** track title Heading · 3 `--color-text`, then a meta row `ROLE / YEAR` (plus `MIXING / PRODUCTION / MASTERING` where known), then time `00:42 / 03:15` Metadata tabular on the inline-end. The time is the non-color indicator of progress.
 - **Empty:** the flat line (6.20) plus the existing strings (尚無可播放的 Showreel / No showreel is available yet).
-- The `.direct-audio > button` icon color must change to `--color-on-accent`/`--color-bg` during migration. With the alias `--color-coral → --color-accent`, today's `--color-chalk` icon on that fill would be about 1.5:1.
+- On a filled state the `.direct-audio > button` icon is `--color-bg` (Playing, above), never `--color-text`: a `--color-text` icon on an `--color-accent` fill would be about 1.5:1.
 
 ### 6.23 Commission wizard surfaces
 
@@ -844,19 +844,6 @@ The web app manifest (`manifest.webmanifest`) is hand-written: name and short na
   --z-header: 50;
   --z-menu: 60;
   --z-skip: 100;
-
-  /* ---- Legacy aliases (remove after every page is migrated) ---- */
-  --color-mineral: var(--color-bg);
-  --color-console: var(--color-bg-2);
-  --color-chalk: var(--color-text);
-  --color-cool-gray: var(--color-text-secondary);
-  --color-coral: var(--color-accent); /* icons on a coral fill must switch to --color-on-accent */
-  --color-line: var(--color-rule-strong);
-  --color-line-soft: var(--color-rule);
-  --color-surface-raised: var(--color-surface);
-  --motion-fast: var(--duration-fast);
-  --motion-normal: var(--duration-base);
-  --motion-panel: var(--duration-slow);
 }
 
 @media (min-width: 768px) {

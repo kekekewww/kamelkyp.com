@@ -65,7 +65,7 @@ export function usageHref(
   }
 }
 
-export interface UsageGroup {
+interface UsageGroup {
   key: string;
   usage: MediaUsage;
   fields: string[];

@@ -551,6 +551,76 @@ describe("editor actions", () => {
     });
   });
 
+  it("round-trips body blocks from the block editor and indexes their media", async () => {
+    const image = await insertExternalAsset(env.DB, { alt: "Body image" });
+    const meta = await createEntity(env.DB, "project", {}, { now });
+    const zh = [
+      { type: "paragraph", text: "案例之後的段落" },
+      { type: "media", mediaId: image },
+    ];
+    const en = [{ type: "paragraph", text: "A paragraph after the story" }];
+    const saved = await editor(
+      meta.id,
+      "save",
+      editorForm(0, {
+        "title.zh": "區塊",
+        "title.en": "Blocks",
+        "body.zh:json": JSON.stringify(zh),
+        "body.en:json": JSON.stringify(en),
+      }),
+    );
+    expect(saved.data).toMatchObject({ ok: true });
+    const loaded = await getEntity(env.DB, "project", meta.id);
+    expect(loaded?.content.body).toEqual({ zh, en });
+
+    // The editor gets the summary of a media block's asset.
+    const data = await loadProjectEditor({
+      db: env.DB,
+      env: testEnv,
+      params: { id: meta.id },
+      now,
+    });
+    expect(data.content.body).toEqual({ zh, en });
+    expect(data.assets[image]?.filename).toBe(`${image}.jpg`);
+
+    const usages = await env.DB.prepare(
+      "SELECT asset_id, field, scope FROM media_usages WHERE entity_type = 'project' AND entity_id = ? ORDER BY field, scope",
+    )
+      .bind(meta.id)
+      .all<{ asset_id: string; field: string; scope: string }>();
+    expect(usages.results).toEqual([
+      { asset_id: image, field: "body.zh", scope: "working" },
+    ]);
+  });
+
+  it("refuses to publish a body media block whose asset is missing", async () => {
+    const id = await publishedProject();
+    const loaded = await getEntity(env.DB, "project", id);
+    const refused = await editor(
+      id,
+      "publish",
+      editorForm(loaded?.meta.revision ?? -1, {
+        "title.zh": "上線專案",
+        "title.en": "Live project",
+        slug: loaded?.content.slug ?? "",
+        "year:number": "2026",
+        primaryCategoryId: SOFTWARE,
+        "shortDescription.zh": "摘要",
+        "shortDescription.en": "Summary",
+        "body.zh:json": "[]",
+        "body.en:json": JSON.stringify([
+          { type: "media", mediaId: uniqueId("gone") },
+        ]),
+      }),
+      later,
+    );
+    expect(refused.data).toMatchObject({ ok: true, published: false });
+    expect(codes(refused.data.issues)).toContain("body.en:missing_asset");
+    // The live copy keeps its (empty) body.
+    const after = await getEntity(env.DB, "project", id);
+    expect(after?.published?.body).toEqual({ zh: [], en: [] });
+  });
+
   it("answers 409 when the entry changed elsewhere", async () => {
     const meta = await createEntity(env.DB, "project", {}, { now });
     await editor(meta.id, "save", editorForm(0, { "title.en": "First tab" }));

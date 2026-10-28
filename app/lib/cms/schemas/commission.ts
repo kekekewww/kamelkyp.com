@@ -45,7 +45,7 @@ export const CASE_STATUS_LABELS: Record<CaseStatus, string> = {
   cancelled: "Cancelled",
 };
 
-export const CaseStatusSchema = z.enum(CASE_STATUSES);
+const CaseStatusSchema = z.enum(CASE_STATUSES);
 
 /** `KAM-<UTC yyyymmdd>-<10 Crockford base32>` (cases/case-id.ts). */
 export const CaseIdSchema = z
@@ -77,13 +77,13 @@ export function isCaseStatus(value: string): value is CaseStatus {
   return (CASE_STATUSES as readonly string[]).includes(value);
 }
 
-export type CommissionQuery = {
+type CommissionQuery = {
   status: CaseStatus | null;
   service: ServiceId | null;
   cursor: string | null;
 };
 
-export const COMMISSION_CURSOR_MAX_LENGTH = 512;
+const COMMISSION_CURSOR_MAX_LENGTH = 512;
 
 /** Invalid or empty values are ignored (null), never an error. */
 export function parseCommissionQuery(params: URLSearchParams): CommissionQuery {
@@ -98,7 +98,7 @@ export function parseCommissionQuery(params: URLSearchParams): CommissionQuery {
   };
 }
 
-export const COMMISSIONS_PATH = "/studio/commissions";
+const COMMISSIONS_PATH = "/studio/commissions";
 
 export function commissionQueryHref(query: Partial<CommissionQuery>): string {
   const params = new URLSearchParams();
@@ -152,23 +152,3 @@ export type CommissionsModel = {
   /** Every due cleanup, independent of filters and page. */
   cleanupDue: CleanupDueItem[];
 };
-
-// ---- Action payloads ------------------------------------------------------------
-
-export type SetStatusPayload = {
-  intent: "set-status";
-  caseId: string;
-  status: CaseStatus;
-  previousStatus: CaseStatus;
-  cleanupDueAt: string | null;
-  unchanged: boolean;
-};
-
-export type StudentDecisionPayload = {
-  intent: "accept-student-price" | "reject-student-price";
-  caseId: string;
-  lockedPriceMinor: number;
-  currency: "TWD" | "USD";
-};
-
-export type CleanupPayload = { intent: "confirm-cleanup"; caseId: string };

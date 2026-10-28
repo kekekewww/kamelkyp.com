@@ -3,22 +3,37 @@
  * not analytics. Counts per type and status, the 15 latest edits, what needs
  * attention (each row links to the fix), the homepage as it is curated now,
  * and the commission queue. Every table is read here with its own queries
- * (read-only); one `db.batch` per page load.
+ * (read-only); one `db.batch` per page load, plus the commission readiness
+ * reads (`getCommissionReadiness`, the one definition of an open form) and
+ * the service names the Terms page labels its documents with.
  *
  * `collectAttention` also feeds the sidebar badge (`getStudioCounts`), so the
  * number next to HOME always equals the rows on the home list.
  */
+import {
+  type CommissionReadiness,
+  getCommissionReadiness,
+} from "../../commission/availability.server";
+import { TERM_DOCUMENT_IDS } from "../../commission/term-outline";
+import type { ServiceId } from "../../services/service-id";
 import { studioLabel } from "../localized";
 import {
   HOMEPAGE_SECTIONS,
   type HomepageSection,
 } from "../schemas/site-settings";
 import { settingsFromRows, settingsStatement } from "../settings.server";
-import { ENTITY_TYPES, type EntityType, type EntryStatus } from "../types";
+import {
+  ENTITY_TYPES,
+  type EntityType,
+  type EntryStatus,
+  type Locale,
+  type LocalizedText,
+} from "../types";
+import { serviceNamesOf, termDocumentInfo } from "./terms.server";
 
 // ---- Types ---------------------------------------------------------------------
 
-export type AttentionSeverity = "high" | "medium" | "low";
+type AttentionSeverity = "high" | "medium" | "low";
 
 export type AttentionItem = {
   /** Stable identity, e.g. `contact-email`, `changes:project:<id>`. */
@@ -32,7 +47,7 @@ export type AttentionItem = {
   count?: number;
 };
 
-export type ContentCountRow = {
+type ContentCountRow = {
   type: EntityType;
   label: string;
   href: string;
@@ -42,7 +57,7 @@ export type ContentCountRow = {
   todo: number;
 };
 
-export type RecentChange = {
+type RecentChange = {
   kind: EntityType | "settings" | "social";
   id: string;
   label: string;
@@ -51,7 +66,7 @@ export type RecentChange = {
   href: string;
 };
 
-export type HomepageSummary = {
+type HomepageSummary = {
   showreel: { id: string; label: string; status: EntryStatus } | null;
   featuredProjects: Array<{ id: string; label: string; status: EntryStatus }>;
   featuredProjectLimit: number;
@@ -59,7 +74,7 @@ export type HomepageSummary = {
   sections: { visible: HomepageSection[]; hidden: HomepageSection[] };
 };
 
-export type CommissionQueue = {
+type CommissionQueue = {
   pendingReview: number;
   awaitingDeposit: number;
   inProduction: number;
@@ -89,7 +104,7 @@ type TypeInfo = {
   required: readonly string[];
 };
 
-export const TYPE_INFO: Record<EntityType, TypeInfo> = {
+const TYPE_INFO: Record<EntityType, TypeInfo> = {
   project: {
     table: "projects",
     label: "Projects",
@@ -259,7 +274,72 @@ function first<T>(result: D1Result | undefined): T | undefined {
   return rows<T>(result)[0];
 }
 
-function buildAttention(results: D1Result[]): AttentionFacts {
+/** What the "Commission form closed" row reads besides the batch. */
+type CommissionFacts = {
+  readiness: readonly CommissionReadiness[];
+  /** Service names for the term document labels. */
+  serviceNames: Partial<Record<ServiceId, LocalizedText>>;
+};
+
+async function commissionFacts(
+  db: D1Database,
+  now: Date,
+): Promise<CommissionFacts> {
+  const [readiness, serviceNames] = await Promise.all([
+    getCommissionReadiness(db, now),
+    serviceNamesOf(db),
+  ]);
+  return { readiness, serviceNames };
+}
+
+const LOCALES: readonly Locale[] = ["zh", "en"];
+
+/**
+ * A single row for the commission forms that are closed in a locale while
+ * their service page is published (wp2 §4.6): no active price, or a term
+ * document not in effect. Production starts without terms, so the row stays
+ * until the general terms, the privacy notice and the service terms are
+ * published in both locales. The detail names each missing document the way
+ * the Terms page does ("Service terms · Vocal Mixing"), with the locales it
+ * lacks.
+ */
+function commissionClosedRow({
+  readiness,
+  serviceNames,
+}: CommissionFacts): AttentionItem | null {
+  const closed = readiness.filter(
+    (item) =>
+      item.serviceStatus === "published" && (!item.open.zh || !item.open.en),
+  );
+  if (closed.length === 0) return null;
+  const priceMissing = closed.some((item) => item.price === null);
+  const documents = TERM_DOCUMENT_IDS.flatMap((id) => {
+    const locales = LOCALES.filter((locale) =>
+      closed.some((item) => item.terms[locale].missing.includes(id)),
+    );
+    if (locales.length === 0) return [];
+    const tags = locales.map((locale) => locale.toUpperCase()).join(", ");
+    return [`${termDocumentInfo(id, serviceNames).label} (${tags})`];
+  });
+  const reasons = [
+    ...(priceMissing ? ["no active price"] : []),
+    ...(documents.length > 0 ? [`terms missing: ${documents.join(", ")}`] : []),
+  ];
+  return {
+    key: "commission-closed",
+    severity: "high",
+    title: `Commission form closed: ${closed.length} ${closed.length === 1 ? "service" : "services"}`,
+    detail: reasons.join("; "),
+    href: priceMissing ? "/studio/services/pricing" : "/studio/services/terms",
+    action: priceMissing ? "Open pricing" : "Open terms",
+    count: closed.length,
+  };
+}
+
+function buildAttention(
+  results: D1Result[],
+  commission: CommissionFacts,
+): AttentionFacts {
   const [
     settingsResult,
     showreelResult,
@@ -424,6 +504,9 @@ function buildAttention(results: D1Result[]): AttentionFacts {
     studentReviews: runtime?.student ?? 0,
     cleanupDue: runtime?.cleanup ?? 0,
   };
+  const closedForms = commissionClosedRow(commission);
+  if (closedForms) items.push(closedForms);
+
   // Each commissions row links to the place that fixes it (admin-architecture
   // §4.2): the filtered list or one of the inbox queues.
   const caseRow = (
@@ -502,7 +585,11 @@ export async function collectAttention(
   db: D1Database,
   now: Date,
 ): Promise<AttentionFacts> {
-  return buildAttention(await db.batch(attentionStatements(db, now)));
+  const [results, commission] = await Promise.all([
+    db.batch(attentionStatements(db, now)),
+    commissionFacts(db, now),
+  ]);
+  return buildAttention(results, commission);
 }
 
 // ---- Studio home ------------------------------------------------------------------
@@ -565,8 +652,14 @@ export async function getStudioHome(
   now: Date,
 ): Promise<StudioHomeModel> {
   const attentionPart = attentionStatements(db, now);
-  const results = await db.batch([...attentionPart, ...homeStatements(db)]);
-  const facts = buildAttention(results.slice(0, attentionPart.length));
+  const [results, commission] = await Promise.all([
+    db.batch([...attentionPart, ...homeStatements(db)]),
+    commissionFacts(db, now),
+  ]);
+  const facts = buildAttention(
+    results.slice(0, attentionPart.length),
+    commission,
+  );
   const [
     countsResult,
     recentContentResult,

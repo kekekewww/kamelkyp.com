@@ -39,7 +39,7 @@ import {
   statusesFor,
 } from "./recognition.server";
 
-export type StudioWritingRow = {
+type StudioWritingRow = {
   id: string;
   status: EntryStatus;
   todoContent: boolean;
@@ -58,7 +58,7 @@ export type StudioWritingRow = {
   updatedAt: string;
 };
 
-export type WritingListFilters = {
+type WritingListFilters = {
   q: string;
   platform: WritingPlatform | null;
   categoryTermId: string | null;
@@ -95,7 +95,7 @@ type ActionArgs = Pick<
   params: { id?: string };
 };
 
-export function isWritingPlatform(value: string): value is WritingPlatform {
+function isWritingPlatform(value: string): value is WritingPlatform {
   return (WRITING_PLATFORMS as readonly string[]).includes(value);
 }
 
@@ -174,7 +174,7 @@ export async function getWritingFacets(
   return { categories: await listTerms(db, "writing_category") };
 }
 
-export function parseWritingFilters(url: URL): WritingListFilters {
+function parseWritingFilters(url: URL): WritingListFilters {
   const params = url.searchParams;
   const platform = params.get("platform") ?? "";
   const category = params.get("category")?.trim() ?? "";
@@ -187,9 +187,7 @@ export function parseWritingFilters(url: URL): WritingListFilters {
   };
 }
 
-export function parseWritingForm(
-  formData: FormData,
-): ParsedEntryForm<"writing"> {
+function parseWritingForm(formData: FormData): ParsedEntryForm<"writing"> {
   return parseDraftForm<"writing">(formData, WritingDraftSchema);
 }
 

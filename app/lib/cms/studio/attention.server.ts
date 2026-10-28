@@ -1,5 +1,6 @@
 /**
- * Sidebar counts for the Studio root loader (one `db.batch`).
+ * Sidebar counts for the Studio root loader (one `db.batch` and the
+ * commission readiness reads).
  *
  * `attention` is the number of rows on the Studio home "Needs attention" list
  * (admin-architecture §4.2), built by the same rules

@@ -55,11 +55,9 @@ import {
 import type { Locale, LocalizedText, ValidationIssue } from "../types";
 import { type FxStatus, loadFxStatus } from "./pricing.server";
 
-export type { TermDocumentId } from "../../commission/term-outline";
+type TermDocumentKind = "common" | "service" | "privacy";
 
-export type TermDocumentKind = "common" | "service" | "privacy";
-
-export type TermDocumentInfo = {
+type TermDocumentInfo = {
   id: TermDocumentId;
   kind: TermDocumentKind;
   serviceId: ServiceId | null;
@@ -68,7 +66,7 @@ export type TermDocumentInfo = {
   publicPath: "/terms" | "/privacy";
 };
 
-export type TermVersionInfo = {
+type TermVersionInfo = {
   id: string;
   versionNumber: number;
   createdAt: string;
@@ -138,7 +136,8 @@ const notFound = () => new Response("Not Found", { status: 404 });
 
 // ---- Documents -----------------------------------------------------------------
 
-async function serviceNamesOf(
+/** Service names by commission service id (published name first). */
+export async function serviceNamesOf(
   db: D1Database,
 ): Promise<Partial<Record<ServiceId, LocalizedText>>> {
   const rows = await db
@@ -653,7 +652,7 @@ export async function publishTermDraft(
   };
 }
 
-export async function discardTermDraft(
+async function discardTermDraft(
   db: D1Database,
   input: DraftKey & { revision: number },
 ): Promise<void> {

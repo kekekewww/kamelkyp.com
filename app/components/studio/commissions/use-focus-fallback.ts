@@ -15,7 +15,7 @@ import {
   STALE_PAGE_CODES,
 } from "./use-commission-action";
 
-export type FocusFallback = "now" | "after-reload";
+type FocusFallback = "now" | "after-reload";
 
 /** When a finished action can have removed the focused control. */
 export function focusFallbackAfter(

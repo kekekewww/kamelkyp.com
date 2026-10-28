@@ -3,7 +3,7 @@
  * URL search params, 40 px ruled rows, empty states that invite the next
  * action, and explicit ordering controls with a keyboard reorder model.
  */
-import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useReducer, useRef } from "react";
 import { Form, Link } from "react-router";
 import type { EntryStatus } from "../../../lib/cms/types";
 import { type Flag, FlagBadge, StatusBadge } from "./badges";
@@ -11,9 +11,10 @@ import {
   keyboardReorderReducer,
   moveItem,
   reorderAnnouncement,
+  reorderSource,
 } from "./reorder";
 
-export const STATUS_FILTERS = [
+const STATUS_FILTERS = [
   { value: "active", label: "Active" },
   { value: "draft", label: "Draft" },
   { value: "published", label: "Published" },
@@ -262,28 +263,46 @@ export function OrderControls({
  * Keyboard reorder: Space/Enter on a handle picks up and drops, arrows move,
  * Escape cancels, Alt+↑/↓ moves at once. `onCommit` receives the full ordered
  * id list after each drop (one request per drop).
+ *
+ * The order restarts from `ids` (the server order) when that list changes. A
+ * failed save changes no list, so a caller whose reorder can fail passes a
+ * counter it bumps on every failed answer as `resetKey`: a list that has sent
+ * an order since it last restarted goes back to the server order (and clears
+ * its announcement) while its rows stay mounted. A list that has sent nothing
+ * keeps its order and a pick in progress, so several lists and row actions
+ * can share one fetcher and one counter.
  */
 export function useKeyboardReorder({
   ids,
   labelOf,
   onCommit,
+  resetKey = 0,
 }: {
   ids: string[];
   labelOf: (id: string) => string;
   onCommit: (order: string[]) => void;
+  resetKey?: string | number;
 }) {
+  const source = reorderSource(ids);
   const [state, dispatch] = useReducer(keyboardReorderReducer, {
     order: ids,
     picked: null,
     originIndex: null,
+    source,
+    resetKey,
+    sent: false,
+    announcement: "",
   });
-  const [announcement, setAnnouncement] = useState("");
-  const idsKey = ids.join("\u0000");
+  const announce = useCallback(
+    (text: string) => dispatch({ type: "announce", text }),
+    [],
+  );
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: reset only when the server order changes
-  useEffect(() => {
-    dispatch({ type: "reset", order: ids });
-  }, [idsKey]);
+  // During render (not in an effect), so no frame shows an order the server
+  // has refused or replaced; the reducer ignores what does not concern it.
+  if (state.source !== source || state.resetKey !== resetKey) {
+    dispatch({ type: "sync", order: ids, source, resetKey });
+  }
 
   const move = useCallback(
     (id: string, delta: number) => {
@@ -291,12 +310,12 @@ export function useKeyboardReorder({
       const next = moveItem(state.order, index, index + delta);
       dispatch({ type: "reset", order: next });
       const newIndex = next.indexOf(id);
-      setAnnouncement(
+      announce(
         reorderAnnouncement("moved", labelOf(id), newIndex, next.length),
       );
       onCommit(next);
     },
-    [state.order, labelOf, onCommit],
+    [state.order, labelOf, onCommit, announce],
   );
 
   const handleProps = useCallback(
@@ -315,7 +334,7 @@ export function useKeyboardReorder({
           event.preventDefault();
           if (state.picked === id) {
             dispatch({ type: "drop" });
-            setAnnouncement(
+            announce(
               reorderAnnouncement(
                 "dropped",
                 labelOf(id),
@@ -326,7 +345,7 @@ export function useKeyboardReorder({
             onCommit(state.order);
           } else {
             dispatch({ type: "pick", id });
-            setAnnouncement(
+            announce(
               reorderAnnouncement(
                 "picked",
                 labelOf(id),
@@ -346,13 +365,11 @@ export function useKeyboardReorder({
             0,
             Math.min(total - 1, state.order.indexOf(id) + delta),
           );
-          setAnnouncement(
-            reorderAnnouncement("moved", labelOf(id), index, total),
-          );
+          announce(reorderAnnouncement("moved", labelOf(id), index, total));
         } else if (event.key === "Escape") {
           event.preventDefault();
           dispatch({ type: "cancel" });
-          setAnnouncement(
+          announce(
             reorderAnnouncement(
               "cancelled",
               labelOf(id),
@@ -363,7 +380,7 @@ export function useKeyboardReorder({
         }
       },
     }),
-    [state, labelOf, move, onCommit],
+    [state, labelOf, move, onCommit, announce],
   );
 
   return {
@@ -372,6 +389,6 @@ export function useKeyboardReorder({
     move,
     handleProps,
     /** Render inside a visually hidden `aria-live="assertive"` region. */
-    announcement,
+    announcement: state.announcement ?? "",
   };
 }

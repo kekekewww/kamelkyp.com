@@ -12,7 +12,7 @@ import type {
 import { CaseIdText, ServiceNameText } from "./case-row";
 import { formatCaseDate, formatCaseMoney } from "./format";
 
-export type StudentDecision = "accept-student-price" | "reject-student-price";
+type StudentDecision = "accept-student-price" | "reject-student-price";
 
 export function StudentReviewItem({
   item,

@@ -21,11 +21,11 @@ import { usePlayback } from "../media/playback-provider";
  * size comes from CSS, the backing store from the canvas width/height props.
  */
 
-export const FIELD_SEED = 0x4b414d; // "KAM"
+const FIELD_SEED = 0x4b414d; // "KAM"
 
-export type FieldMode = "wide" | "band";
+type FieldMode = "wide" | "band";
 
-export interface FieldParams {
+interface FieldParams {
   lines: number;
   /** Sample step along x, CSS px. */
   step: number;
@@ -34,7 +34,7 @@ export interface FieldParams {
 }
 
 /** §4.2: full 28 / 8 / 14; lite 16 (12 < 480px) / 12 / 10. */
-export function fieldParams(
+function fieldParams(
   tier: MotionTier,
   viewportWidth: number,
   degraded = false,
@@ -82,7 +82,7 @@ function noise1D(x: number): number {
 }
 
 /** §4.3: two slow sines plus value noise. */
-export function wave(
+function wave(
   u: number,
   t: number,
   k: number,
@@ -102,7 +102,7 @@ export function wave(
  * the right with a quiet crest near 0.78W. Band (stacked mobile layout): full
  * across x with an 8% fade at both edges.
  */
-export function envelope(u: number, mode: FieldMode): number {
+function envelope(u: number, mode: FieldMode): number {
   if (mode === "band") {
     return smoothstep(0, 0.08, u) * smoothstep(0, 0.08, 1 - u);
   }
@@ -114,7 +114,7 @@ const SKIP = 255;
 /** Envelope zones: alpha multiplier per zone (lines fade in toward the right). */
 const ZONE_ALPHA = [0.3, 0.62, 0.92] as const;
 
-export interface FieldGeometry {
+interface FieldGeometry {
   w: number;
   h: number;
   mode: FieldMode;
@@ -136,7 +136,7 @@ export interface FieldGeometry {
   ys: Float32Array;
 }
 
-export function buildGeometry(
+function buildGeometry(
   w: number,
   h: number,
   params: FieldParams,
@@ -192,7 +192,7 @@ export function buildGeometry(
   };
 }
 
-export interface FieldFrame {
+interface FieldFrame {
   t: number;
   gain: number;
   /** Smoothed cursor, 0–1 over the hero. */
@@ -203,7 +203,7 @@ export interface FieldFrame {
   p: number;
 }
 
-export const STATIC_FRAME: FieldFrame = {
+const STATIC_FRAME: FieldFrame = {
   t: 0,
   gain: 1,
   cx: 0.5,
@@ -213,7 +213,7 @@ export const STATIC_FRAME: FieldFrame = {
 };
 
 /** Fills `g.ys` for one frame (§4.3, §4.4). */
-export function computeField(g: FieldGeometry, s: FieldFrame): void {
+function computeField(g: FieldGeometry, s: FieldFrame): void {
   const converge = 0.35 * s.p;
   for (let i = 0; i < g.n; i += 1) {
     const base = g.baseY[i] * (1 - converge) + g.centerY * converge;

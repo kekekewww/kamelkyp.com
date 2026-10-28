@@ -1,7 +1,7 @@
 /**
  * Watches the editor form for every kind of change. Typed input arrives
  * through React's `onInput` (pass the returned `onInput` to the form); tags,
- * category chips, list rows, media pickers and the legacy-blocks toggle
+ * category chips, list rows, media pickers and the body block editor
  * change hidden inputs from React state, which fires no event, so a
  * MutationObserver catches those. The save state, the live checklist and the
  * per-section "unsaved" dots never miss an edit.
@@ -19,7 +19,7 @@ import type { ProjectSectionId } from "./project-form";
 const IGNORED = new Set(["csrfToken", "intent", "expectedRevision", "confirm"]);
 
 /** Serialized named controls per editor section (`details#section-<id>`). */
-export function sectionSnapshot(form: HTMLFormElement): Map<string, string> {
+function sectionSnapshot(form: HTMLFormElement): Map<string, string> {
   const parts = new Map<string, string[]>();
   for (const element of Array.from(form.elements)) {
     if (

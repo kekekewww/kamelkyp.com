@@ -18,7 +18,7 @@ import { SelectedWork } from "./selected-work";
 import { ServicesOverview } from "./services-overview";
 import { WritingPreview } from "./writing-preview";
 
-export interface HomeData {
+interface HomeData {
   showreel: MediaItem | null;
   projects: PublicProjectCard[];
   recognition: PublicRecognitionItem[];
@@ -31,7 +31,7 @@ export interface HomeData {
 }
 
 /** Area price rows in settings order; software is always quoted on request. */
-export function homePriceRows(
+function homePriceRows(
   areas: PublicSite["serviceAreas"],
   prices: HomeData["startingPrices"],
 ): HomePriceRow[] {

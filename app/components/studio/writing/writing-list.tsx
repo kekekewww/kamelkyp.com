@@ -53,7 +53,7 @@ export type WritingListRow = {
   updatedAt: string;
 };
 
-export type WritingListProps = {
+type WritingListProps = {
   rows: readonly WritingListRow[];
   facets: { categories: readonly Term[] };
   filters: {

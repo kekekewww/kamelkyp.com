@@ -16,7 +16,7 @@ export interface ReloadTarget {
   revision: number;
 }
 
-export interface EditorReload {
+interface EditorReload {
   /** Part of the editor's `key`: a new epoch remounts the editor. */
   epoch: number;
   /** The entry and revision the next remount waits for. */

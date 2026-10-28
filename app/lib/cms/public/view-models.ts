@@ -77,7 +77,7 @@ export interface PublicProjectCard {
   todoContent: boolean;
 }
 
-export interface PublicStorySection {
+interface PublicStorySection {
   key: string;
   blocks: FormattedBlock[];
 }
@@ -87,7 +87,7 @@ export interface PublicStorySection {
  * pages are noindex) and the locales the page renders in (its hreflang set,
  * the same predicates as the sitemap).
  */
-export interface PublicIndexing {
+interface PublicIndexing {
   listed: boolean;
   locales: Locale[];
 }

@@ -39,7 +39,7 @@ export function submitFilters() {
 }
 
 /** `n` opens the new-entry page (ignored while typing). */
-export function useNewItemShortcut(href: string) {
+function useNewItemShortcut(href: string) {
   const navigate = useNavigate();
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -105,7 +105,7 @@ export function YearRail({
   );
 }
 
-export type RowMenuItem = {
+type RowMenuItem = {
   label: string;
   href?: string;
   newTab?: boolean;

@@ -45,12 +45,15 @@ export function FeaturedStrip({
   onReorder,
   onRemove,
   busy,
+  resetKey = 0,
 }: {
   rows: StudioProjectRow[];
   limit: number;
   onReorder: (ids: string[]) => void;
   onRemove: (row: StudioProjectRow) => void;
   busy?: boolean;
+  /** Bumps after a failed reorder: the strip goes back to the saved order. */
+  resetKey?: number;
 }) {
   const byId = useMemo(() => new Map(rows.map((row) => [row.id, row])), [rows]);
   const labelOf = useCallback(
@@ -62,6 +65,7 @@ export function FeaturedStrip({
     ids: rows.map((row) => row.id),
     labelOf,
     onCommit: onReorder,
+    resetKey,
   });
   const ordered = reorder.order
     .map((id) => byId.get(id))

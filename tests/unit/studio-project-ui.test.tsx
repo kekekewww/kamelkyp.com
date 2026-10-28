@@ -357,15 +357,81 @@ describe("project editor", () => {
     expect(html).toContain("Preview changes");
   });
 
-  it("lists the checklist and keeps legacy content blocks", () => {
+  it("lists the checklist", () => {
     const html = render(
       <ProjectEditor data={editorData()} />,
       "/studio/projects/p-1",
     );
     expect(html).toContain("Year is required.");
     expect(html).toContain("2 issues block publishing");
-    expect(html).toContain('name="body:json"');
-    expect(html).toContain("1 block in ZH");
+  });
+
+  it("edits the body blocks with the block editor, one field per locale", () => {
+    const html = render(
+      <ProjectEditor data={editorData()} />,
+      "/studio/projects/p-1",
+    );
+    expect(html).toContain('name="body.zh:json"');
+    expect(html).toContain('name="body.en:json"');
+    expect(html).not.toContain('name="body:json"');
+    // The stored ZH paragraph is the editor's starting value.
+    expect(html).toContain(
+      `value="${JSON.stringify([{ type: "paragraph", text: "舊段落" }]).replaceAll('"', "&quot;")}"`,
+    );
+    // Empty EN blocks, on the EN field itself (the gallery, links and
+    // credits post `[]` too).
+    expect(html).toContain('name="body.en:json" value="[]"');
+    expect(html).toContain("Additional content blocks");
+    expect(html).toContain("Shown after the case study on the public page.");
+    expect(html).toContain(" · 1 block");
+    expect(html).not.toContain("Remove the blocks on save");
+    expect(html).not.toContain("Imported from the old admin");
+  });
+
+  it("marks the block locale a server finding names, with its message", () => {
+    const base = editorData();
+    const html = render(
+      <ProjectEditor
+        data={editorData({
+          content: {
+            ...base.content,
+            body: {
+              zh: [{ type: "media", mediaId: "img-no-en-alt" }],
+              en: [{ type: "media", mediaId: "img-pending" }],
+            },
+          },
+          issues: [
+            ...base.issues,
+            {
+              field: "body.zh",
+              code: "alt_required",
+              locale: "en",
+              severity: "error",
+              message: "Add EN alt text to this image before publishing.",
+            },
+            {
+              field: "body.en",
+              code: "missing_asset",
+              severity: "error",
+              message: "This media asset no longer exists.",
+            },
+          ],
+        })}
+      />,
+      "/studio/projects/p-1",
+    );
+    const blocks = html.slice(html.indexOf('class="studio-blocks"'));
+    // Both locale tabs are marked; the open ZH tab shows its message inline
+    // (not only in the checklist).
+    expect(blocks).toMatch(
+      /class="studio-blocks__tab" data-invalid="">ZH<span/,
+    );
+    expect(blocks).toMatch(
+      /class="studio-blocks__tab" data-invalid="">EN<span/,
+    );
+    expect(blocks).toContain(
+      '<p class="studio-field__error" role="alert">Add EN alt text to this image before publishing.</p>',
+    );
   });
 
   it("frames the preview route for the working copy", () => {

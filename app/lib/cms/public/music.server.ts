@@ -12,7 +12,7 @@ import type { PublicMusicItem, ReadMode } from "./view-models";
 
 type Options = { mode?: ReadMode };
 
-export async function getShowreelTrack(
+async function getShowreelTrack(
   db: D1Database,
   env: Env,
   locale: Locale,

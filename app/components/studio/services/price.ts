@@ -46,7 +46,7 @@ export function formatMoney(amount: number, currency: Currency): string {
   return `${PREFIX[currency]}${Math.round(amount).toLocaleString("en-US")}`;
 }
 
-export type PriceLabelInput = {
+type PriceLabelInput = {
   commissionServiceId: string | null;
   livePrice: { baseTwd: number; versionId: string } | null;
   priceMode: PriceMode;

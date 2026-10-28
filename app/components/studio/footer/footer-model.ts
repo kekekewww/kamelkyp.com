@@ -116,7 +116,7 @@ export function placeLinkIssues(
  * Whether the public footer shows the link in at least one language: each
  * locale reads its own stored row (a legacy pair may disagree).
  */
-export function isLinkShown(link: StudioFooterLink): boolean {
+function isLinkShown(link: StudioFooterLink): boolean {
   const rows = Object.values(link.rows);
   return rows.length > 0 ? rows.some((row) => row?.enabled) : link.enabled;
 }

@@ -33,7 +33,7 @@ import { cloudflareContext } from "../../cloudflare/context";
 import type { Env } from "../../env.server";
 import { readIntent } from "../forms";
 
-export type OwnerIdentity = AdminIdentity;
+type OwnerIdentity = AdminIdentity;
 
 /** Set by the Studio middleware; `null` outside the `/studio` root. */
 export const ownerContext = createContext<OwnerIdentity | null>(null);
@@ -135,7 +135,7 @@ export function createStudioMiddleware(
 /** Root-route middleware for `/studio` (shell and preview branch). */
 export const studioMiddleware = createStudioMiddleware();
 
-export interface StudioSession {
+interface StudioSession {
   ownerEmail: string;
   csrfToken: string;
   csrfExpiresAt: string;

@@ -62,7 +62,7 @@ export function isAmountField(field: keyof PriceValues): boolean {
 }
 
 /** Percent inputs are posted as plain strings (no `:number` suffix). */
-export const PERCENT_INPUT_NAMES: Record<
+const PERCENT_INPUT_NAMES: Record<
   Exclude<keyof PriceValues, "baseTwd" | "perSongAfterFiveTwd">,
   string
 > = {
@@ -85,7 +85,7 @@ export function priceInputName(field: keyof PriceValues): string {
 /** A scheduled price takes effect at least this far ahead. */
 export const MIN_SCHEDULE_LEAD_MS = 5 * 60 * 1000;
 
-export function isTransition(serviceId: ServiceId): boolean {
+function isTransition(serviceId: ServiceId): boolean {
   return serviceId === "simple_transition" || serviceId === "edit_transition";
 }
 
@@ -181,7 +181,7 @@ const SAMPLES: Record<ServiceId, Sample[]> = {
   edit_transition: EDIT_SAMPLES,
 };
 
-export type SampleQuote = { key: string; label: string; quote: QuoteBreakdown };
+type SampleQuote = { key: string; label: string; quote: QuoteBreakdown };
 
 /**
  * Sample quotes through `calculateQuote`, so the Studio shows exactly what
@@ -208,7 +208,7 @@ export function sampleQuotes(
   });
 }
 
-export type PriceChangeWarning = { field: keyof PriceValues; message: string };
+type PriceChangeWarning = { field: keyof PriceValues; message: string };
 
 /** Values that change by more than 50 % relative to the baseline. */
 export function priceChangeWarnings(

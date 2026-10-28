@@ -259,12 +259,10 @@ function LinkRow({
   const snapshot = () =>
     formRef.current ? serializeForm(new FormData(formRef.current)) : null;
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: re-baseline when the saved link changes
-  useEffect(() => {
-    baseline.current = snapshot();
-    setDirty(false);
-    onDirty(link.id, false);
-  }, [
+  // The stored values the baseline was taken for. React may run this effect
+  // again without a save (Strict Mode reconnects a moved row's effects in
+  // development); the baseline then stays, so an unsaved edit stays unsaved.
+  const stored = JSON.stringify([
     link.url,
     link.label.zh,
     link.label.en,
@@ -272,6 +270,15 @@ function LinkRow({
     link.username,
     link.icon,
   ]);
+  const baselineOf = useRef<string | null>(null);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: re-baseline when the saved link changes
+  useEffect(() => {
+    if (baselineOf.current === stored) return;
+    baselineOf.current = stored;
+    baseline.current = snapshot();
+    setDirty(false);
+    onDirty(link.id, false);
+  }, [stored]);
 
   const onInput = () => {
     const next = snapshot() !== baseline.current;
@@ -590,7 +597,7 @@ function AddLink({
 }
 
 /** The footer group these links fill, as Settings → Footer sets it. */
-export type FindMeGroup = { label: LocalizedText; enabled: boolean };
+type FindMeGroup = { label: LocalizedText; enabled: boolean };
 
 function FooterPreview({
   links,
@@ -674,6 +681,7 @@ export function SocialLinks({
   const { csrfToken } = useStudioSession();
   const toast = useToast();
   const [dirtyRows, setDirtyRows] = useState<ReadonlySet<string>>(new Set());
+  // Bumps after a failed reorder: the list goes back to the server order.
   const [resetKey, setResetKey] = useState(0);
   const handled = useRef<unknown>(null);
   const byId = new Map(links.map((link) => [link.id, link]));
@@ -705,6 +713,7 @@ export function SocialLinks({
     ids: links.map((link) => link.id),
     labelOf,
     onCommit: commit,
+    resetKey,
   });
 
   useEffect(() => {
@@ -786,11 +795,7 @@ export function SocialLinks({
                 <span>Username</span>
                 <span>Icon</span>
               </div>
-              <ol
-                className="p3-social__list"
-                aria-label="Social links"
-                key={resetKey}
-              >
+              <ol className="p3-social__list" aria-label="Social links">
                 {ordered.map((link, index) => (
                   <LinkRow
                     key={link.id}

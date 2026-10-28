@@ -122,7 +122,7 @@ Auth column: **A** = Access JWT verified (middleware + `withOwner`), **A+C** = A
 | `/studio/services/pricing/:serviceId` | one service's price versions (4 ids, else 404) | `PriceEditorData`: active rule, editable fields, classified history, `versionCount`, NT$ mentions in its live terms | `publish-price-version` (now or scheduled ≥ 5 min ahead, Taipei time; through the existing `publishPriceVersion`; `basedOnVersionId` + `expectedVersionCount` → 409 when stale), `cancel-scheduled` (`versionId`, `expectedVersionCount`) | A / A+C | I |
 | `/studio/services/terms` | legal documents | `TermsIndexData`: 6 documents × 2 locales with live version and draft marker, commission readiness | — | A | I |
 | `/studio/services/terms/:documentId/:locale` | one document's draft (6 ids × `zh`/`en`, else 404) | `TermEditorData`: live version, server draft, other locale's keys, history, issues, diff, expected outline | `save` (revision-checked draft), `publish-term-version` (requires `legalReviewConfirmed`, else 422 and nothing saved; copies the stored draft into the next version, moves the pointer with `effective_from = now`, deletes the draft, one batch), `discard-draft` | A / A+C | I |
-| `/studio/social` | social links table | links | `create`, `update`, `delete`, `toggle`, `reorder` | A / A+C | P3 |
+| `/studio/social` | social links table | `{ links, findMe }` (every link, shown or hidden, in footer order; the Find me group's label and visibility from Settings → Footer) | `create`, `update`, `delete`, `toggle`, `reorder` (`ids` JSON naming every stored link once; any other set → 409 `stale_revision` "The order changed elsewhere. Reload and try again.", nothing written; check and write are one statement) | A / A+C | P3 |
 | `/studio/media` | library | page of assets (`?q&kind&usage&missingAlt&cursor`), CORS/analysis status, upload availability | `register-url`, `update`, `archive`, `delete` (`acknowledgeDraftUsages`), `rebuild-usages` | A / A+C | P2 |
 | `/studio/media/:id` | asset detail | asset, usages, public URL, image sources preview | `update`, `delete` | A / A+C | P2 |
 | `/studio/homepage` | homepage control (§4.2.1) | hero (brand fields), sections + counts (site), showreel, featured lists per type with candidates, availability, contact CTA | `save-hero`, `save-sections`, `set-showreel`, `feature`, `unfeature`, `reorder-featured` (`type`, `ids`) | A / A+C | P4 |
@@ -390,7 +390,7 @@ Two columns (single column on mobile), ruled lists, no charts, no cards grid:
 
 | Block | Content |
 | --- | --- |
-| Needs attention | Ordered by severity; each row links to the fix: contact email unconfirmed; redesign copy unacknowledged; showreel unset or its track not published; no featured projects; published items with unpublished changes; published items missing a locale (legacy); `TODO_CONTENT` drafts (count, link to filtered lists); images used by published entries without alt text; pending uploads/failed uploads; commissions pending review, student reviews, cleanup due. |
+| Needs attention | Ordered by severity; each row links to the fix: contact email unconfirmed; redesign copy unacknowledged; showreel unset or its track not published; no featured projects; published items with unpublished changes; published items missing a locale (legacy); `TODO_CONTENT` drafts (count, link to filtered lists); images used by published entries without alt text; pending uploads/failed uploads; commission form closed (one high row while a published commission service has no active price, or the general terms, privacy notice or its service terms are not in effect in a locale; the detail names each missing document as the Terms page does, for example "Service terms · Vocal Mixing (EN)", and the row links to Terms, or to Pricing when a price is missing; same rule as the readiness tables, `getCommissionReadiness`); commissions pending review, student reviews, cleanup due. |
 | Recent changes | 15 most recent `updated_at` across content tables, settings and social links: type, title (current locale zh), status badge, relative time. |
 | Content | Table: rows Projects, Music, Recognition, Writing, Services; columns Published, Draft, Archived, TODO; each number links to the filtered list. |
 | Homepage | Showreel (title + status), featured projects in order (titles), counts of featured music/recognition/writing/services, section visibility summary, "Edit homepage". |
@@ -457,7 +457,7 @@ Section maps per type:
 
 | Type | Sections (fields) |
 | --- | --- |
-| Project | **BASIC** title, slug, year, role, short description, description · **MEDIA** cover image, cover video, gallery (ordered, captions), social image · **CLASSIFICATION** primary category, categories, tools, technologies · **CASE STUDY** context, problem, approach, process, architecture, result, reflection, additional content blocks (legacy bodies) · **LINKS** · **CREDITS** · **PUBLICATION** status, listed, featured, SEO title/description, checklist, danger zone |
+| Project | **BASIC** title, slug, year, role, short description, description · **MEDIA** cover image, cover video, gallery (ordered, captions), social image · **CLASSIFICATION** primary category, categories, tools, technologies · **CASE STUDY** context, problem, approach, process, architecture, result, reflection, additional content blocks (block editor with ZH/EN tabs, shown after the case study; media blocks list in the usage index as `body.zh` / `body.en`; a block a save refuses, or a media block the checklist blocks (asset missing, wrong kind, alt text missing), marks its locale tab and shows the message there) · **LINKS** · **CREDITS** · **PUBLICATION** status, listed, featured, SEO title/description, checklist, danger zone |
 | Music | **BASIC** title, artist, year, role, genre, description · **AUDIO** preview audio, full audio, duration, preview start/end, artwork · **LINKS** Spotify, YouTube, SoundCloud, other · **CREDITS** · **RELATIONS** project · **PUBLICATION** featured, homepage showreel toggle |
 | Recognition | **BASIC** event, organization, result, type, year, date · **DETAILS** description, URL, image, discipline, related project · **PUBLICATION** |
 | Writing | **BASIC** title, slug, date, platform (+ label for Other), category, excerpt · **SOURCE** external URL · **CONTENT** block editor with ZH/EN tabs (ported `BlockEditor`) · **MEDIA** cover, social image · **PUBLICATION** listed, featured, SEO |
@@ -572,6 +572,19 @@ the checklist opens.
 - Each drop saves immediately (one `reorder` request with the full ordered id list, applied by a single
   `json_each` statement); the moved row flashes a background highlight (`--dur-3`); toast "Order saved"; a failure
   restores the previous order and shows an error toast.
+- A failure is any `ok: false` answer, for example 409 `stale_revision` from the lists that refuse an id set that is
+  not the stored one (Settings → Footer, `/studio/social`) after another tab added or deleted a row. A failed save
+  changes no server data, so `useKeyboardReorder` (`ui/list.tsx`) would keep the refused order; every list whose
+  reorder can fail therefore passes a failure counter as the hook's `resetKey` (`useFailureCount(fetcher)` from
+  `ui/use-fetcher-settled.ts`, or the list's own counter), and a new key restarts the order from the server order
+  during render, in a list that has sent an order since its last restart; a list that has sent nothing (another
+  services group or the other projects list on the same counter, a failed row action) keeps its order and a pick in
+  progress. The restart clears the list's live-region announcement, so the same move tried again is announced. The
+  rows stay mounted: focus, open editors and unsaved row edits survive. Lists: projects (homepage strip and manual
+  order), music, services (per group), taxonomies, homepage featured lists, social links; the Studio e2e
+  (`tests/e2e-studio/wp7-final-sweep.spec.ts`) makes each one's reorder fail and checks the order comes back. On the
+  same counter, the recognition and writing tie groups (`list-kit.tsx`, rows without inline edits) remount instead,
+  and Settings → Footer remounts only its reorder state (`ReorderState`), so its rows stay mounted too.
 - Pointer drag-and-drop is not required. No library is added; if pointer dragging is wanted later, a ~150-line
   Pointer Events hook that moves rows via CSSOM in an effect (CSP-safe) is enough; explicit controls stay as the
   accessible path.

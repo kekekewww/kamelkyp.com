@@ -13,13 +13,13 @@ interface Registry {
 
 const registries = new Map<string, Registry>();
 
-export const OBSERVE_OPTIONS = {
+const OBSERVE_OPTIONS = {
   reveal: { rootMargin: "0px 0px -10% 0px", threshold: 0 },
   parallax: { rootMargin: "20% 0px", threshold: 0 },
   canvas: { rootMargin: "0px", threshold: 0 },
 } as const satisfies Record<string, IntersectionObserverInit>;
 
-export type ObserveKey = keyof typeof OBSERVE_OPTIONS;
+type ObserveKey = keyof typeof OBSERVE_OPTIONS;
 
 function getRegistry(key: ObserveKey): Registry | null {
   if (typeof IntersectionObserver === "undefined") return null;

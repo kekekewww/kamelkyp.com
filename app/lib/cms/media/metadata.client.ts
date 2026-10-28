@@ -69,7 +69,7 @@ function probeMedia(
   });
 }
 
-export const browserProbes: MetadataProbes = {
+const browserProbes: MetadataProbes = {
   image: probeImage,
   media: probeMedia,
 };

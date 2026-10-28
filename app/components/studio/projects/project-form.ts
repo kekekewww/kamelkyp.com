@@ -9,13 +9,15 @@ import {
   type ProjectContent,
   ProjectDraftSchema,
 } from "../../../lib/cms/schemas/project";
-import type { ValidationIssue } from "../../../lib/cms/types";
+import type { LocalizedBlocks, ValidationIssue } from "../../../lib/cms/types";
 import {
   structuralIssues,
   validateForPublish,
 } from "../../../lib/cms/validation";
+import { ContentBlockSchema } from "../../../lib/content/block-schema";
+import { editableBlocks } from "../blocks/block-model";
 
-export type ProjectFormResult =
+type ProjectFormResult =
   | {
       ok: true;
       content: ProjectContent;
@@ -39,6 +41,85 @@ export function readProjectForm(formData: FormData): ProjectFormResult {
     expectedRevision: readExpectedRevision(formData),
     clearTodoContent: raw.clearTodoContent === true,
   };
+}
+
+/**
+ * The block editor's value in a local backup (`serializeForm` entries):
+ * `<name>.zh:json` and `<name>.en:json`. Restoring a backup writes only the
+ * visible controls back (`useEditorForm`), so the block editor remounts with
+ * this value instead. A locale the backup lacks or garbles keeps `stored`.
+ * Blocks still being written stay, as the writing editor keeps them
+ * (`editableBlocks`); only entries the editor cannot show are dropped.
+ */
+export function backupBlocks(
+  fields: string,
+  name: string,
+  stored: LocalizedBlocks,
+): LocalizedBlocks {
+  let entries: unknown;
+  try {
+    entries = JSON.parse(fields);
+  } catch {
+    return stored;
+  }
+  if (!Array.isArray(entries)) return stored;
+  const read = (locale: "zh" | "en"): LocalizedBlocks["zh"] => {
+    const entry = entries.find(
+      (item): item is [string, string] =>
+        Array.isArray(item) &&
+        item[0] === `${name}.${locale}:json` &&
+        typeof item[1] === "string",
+    );
+    if (!entry) return stored[locale];
+    let value: unknown;
+    try {
+      value = JSON.parse(entry[1]);
+    } catch {
+      return stored[locale];
+    }
+    if (!Array.isArray(value)) return stored[locale];
+    return editableBlocks(value);
+  };
+  return { zh: read("zh"), en: read("en") };
+}
+
+const BODY_FIELDS: ReadonlySet<string> = new Set([
+  "body.zh:json",
+  "body.en:json",
+]);
+
+/** A block list without the blocks the schema refuses (unchanged when none). */
+function storableBlocksJson(raw: string): string {
+  let value: unknown;
+  try {
+    value = JSON.parse(raw);
+  } catch {
+    return raw;
+  }
+  if (!Array.isArray(value)) return raw;
+  const kept = value.filter(
+    (block) => ContentBlockSchema.safeParse(block).success,
+  );
+  return kept.length === value.length ? raw : JSON.stringify(kept);
+}
+
+/**
+ * The form as the preview reads it. The block editor posts a block the owner
+ * is still writing (a link with only its label) so that a save refuses it
+ * and the block keeps its message; the preview leaves such blocks out instead
+ * of refusing the whole form (422), so it keeps following everything else.
+ */
+export function previewFormData(formData: FormData): FormData {
+  const result = new FormData();
+  for (const [name, value] of formData.entries()) {
+    result.append(
+      name,
+      BODY_FIELDS.has(name) && typeof value === "string"
+        ? storableBlocksJson(value)
+        : value,
+    );
+  }
+  return result;
 }
 
 /** Publish readiness the browser can judge on its own (model + TODO rules). */
@@ -79,6 +160,33 @@ export function mergeIssues(
     ...client,
     ...server.filter((issue) => SERVER_ONLY_CODES.has(issue.code)),
   ];
+}
+
+/**
+ * Inline messages for a block field (`name`), per locale: the first blocking
+ * issue on that locale's blocks. The server reports them on
+ * `<name>.<locale>` (media blocks: missing asset, wrong kind, and missing
+ * alt text, whose own locale names the alt text, not the block), below it
+ * (a block a save refused: `<name>.<locale>.<index>.<key>`) or on `<name>`
+ * with the locale (the whole list).
+ */
+export function blockFieldErrors(
+  issues: readonly ValidationIssue[],
+  name: string,
+): Partial<Record<"zh" | "en", string>> {
+  const result: Partial<Record<"zh" | "en", string>> = {};
+  for (const locale of ["zh", "en"] as const) {
+    const path = `${name}.${locale}`;
+    const issue = issues.find(
+      ({ severity, field, locale: issueLocale }) =>
+        severity === "error" &&
+        (field === path ||
+          field.startsWith(`${path}.`) ||
+          (field === name && issueLocale === locale)),
+    );
+    if (issue) result[locale] = issue.message;
+  }
+  return result;
 }
 
 export const PROJECT_SECTIONS = [

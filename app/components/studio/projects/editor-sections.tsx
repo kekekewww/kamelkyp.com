@@ -3,7 +3,6 @@
  * CLASSIFICATION, CASE STUDY, LINKS, CREDITS, PUBLICATION. Uncontrolled
  * fields named per `app/lib/cms/forms.ts`; the editor owns state and submit.
  */
-import { useState } from "react";
 import { Link } from "react-router";
 import type { MediaSummary } from "../../../lib/cms/media/summary";
 import {
@@ -17,6 +16,7 @@ import type {
   LocalizedText,
   ValidationIssue,
 } from "../../../lib/cms/types";
+import { BlockEditor } from "../blocks/block-editor";
 import {
   Checkbox,
   EditorSection,
@@ -75,10 +75,7 @@ const STORY: Record<StoryKey, { label: string; hint: string }> = {
 };
 
 /** Inline structural errors from the last failed save. */
-export type FieldErrors = (
-  field: string,
-  locale?: "zh" | "en",
-) => string | undefined;
+type FieldErrors = (field: string, locale?: "zh" | "en") => string | undefined;
 
 export function fieldErrorLookup(
   issues: readonly ValidationIssue[] | undefined,
@@ -342,46 +339,30 @@ function StoryCoverage({ story }: { story: ProjectContent["story"] }) {
   );
 }
 
-function blockCount(count: number, locale: string) {
-  return `${count} ${count === 1 ? "block" : "blocks"} in ${locale}`;
-}
-
-/** Imported block bodies: preserved as they are until the block editor lands. */
-function LegacyBlocks({ body }: { body: ProjectContent["body"] }) {
-  const [removed, setRemoved] = useState(false);
-  const empty = body.zh.length === 0 && body.en.length === 0;
-  const value = JSON.stringify(removed ? { zh: [], en: [] } : body);
-  if (empty) return <input type="hidden" name="body:json" value={value} />;
-  return (
-    <div className="projects-legacy" data-removed={removed ? "" : undefined}>
-      <input type="hidden" name="body:json" value={value} />
-      <p className="studio-field__label">Additional content blocks</p>
-      <p className="studio-hint">
-        Imported from the old admin: {blockCount(body.zh.length, "ZH")} ·{" "}
-        {blockCount(body.en.length, "EN")}. They appear after the case study on
-        the public page and are kept as they are.
-      </p>
-      <button
-        type="button"
-        className="studio-btn studio-btn--ghost studio-btn--compact"
-        aria-pressed={removed}
-        onClick={() => setRemoved((value) => !value)}
-      >
-        {removed ? "Keep the blocks" : "Remove the blocks on save"}
-      </button>
-    </div>
-  );
-}
-
 export function CaseStudySection({
   content,
   story,
   errors,
+  assets,
+  body = content.body,
+  bodyKey = 0,
+  bodyErrors,
+  onBlocksChange,
 }: {
   content: ProjectContent;
   /** Live story values (coverage follows typing). */
   story: ProjectContent["story"];
   errors: FieldErrors;
+  /** Summaries of the assets the working copy references, by id. */
+  assets: Record<string, MediaSummary>;
+  /** The blocks the editor starts from: the working copy or a restored backup. */
+  body?: ProjectContent["body"];
+  /** A new key remounts the block editor with `body` (backup restored). */
+  bodyKey?: number;
+  /** Server messages on the blocks, per locale (`blockFieldErrors`). */
+  bodyErrors?: Partial<Record<"zh" | "en", string>>;
+  /** The editor's change notification (dirty state, checklist, preview). */
+  onBlocksChange?: () => void;
 }) {
   return (
     <EditorSection
@@ -404,7 +385,16 @@ export function CaseStudySection({
             errors={localeErrors(errors, `story.${key}`)}
           />
         ))}
-        <LegacyBlocks body={content.body} />
+        <BlockEditor
+          key={`body-${bodyKey}`}
+          name="body"
+          label="Additional content blocks"
+          hint="Shown after the case study on the public page."
+          defaultValue={body}
+          assets={Object.values(assets)}
+          onChange={onBlocksChange}
+          errors={bodyErrors}
+        />
       </div>
     </EditorSection>
   );

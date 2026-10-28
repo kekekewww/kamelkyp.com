@@ -12,7 +12,7 @@
 export const STUDIO_CSRF_HEADER = "X-Studio-CSRF";
 export const SESSION_REFRESH_MS = 20 * 60 * 1000;
 
-export interface StudioSessionPayload {
+interface StudioSessionPayload {
   csrfToken: string;
   expiresAt: string;
   ownerEmail: string;
