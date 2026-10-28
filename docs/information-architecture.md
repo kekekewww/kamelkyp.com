@@ -454,6 +454,13 @@ project. Unknown slug → 404.
   field labels and buttons unchanged (tests depend on 下一步, Next, Review,
   Submit commission, Retry notification, …). The header CTA is kept but the
   page adds no extra START A PROJECT.
+  When the terms change while the wizard is open, the submit answers 409
+  `terms_changed` (the log keeps `term_version_mismatch`) with
+  條款已更新。請重新整理頁面，閱讀並同意新版條款後再送出。
+  / The terms were updated. Reload the page, read and accept the new version,
+  then submit again. The verify step then offers
+  重新整理 / Reload in place of the submit button: it reloads the page data,
+  keeps the draft, resets the acceptance and reopens the `terms` step.
 - `/commission/success`: unchanged copy, reskinned; link 返回主頁 / Back home.
 
 ### 4.11 Terms / Privacy
