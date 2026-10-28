@@ -203,7 +203,7 @@ Section order is fixed by the spec. Headings are `h2` unless noted.
 
 | # | Section | Eyebrow (both locales) | Heading zh / en | Data | CTA | Share |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | Hero | `SOUND × SOFTWARE × INTERACTION` | `h1` **Kamel** (both). Roles line: 音樂製作人 · 軟體開發者 · 創意科技 / Music Producer · Software Developer · Creative Technologist. Statement: 打造系統、聲音與互動體驗。/ Building systems, sound, and interactive experiences. | D1 `page/home` media → first item is the showreel (existing `listMediaForVersion`); canvas hero visual reads its amplitude | **CTA #1**: 開始合作 / Start a project (primary) + 查看作品 / View work (secondary, → `/works`) | 15 % (≈ 100 vh) |
+| 1 | Hero | `SOUND × SOFTWARE × INTERACTION` | `h1` **Kamel** (both). Roles line: 音樂製作人 · 軟體開發者 · 創意科技 / Music Producer · Software Developer · Creative Technologist. Statement: 打造系統、聲音與互動體驗。/ Building systems, sound, and interactive experiences. | The homepage showreel track (`getShowreel` in `app/lib/cms/public/music.server.ts`, read by `loadHome`); canvas hero visual reads its amplitude | **CTA #1**: 開始合作 / Start a project (primary) + 查看作品 / View work (secondary, → `/works`) | 15 % (≈ 100 vh) |
 | 2 | Selected Work | `SELECTED WORK / 2024—2026` | 精選作品 / Selected Work | Merged list (see 4.2), first 4 items where file `featured: true`, plus the most recent D1 work first if one exists; must span ≥ 3 categories | Text link 所有作品 → / All work → (`/works`) | 25 % |
 | 3 | Capabilities | `CAPABILITIES / 04` | 能力範圍 / Capabilities | `capabilities.ts` (4 groups) | none | 10 % |
 | 4 | Recognition | `RECOGNITION` | 獲獎與肯定 / Recognition | `recognition.ts`, newest 3, metadata rows `YEAR / EVENT / RESULT` | none | 6 % |
@@ -247,10 +247,12 @@ Hierarchy:
 5. Closing band: 沒看到類似的案子？直接聊聊。/ Don't see something similar?
    Let's talk. + **CTA** 開始合作 / Start a project.
 
-Mixed source list:
+Mixed source list (the pre-Studio design; since the Studio the list has one
+source, the published projects that `listPublicProjects(db, env, locale)` in
+`app/lib/cms/public/projects.server.ts` returns):
 
-- D1 works (`listPublishedContent(db, "work", locale)`) map to the same row
-  model: `title`, `summary` → description, `year` from `publishedAt`,
+- D1 works map to the same row model: `title`, `summary` → description,
+  `year` from `publishedAt`,
   `categories: ["music"]` (D1 works have no category column; `music` is the
   umbrella for audio work), `placeholder: false`, `source: "d1"`.
 - File projects from `app/content/projects.ts`, `source: "file"`.
@@ -300,7 +302,9 @@ are absent (`sections` array keyed by `kind`):
   which cannot be published, so they are 404 publicly; the detail `noindex`
   for `todoContent` is defensive (WP4).
 
-D1 works (`getPublicContent(db, "work", slug, locale)`):
+D1 works (the pre-Studio design; since the Studio every detail page is a
+project that `getPublicProject(db, env, locale, slug)` in
+`app/lib/cms/public/projects.server.ts` reads, in the common frame above):
 
 - Same frame; metadata grid shows 年份 (from `publishedAt`) and 類別 = 音樂 / Music
   only. Body is the existing `BlockRenderer` inside the case-study text column
