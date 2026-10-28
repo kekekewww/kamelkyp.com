@@ -3,7 +3,7 @@
  * 1–96 characters, no leading or trailing hyphen (admin-architecture §4.11).
  */
 
-export const SLUG_MAX = 96;
+const SLUG_MAX = 96;
 const SLUG_PATTERN = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
 
 export function isValidSlug(slug: string): boolean {

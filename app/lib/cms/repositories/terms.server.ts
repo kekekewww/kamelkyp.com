@@ -57,9 +57,9 @@ import { type FxStatus, loadFxStatus } from "./pricing.server";
 
 export type { TermDocumentId } from "../../commission/term-outline";
 
-export type TermDocumentKind = "common" | "service" | "privacy";
+type TermDocumentKind = "common" | "service" | "privacy";
 
-export type TermDocumentInfo = {
+type TermDocumentInfo = {
   id: TermDocumentId;
   kind: TermDocumentKind;
   serviceId: ServiceId | null;
@@ -68,7 +68,7 @@ export type TermDocumentInfo = {
   publicPath: "/terms" | "/privacy";
 };
 
-export type TermVersionInfo = {
+type TermVersionInfo = {
   id: string;
   versionNumber: number;
   createdAt: string;
@@ -654,7 +654,7 @@ export async function publishTermDraft(
   };
 }
 
-export async function discardTermDraft(
+async function discardTermDraft(
   db: D1Database,
   input: DraftKey & { revision: number },
 ): Promise<void> {

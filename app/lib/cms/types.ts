@@ -9,7 +9,7 @@ export type { Locale };
 export type LocalizedText = { zh: string; en: string };
 export type LocalizedBlocks = { zh: ContentBlock[]; en: ContentBlock[] };
 
-export const ENTRY_STATUSES = ["draft", "published", "archived"] as const;
+const ENTRY_STATUSES = ["draft", "published", "archived"] as const;
 export type EntryStatus = (typeof ENTRY_STATUSES)[number];
 
 export const ENTITY_TYPES = [
@@ -30,7 +30,7 @@ export type AssetRef = string;
 export type LinkItem = { label: LocalizedText; url: string };
 export type CreditItem = { role: LocalizedText; name: string };
 
-export type ValidationIssueCode =
+type ValidationIssueCode =
   | "required"
   | "required_locale"
   | "one_locale_only"

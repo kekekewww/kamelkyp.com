@@ -61,7 +61,7 @@ export interface ImageSources {
   height?: number;
 }
 
-export const DEFAULT_IMAGE_WIDTHS = [480, 960, 1440, 1920] as const;
+const DEFAULT_IMAGE_WIDTHS = [480, 960, 1440, 1920] as const;
 
 /**
  * `src`/`srcset` for an image. With transformations on and an R2 asset, widths

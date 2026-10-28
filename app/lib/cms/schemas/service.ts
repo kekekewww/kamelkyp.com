@@ -19,14 +19,14 @@ import {
   storedArray,
 } from "./common";
 
-export const PRICE_MODES = [
+const PRICE_MODES = [
   "fixed",
   "starting_from",
   "custom_quote",
   "contact",
 ] as const;
 export type PriceMode = (typeof PRICE_MODES)[number];
-export const CURRENCIES = ["TWD", "USD"] as const;
+const CURRENCIES = ["TWD", "USD"] as const;
 export type Currency = (typeof CURRENCIES)[number];
 
 export type ServiceContent = {

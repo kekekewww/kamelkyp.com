@@ -14,7 +14,7 @@ import {
   type SiteSettings,
 } from "./schemas/site-settings";
 
-export type SettingsDocument<T> = { value: T; revision: number };
+type SettingsDocument<T> = { value: T; revision: number };
 
 type SettingsRow = {
   key: "brand" | "site";
@@ -51,7 +51,7 @@ export function settingsFromRows(rows: readonly SettingsRow[]): {
   };
 }
 
-export async function getSettings(db: D1Database) {
+async function getSettings(db: D1Database) {
   const rows = await settingsStatement(db).all<SettingsRow>();
   return settingsFromRows(rows.results);
 }

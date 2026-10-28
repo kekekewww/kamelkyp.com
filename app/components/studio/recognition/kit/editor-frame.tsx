@@ -52,7 +52,7 @@ type EditorResult =
       issues?: ValidationIssue[];
     };
 
-export type EditorContext = {
+type EditorContext = {
   /** The checklist for the current form. */
   issues: ValidationIssue[];
   /** Inline message for a field: structural save errors, or publish blockers after a publish attempt. */

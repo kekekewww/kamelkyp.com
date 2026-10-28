@@ -141,7 +141,7 @@ function groupStatements(db: D1Database): D1PreparedStatement[] {
  * {@link fingerprintLabel} for the labels; not the group's visibility or
  * position, so toggling or moving a group does not invalidate an open editor).
  */
-export async function footerGroupFingerprint(
+async function footerGroupFingerprint(
   label: LocalizedText,
   rows: readonly FooterLinkRow[],
 ): Promise<string> {
@@ -283,7 +283,7 @@ function hideable(kind: FooterGroupKind): boolean {
 }
 
 /** Every footer group (not the legacy `social` one) in footer order. */
-export async function listStudioFooterGroups(
+async function listStudioFooterGroups(
   db: D1Database,
 ): Promise<StudioFooterGroup[]> {
   const [groups, labels, links] = await db.batch(groupStatements(db));
@@ -358,7 +358,7 @@ async function findGroup(
 // ---- Writes -----------------------------------------------------------------
 
 /** A refusal with a message of its own (CmsError answers generic text). */
-export class FooterRefusal extends Error {
+class FooterRefusal extends Error {
   readonly code: string;
   readonly status: number;
 
@@ -545,7 +545,7 @@ async function createFooterGroup(
 }
 
 /** Creates (no `id`) or updates a group; the save is live. */
-export async function saveFooterGroup(
+async function saveFooterGroup(
   db: D1Database,
   input: FooterGroupDraft,
 ): Promise<StudioFooterGroup> {
@@ -590,7 +590,7 @@ export async function saveFooterGroup(
 }
 
 /** Shows or hides a group (Legal is always shown). */
-export async function setFooterGroupEnabled(
+async function setFooterGroupEnabled(
   db: D1Database,
   id: string,
   enabled: boolean,
@@ -616,10 +616,7 @@ export async function setFooterGroupEnabled(
 }
 
 /** Deletes a custom group with its labels and links. */
-export async function deleteFooterGroup(
-  db: D1Database,
-  id: string,
-): Promise<void> {
+async function deleteFooterGroup(db: D1Database, id: string): Promise<void> {
   const builtIn = FOOTER_SYSTEM_KEYS.some(
     (key) => FOOTER_SYSTEM_GROUPS[key].seedId === id,
   );
@@ -648,7 +645,7 @@ export async function deleteFooterGroup(
  * screen shows (stored rows and missing built-ins); otherwise the footer
  * changed elsewhere and the order is refused.
  */
-export async function reorderFooterGroups(
+async function reorderFooterGroups(
   db: D1Database,
   ids: readonly string[],
 ): Promise<void> {
@@ -674,7 +671,7 @@ export async function reorderFooterGroups(
 // ---- Forms and actions --------------------------------------------------------
 
 /** Form → draft (structural parse only; the save rules run in the repository). */
-export function parseFooterGroupForm(formData: FormData): FooterGroupDraft {
+function parseFooterGroupForm(formData: FormData): FooterGroupDraft {
   const raw = formDataToObject(formData);
   const id = typeof raw.id === "string" ? raw.id.trim() : "";
   const fingerprint =

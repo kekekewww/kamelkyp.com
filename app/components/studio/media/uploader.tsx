@@ -34,7 +34,7 @@ import { useStudioSession } from "../ui/studio-session";
 import { useToast } from "../ui/toast";
 import { preflightUpload, UploadFailure, uploadFile } from "./upload-client";
 
-export interface MediaUploaderProps {
+interface MediaUploaderProps {
   kind?: MediaKind;
   onUploaded: (asset: MediaSummary) => void;
   /** `picker` (inside a media field) or `library` (the Media page). */

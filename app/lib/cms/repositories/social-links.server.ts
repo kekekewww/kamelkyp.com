@@ -29,7 +29,7 @@ import type { LocalizedText, ValidationIssue } from "../types";
 
 export type { SocialLink, SocialPlatform };
 
-export type SocialLinkDraft = {
+type SocialLinkDraft = {
   id?: string;
   platform: string;
   label: LocalizedText;
@@ -325,7 +325,7 @@ export async function reorderSocialLinks(
 }
 
 /** `ids` form field: a JSON array of up to 500 id strings, or null. */
-export function readIdList(formData: FormData): string[] | null {
+function readIdList(formData: FormData): string[] | null {
   const raw = readString(formData, "ids");
   if (!raw) return null;
   try {
@@ -344,7 +344,7 @@ export function readIdList(formData: FormData): string[] | null {
 }
 
 /** Form → draft. `enabled` is only set when the form submitted it. */
-export function parseSocialLinkForm(formData: FormData): SocialLinkDraft {
+function parseSocialLinkForm(formData: FormData): SocialLinkDraft {
   const raw = formDataToObject(formData);
   const text = (value: unknown) => (typeof value === "string" ? value : "");
   const id = text(raw.id).trim();
@@ -363,7 +363,7 @@ export function parseSocialLinkForm(formData: FormData): SocialLinkDraft {
  * How Settings → Footer sets the "Find me" group these links fill: its label
  * per locale (the default when none is stored) and whether it is shown.
  */
-export async function getFindMeGroup(
+async function getFindMeGroup(
   db: D1Database,
 ): Promise<{ label: LocalizedText; enabled: boolean }> {
   const rows = await db

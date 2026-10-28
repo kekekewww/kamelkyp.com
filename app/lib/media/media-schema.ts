@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const MediaKinds = [
+const MediaKinds = [
   "youtube",
   "google_drive",
   "direct_audio",
@@ -21,7 +21,7 @@ const httpsUrl = z.url().superRefine((value, context) => {
   }
 });
 
-export const MediaItemSchema = z
+const MediaItemSchema = z
   .object({
     id: z.string().min(1).max(100),
     kind: z.enum(MediaKinds),

@@ -10,7 +10,7 @@ import { Link, useLocation, useNavigate } from "react-router";
 import { ShortcutHelp } from "../ui/shortcut-help";
 import { activeNavItem, GO_TO_SHORTCUTS, STUDIO_NAV } from "./nav";
 
-export function StudioWordmark() {
+function StudioWordmark() {
   return (
     <Link className="studio-wordmark" to="/studio" aria-label="KAMEL STUDIO">
       <span className="studio-wordmark__brand" aria-hidden="true">

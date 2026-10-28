@@ -33,7 +33,7 @@ function stateWord(
     : STATE_WORD[version.state];
 }
 
-export function PriceStateBadge({
+function PriceStateBadge({
   version,
 }: {
   version: Pick<StudioPriceVersion, "state" | "action" | "effectiveFrom">;

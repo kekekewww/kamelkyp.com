@@ -32,14 +32,14 @@ import type { LocalizedText } from "../types";
 
 export type TaxonomyTermRow = Term & { usage: number };
 
-export const VOCABULARY_LABELS: Record<Vocabulary, string> = {
+const VOCABULARY_LABELS: Record<Vocabulary, string> = {
   project_category: "Project categories",
   recognition_type: "Recognition types",
   service_group: "Service groups",
   writing_category: "Writing categories",
 };
 
-export function parseVocabulary(value: string | null | undefined): Vocabulary {
+function parseVocabulary(value: string | null | undefined): Vocabulary {
   return value && isVocabulary(value) ? value : VOCABULARIES[0];
 }
 

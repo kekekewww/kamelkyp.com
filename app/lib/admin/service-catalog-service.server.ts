@@ -13,7 +13,7 @@ const PriceInputSchema = z.object({
 
 export type PublishAction = "publish" | "replace" | "cancel";
 
-export interface AdminPriceVersion {
+interface AdminPriceVersion {
   id: string;
   serviceId: ServiceId;
   baseTwd: number;

@@ -32,7 +32,7 @@ function label(text: LocalizedText): string {
   return text.en.trim() || text.zh.trim();
 }
 
-export function musicMeta(row: StudioMusicRow): string {
+function musicMeta(row: StudioMusicRow): string {
   return [
     label(row.artist),
     label(row.role),

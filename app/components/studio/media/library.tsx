@@ -66,7 +66,7 @@ function isTyping(target: EventTarget | null) {
   );
 }
 
-export function assetMeta(summary: MediaSummary): string {
+function assetMeta(summary: MediaSummary): string {
   const parts: string[] = [KIND_LABEL[summary.kind]];
   const size = formatBytes(summary.sizeBytes);
   if (size) parts.push(size);

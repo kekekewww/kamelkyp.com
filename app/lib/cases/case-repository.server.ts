@@ -10,7 +10,7 @@ export type CaseStatus =
   | "paused"
   | "cancelled";
 
-export interface SubmissionAttemptRecord {
+interface SubmissionAttemptRecord {
   caseId: string;
   serviceId: ServiceId;
   lockedPriceMinor: number;

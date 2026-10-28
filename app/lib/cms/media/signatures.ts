@@ -140,7 +140,7 @@ export function acceptAttribute(kind?: MediaKind): string {
   ].join(",");
 }
 
-export type UploadCheck =
+type UploadCheck =
   | { ok: true; kind: UploadKind; mimeType: string }
   | {
       ok: false;

@@ -1,7 +1,7 @@
 import { createContext, RouterContextProvider } from "react-router";
 import type { Env } from "../env.server";
 
-export interface CloudflareContextValue {
+interface CloudflareContextValue {
   env: Env;
   ctx: ExecutionContext;
   security: {

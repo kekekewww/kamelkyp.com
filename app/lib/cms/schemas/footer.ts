@@ -36,7 +36,7 @@ export const FOOTER_LIMITS = {
  * full-width or Chinese numerals (`4 元`, `４０００元`, `4千元`, `1萬元`), and the
  * currency words 台幣 / 臺幣 / 美元 / 美金.
  */
-export const PRICE_FIGURE =
+const PRICE_FIGURE =
   /(?:NT|US)\s*[$＄]|(?<![a-z])(?:NTD|TWD|USD)(?![a-z])|(?<![a-z])NT\s*[\d０-９]|[$＄€£¥￥]\s*[\d０-９]|[\d０-９]\s*[$＄€£¥￥]|[\d０-９〇零一二兩两三四五六七八九十百千萬万億亿]\s*元|[台臺]幣|美[元金]/i;
 
 /** Site paths that are not public pages (the public site never links to them). */
@@ -61,7 +61,7 @@ function isSiteHost(hostname: string): boolean {
 export type FooterGroupKind = FooterSystemKey | "custom";
 
 /** One stored `links` row of a pair, as the public footer reads it. */
-export type StoredFooterLinkRow = { id: string; url: string; enabled: boolean };
+type StoredFooterLinkRow = { id: string; url: string; enabled: boolean };
 
 export type StudioFooterLink = {
   /** First row id of the pair (client key only). */

@@ -53,7 +53,7 @@ export type {
 };
 
 /** The case service's maximum page size (same as the legacy list). */
-export const COMMISSION_PAGE_SIZE = 100;
+const COMMISSION_PAGE_SIZE = 100;
 
 // ---- Loader -----------------------------------------------------------------------
 
@@ -343,7 +343,7 @@ function errorResult(code: string, issues?: ValidationIssue[]) {
 }
 
 /** A coded case-service error → action result; anything else is rethrown. */
-export function commissionErrorResult(error: unknown) {
+function commissionErrorResult(error: unknown) {
   const code = errorCode(error);
   if (!code) throw error;
   return errorResult(code);

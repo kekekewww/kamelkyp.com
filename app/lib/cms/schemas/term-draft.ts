@@ -19,7 +19,7 @@ import {
 import { formDataToObject } from "../forms";
 import type { ValidationIssue } from "../types";
 
-export const TERM_KEY_PATTERN = /^[a-z0-9]+(?:[_-][a-z0-9]+)*$/;
+const TERM_KEY_PATTERN = /^[a-z0-9]+(?:[_-][a-z0-9]+)*$/;
 
 export const TERM_LIMITS = {
   key: 100,
@@ -33,7 +33,7 @@ export const TERM_LIMITS = {
 const KEY_FORMAT_MESSAGE =
   "Use lowercase letters and digits, with single - or _ between them (for example deposit_terms).";
 
-export const TermDraftClauseSchema = z.object({
+const TermDraftClauseSchema = z.object({
   key: z
     .string()
     .trim()
@@ -79,7 +79,7 @@ export function readDraftClauseRows(formData: FormData): TermDraftClause[] {
 }
 
 /** UTF-8 size of the stored body. */
-export function serializedBytes(clauses: readonly TermDraftClause[]): number {
+function serializedBytes(clauses: readonly TermDraftClause[]): number {
   return new TextEncoder().encode(JSON.stringify(clauses)).length;
 }
 
@@ -172,7 +172,7 @@ export type TermPublishContext = {
   } | null;
 };
 
-export function baseOutdatedMessage(
+function baseOutdatedMessage(
   outdated: NonNullable<TermPublishContext["baseOutdated"]>,
 ): string {
   const base =

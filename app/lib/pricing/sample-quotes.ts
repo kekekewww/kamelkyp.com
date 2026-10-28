@@ -181,7 +181,7 @@ const SAMPLES: Record<ServiceId, Sample[]> = {
   edit_transition: EDIT_SAMPLES,
 };
 
-export type SampleQuote = { key: string; label: string; quote: QuoteBreakdown };
+type SampleQuote = { key: string; label: string; quote: QuoteBreakdown };
 
 /**
  * Sample quotes through `calculateQuote`, so the Studio shows exactly what
@@ -208,7 +208,7 @@ export function sampleQuotes(
   });
 }
 
-export type PriceChangeWarning = { field: keyof PriceValues; message: string };
+type PriceChangeWarning = { field: keyof PriceValues; message: string };
 
 /** Values that change by more than 50 % relative to the baseline. */
 export function priceChangeWarnings(

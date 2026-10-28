@@ -107,7 +107,7 @@ export type PricingIndexData = {
   now: string;
 };
 
-export type TermMention = {
+type TermMention = {
   locale: Locale;
   versionNumber: number;
   amounts: number[];
@@ -142,7 +142,7 @@ type PriceRow = {
 };
 
 /** Every version of a service with its state, in the active-rule order. */
-export async function listPriceHistory(
+async function listPriceHistory(
   db: D1Database,
   serviceId: ServiceId,
   now: Date,
@@ -344,7 +344,7 @@ export async function loadPriceEditor(
 
 // ---- Form --------------------------------------------------------------------
 
-export type ParsedPriceVersion =
+type ParsedPriceVersion =
   | {
       ok: true;
       values: PriceValues;
@@ -389,7 +389,7 @@ function error(
  * baseline rule: the active rule for "now", else the rule active just
  * before the chosen time.
  */
-export function parsePriceVersionForm(
+function parsePriceVersionForm(
   formData: FormData,
   ctx: {
     serviceId: ServiceId;

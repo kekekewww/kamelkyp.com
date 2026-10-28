@@ -1,4 +1,4 @@
-export interface SignedEnvelope {
+interface SignedEnvelope {
   version: "v1";
   timestamp: string;
   nonce: string;

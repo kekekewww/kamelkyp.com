@@ -77,7 +77,7 @@ export interface PublicProjectCard {
   todoContent: boolean;
 }
 
-export interface PublicStorySection {
+interface PublicStorySection {
   key: string;
   blocks: FormattedBlock[];
 }

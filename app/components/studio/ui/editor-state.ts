@@ -9,7 +9,7 @@ export type SaveState =
   | { kind: "saving"; lastSavedAt: string | null }
   | { kind: "error"; lastSavedAt: string | null; message: string };
 
-export type SaveEvent =
+type SaveEvent =
   | { type: "change"; dirty: boolean }
   | { type: "submit" }
   | { type: "success"; at: string }

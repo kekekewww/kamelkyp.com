@@ -48,7 +48,7 @@ const NO_ANSWER: CommissionResult = {
 };
 
 /** One fetcher's submissions: the one in flight, then the waiting ones. */
-export type SubmissionQueue = {
+type SubmissionQueue = {
   readonly inFlight: SentFields | null;
   readonly waiting: readonly SentFields[];
 };

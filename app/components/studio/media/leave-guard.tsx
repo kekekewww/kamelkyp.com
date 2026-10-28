@@ -11,7 +11,7 @@ import { ConfirmDialog } from "../ui/confirm-dialog";
 import type { SaveState } from "../ui/editor-state";
 import { findIntentButton } from "../ui/use-editor-form";
 
-export type LeaveGuardStep = "wait" | "proceed" | "reset";
+type LeaveGuardStep = "wait" | "proceed" | "reset";
 
 /**
  * What "Save and leave" does next. `clicked` is the save state the owner saw
@@ -31,7 +31,7 @@ export function leaveGuardStep(
 }
 
 /** What "Save and leave" needs of the editor form. */
-export interface SaveForm {
+interface SaveForm {
   addEventListener(
     type: "submit",
     listener: () => void,

@@ -13,7 +13,7 @@ export interface LevelSource {
   playing: boolean;
 }
 
-export type LevelListener = (source: LevelSource | null) => void;
+type LevelListener = (source: LevelSource | null) => void;
 
 export class PlaybackCoordinator {
   private activeId: string | null = null;

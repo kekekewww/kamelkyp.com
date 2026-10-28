@@ -1,13 +1,13 @@
 import type { MediaKind } from "./media-schema";
 
-export interface ParsedMediaUrl {
+interface ParsedMediaUrl {
   kind: MediaKind;
   canonicalUrl: string;
   embedUrl: string | null;
   provider: "youtube" | "google_drive" | "direct" | "external";
 }
 
-export interface ParseMediaUrlOptions {
+interface ParseMediaUrlOptions {
   startSeconds: number | null;
   endSeconds: number | null;
   r2Hosts: ReadonlySet<string>;

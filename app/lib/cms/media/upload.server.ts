@@ -30,7 +30,7 @@ import {
 import { toMediaSummary } from "./summary";
 import type { MediaConfig } from "./urls";
 
-export type UploadErrorCode =
+type UploadErrorCode =
   | "uploads_not_configured"
   | "invalid_request"
   | "unsupported_media_type"
@@ -57,7 +57,7 @@ const STATUS: Record<UploadErrorCode, number> = {
   upload_failed: 502,
 };
 
-export const UPLOAD_ERROR_MESSAGES: Record<UploadErrorCode, string> = {
+const UPLOAD_ERROR_MESSAGES: Record<UploadErrorCode, string> = {
   uploads_not_configured:
     "Uploads are off: no media bucket is configured for this site. Register a URL instead.",
   invalid_request: "The upload request was incomplete.",
@@ -87,7 +87,7 @@ export class UploadError extends Error {
   }
 }
 
-export function isUploadError(error: unknown): error is UploadError {
+function isUploadError(error: unknown): error is UploadError {
   return error instanceof UploadError;
 }
 
@@ -100,7 +100,7 @@ const text = z
 
 const advisoryNumber = z.number().finite().nullable().optional();
 
-export const UploadDeclarationSchema = z.object({
+const UploadDeclarationSchema = z.object({
   filename: z.string().trim().min(1).max(1000),
   mimeType: z.string().trim().max(200),
   sizeBytes: z.number().finite(),
@@ -128,7 +128,7 @@ function clampInt(
 }
 
 /** Display filename: last path segment, no control characters, ≤ 255. */
-export function displayFilename(name: string): string {
+function displayFilename(name: string): string {
   const last = name.split(/[\\/]/).pop() ?? "";
   // biome-ignore lint/suspicious/noControlCharactersInRegex: stripping control characters is the point
   const cleaned = last.replace(/[\u0000-\u001f\u007f]/g, "").trim();
@@ -156,7 +156,7 @@ export function storageKeyFor(now: Date, id: string, filename: string): string {
   return `media/${year}/${month}/${id}/${sanitizeFilename(filename)}`;
 }
 
-export function uploadUrlFor(assetId: string): string {
+function uploadUrlFor(assetId: string): string {
   return `/api/studio/media/${encodeURIComponent(assetId)}/content`;
 }
 
@@ -437,7 +437,7 @@ export async function receiveUpload(
 }
 
 /** UploadError → JSON error response; rethrows anything else. */
-export function uploadErrorJson(error: unknown): Response {
+function uploadErrorJson(error: unknown): Response {
   if (!isUploadError(error)) throw error;
   return jsonError(error.code, error.status, {
     message: UPLOAD_ERROR_MESSAGES[error.code],

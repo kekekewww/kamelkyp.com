@@ -27,7 +27,7 @@ export const FOOTER_SYSTEM_KEYS = [
 ] as const;
 export type FooterSystemKey = (typeof FOOTER_SYSTEM_KEYS)[number];
 
-export type FooterSystemGroup = {
+type FooterSystemGroup = {
   key: FooterSystemKey;
   /** `link_groups.id` that migration 0010 (and the Studio) create. */
   seedId: string;
@@ -85,7 +85,7 @@ export function isFooterSystemKey(key: string): key is FooterSystemKey {
 }
 
 /** Navigate link ids (stable React keys and test ids). */
-export const NAV_LINK_IDS: Readonly<Record<NavKey, string>> = {
+const NAV_LINK_IDS: Readonly<Record<NavKey, string>> = {
   work: "works",
   services: "services-overview",
   about: "about",
@@ -107,7 +107,7 @@ export const SERVICE_AREA_PATHS: Readonly<
 };
 
 /** Service link labels when the area has no name in this locale. */
-export const DEFAULT_SERVICE_AREA_LABELS: Readonly<
+const DEFAULT_SERVICE_AREA_LABELS: Readonly<
   Record<ServiceAreaKey, LocalizedText>
 > = {
   mixing: { zh: "混音", en: "Mixing" },
@@ -115,7 +115,7 @@ export const DEFAULT_SERVICE_AREA_LABELS: Readonly<
   software: { zh: "軟體與互動", en: "Software & Interactive" },
 };
 
-export const LEGAL_LINKS: ReadonlyArray<{
+const LEGAL_LINKS: ReadonlyArray<{
   id: string;
   label: LocalizedText;
   path: string;

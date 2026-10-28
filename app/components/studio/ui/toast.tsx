@@ -14,7 +14,7 @@ import {
   useState,
 } from "react";
 
-export type ToastTone = "success" | "error" | "info";
+type ToastTone = "success" | "error" | "info";
 
 export interface ToastInput {
   message: string;

@@ -51,7 +51,7 @@ export type Loaded<T extends EntityType> = {
   published: ContentOf<T> | null;
 };
 
-export type PublishOutcome =
+type PublishOutcome =
   | { ok: true; meta: EntityMeta }
   | { ok: false; issues: ValidationIssue[] };
 
@@ -846,7 +846,7 @@ export async function listEntityOptions(
   }));
 }
 
-export type SlugConflict = {
+type SlugConflict = {
   id: string;
   label: string;
   status: EntryStatus;

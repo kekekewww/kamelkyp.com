@@ -52,7 +52,7 @@ export const BLOCK_LABEL: Record<BlockKind, string> = Object.fromEntries(
 ) as Record<BlockKind, string>;
 
 let fallbackCounter = 0;
-export function defaultBlockKey(): string {
+function defaultBlockKey(): string {
   fallbackCounter += 1;
   return `block-${fallbackCounter}`;
 }
@@ -84,7 +84,7 @@ export function createEditorBlock(
   }
 }
 
-export function toEditorBlock(
+function toEditorBlock(
   block: ContentBlock,
   makeKey: KeyMaker = defaultBlockKey,
 ): EditorBlock {
@@ -272,7 +272,7 @@ function toBlock(item: EditorBlock): ContentBlock {
 }
 
 /** Plain-language problems with one block (empty list = storable). */
-export function blockProblems(block: ContentBlock): string[] {
+function blockProblems(block: ContentBlock): string[] {
   const problems: string[] = [];
   switch (block.type) {
     case "heading":

@@ -1,4 +1,4 @@
-export interface SubmissionRateLimiter {
+interface SubmissionRateLimiter {
   limit(input: { key: string }): Promise<{ success: boolean }>;
 }
 

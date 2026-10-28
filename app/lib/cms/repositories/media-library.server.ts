@@ -51,9 +51,9 @@ const COLUMNS =
   "a.focal_x, a.focal_y, a.preview_start_seconds, a.preview_end_seconds, a.tags_json, " +
   "a.created_at, a.updated_at, a.archived_at";
 
-export type UsageFilter = "used" | "unused";
+type UsageFilter = "used" | "unused";
 
-export interface LibraryFilters {
+interface LibraryFilters {
   q?: string;
   kind?: MediaKind;
   usage?: UsageFilter;
@@ -63,7 +63,7 @@ export interface LibraryFilters {
   limit?: number;
 }
 
-export interface LibraryRow {
+interface LibraryRow {
   asset: MediaAsset;
   /** Distinct places (entry + field) that reference the asset. */
   usageCount: number;
@@ -201,7 +201,7 @@ async function describeUsages(
   });
 }
 
-export async function listUsages(
+async function listUsages(
   db: D1Database,
   assetId: string,
 ): Promise<MediaUsage[]> {
@@ -238,7 +238,7 @@ const optionalNumber = (schema: z.ZodNumber) =>
     schema.nullable().optional(),
   );
 
-export const AssetMetadataPatchSchema = z.object({
+const AssetMetadataPatchSchema = z.object({
   title: textPatch(300),
   alt: textPatch(500),
   caption: textPatch(1000),
@@ -254,7 +254,7 @@ export const AssetMetadataPatchSchema = z.object({
   previewEndSeconds: optionalNumber(z.number().int().min(1).max(86_400)),
 });
 
-export type AssetMetadataPatch = z.input<typeof AssetMetadataPatchSchema>;
+type AssetMetadataPatch = z.input<typeof AssetMetadataPatchSchema>;
 
 function invalid(issues: ValidationIssue[]): never {
   throw new CmsError("invalid_content", { issues });
@@ -346,7 +346,7 @@ export async function updateAssetMetadata(
   return updated;
 }
 
-export async function setAssetArchived(
+async function setAssetArchived(
   db: D1Database,
   id: string,
   archived: boolean,
@@ -425,7 +425,7 @@ export interface LibraryItemView {
   missingAlt: boolean;
 }
 
-export interface MediaAnalysisStatus {
+interface MediaAnalysisStatus {
   /** Host of the configured media base URL. */
   host: string | null;
   /** Web Audio analysis runs for audio on that host (its CORS rule exists). */
@@ -433,7 +433,7 @@ export interface MediaAnalysisStatus {
   corsHosts: string[];
 }
 
-export function mediaAnalysisStatus(config: MediaConfig): MediaAnalysisStatus {
+function mediaAnalysisStatus(config: MediaConfig): MediaAnalysisStatus {
   const host = config.publicBaseUrl
     ? new URL(config.publicBaseUrl).hostname
     : null;
@@ -463,7 +463,7 @@ function toItemView(row: LibraryRow, config: MediaConfig): LibraryItemView {
   };
 }
 
-export function readLibraryFilters(url: URL) {
+function readLibraryFilters(url: URL) {
   const kind = url.searchParams.get("kind");
   const usage = url.searchParams.get("usage");
   return {
@@ -545,7 +545,7 @@ const RegisterFormSchema = z.object({
 });
 
 /** FormData → metadata patch (`title.zh`, `focalX:number`, `tags:json`, …). */
-export function parseAssetMetadataForm(formData: FormData): AssetMetadataPatch {
+function parseAssetMetadataForm(formData: FormData): AssetMetadataPatch {
   const raw = formDataToObject(formData) as Record<string, unknown>;
   const patch: Record<string, unknown> = {};
   for (const key of [

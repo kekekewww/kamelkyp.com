@@ -25,7 +25,7 @@ import type {
   ValidationIssue,
 } from "./types";
 
-export const SNAPSHOT_MAX_BYTES = 1_500_000;
+const SNAPSHOT_MAX_BYTES = 1_500_000;
 
 export type AssetSummary = {
   id: string;
@@ -36,7 +36,7 @@ export type AssetSummary = {
 
 export type BrandHit = { field: string; locale?: "zh" | "en"; term: string };
 
-export interface PublishContext {
+interface PublishContext {
   todoContent: boolean;
   /** When present, referenced assets are checked (existence, kind, alt). */
   assets?: ReadonlyMap<string, AssetSummary>;
@@ -217,7 +217,7 @@ function checkBlockAssets(
   }
 }
 
-export function validateProjectForPublish(
+function validateProjectForPublish(
   content: ProjectContent,
   context: PublishContext,
 ): ValidationIssue[] {
@@ -293,7 +293,7 @@ function hostAllowed(value: string, hosts: readonly string[]): boolean {
   }
 }
 
-export function validateMusicForPublish(
+function validateMusicForPublish(
   content: MusicContent,
   context: PublishContext,
 ): ValidationIssue[] {
@@ -435,7 +435,7 @@ export function validateWritingForPublish(
   return issues.list;
 }
 
-export function validateServiceForPublish(
+function validateServiceForPublish(
   content: ServiceContent,
   context: PublishContext,
 ): ValidationIssue[] {

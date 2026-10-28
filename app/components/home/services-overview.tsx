@@ -3,7 +3,7 @@ import type { PublicSite } from "../../lib/cms/public/view-models";
 import type { Locale } from "../../lib/i18n/locale";
 import { localePath } from "../../lib/i18n/path";
 
-export type ServiceArea = PublicSite["serviceAreas"][number];
+type ServiceArea = PublicSite["serviceAreas"][number];
 
 /** Public page of each service area (site structure, not content). */
 export const SERVICE_AREA_PATHS: Record<ServiceArea["key"], string> = {

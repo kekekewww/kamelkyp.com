@@ -20,9 +20,9 @@
  * and "loading" after an action carries that action's new data.
  */
 export type FetcherPhase = "idle" | "submitting" | "loading";
-export type FetcherEvent = "start" | "settled" | null;
+type FetcherEvent = "start" | "settled" | null;
 
-export interface SettleTracker {
+interface SettleTracker {
   /** State seen on the previous observation. */
   state: FetcherPhase;
   /** Data already reported (or present at mount): never reported again. */

@@ -99,7 +99,7 @@ const VIDEO_EXTENSION = /\.(mp4|webm)$/i;
 const PDF_EXTENSION = /\.pdf$/i;
 
 /** Kind and provider for an external URL (existing `parseMediaUrl` allowlist). */
-export function classifyExternalUrl(
+function classifyExternalUrl(
   url: string,
   config: MediaConfig,
 ): { kind: MediaKind; provider: MediaProvider; canonicalUrl: string } {

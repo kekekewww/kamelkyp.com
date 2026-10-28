@@ -230,7 +230,7 @@ export async function getProjectFacets(
  * FormData → working copy + expected revision (throws `invalid_content`
  * with inline issues for values that cannot be stored).
  */
-export function parseProjectForm(formData: FormData): {
+function parseProjectForm(formData: FormData): {
   content: ProjectContent;
   expectedRevision: number;
   clearTodoContent: boolean;

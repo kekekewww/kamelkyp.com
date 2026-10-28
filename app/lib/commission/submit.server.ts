@@ -8,13 +8,13 @@ import { sendToGoogle } from "../integrations/google-submission-gateway.server";
 import { convertTwdToUsdCents } from "../pricing/fx";
 import { prepareSubmission, sameVersions } from "./prepare-submission.server";
 
-export interface SubmissionSuccess {
+interface SubmissionSuccess {
   caseId: string;
   serviceId: "full_mix" | "vocal_mix" | "simple_transition" | "edit_transition";
   submittedAt: string;
 }
 
-export type SubmitCommissionResult =
+type SubmitCommissionResult =
   | ({ state: "complete" } & SubmissionSuccess)
   | ({ state: "pending_retry" } & SubmissionSuccess);
 

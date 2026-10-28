@@ -11,7 +11,7 @@ import type { QuoteBreakdown } from "../pricing/types";
 import { type CommissionDraft, CommissionDraftSchema } from "./schema";
 import { getActiveTerms } from "./terms-repository.server";
 
-export interface PreparedSubmission {
+interface PreparedSubmission {
   normalizedDraft: CommissionDraft;
   quote: QuoteBreakdown;
   displayPrice: {

@@ -16,7 +16,7 @@ import { EmptyState, RowList, Select } from "../ui";
 import { CaseRow } from "./case-row";
 import { serviceOptionLabel } from "./format";
 
-export const CASES_HEADING_ID = "commission-cases-heading";
+const CASES_HEADING_ID = "commission-cases-heading";
 
 const PHONE = "(max-width: 767px)";
 

@@ -55,7 +55,7 @@ export function formatShortDate(iso: string): string {
   return `${date.getUTCDate()} ${MONTHS[date.getUTCMonth()]}`;
 }
 
-export function isDue(dueAt: string, now: string): boolean {
+function isDue(dueAt: string, now: string): boolean {
   return new Date(dueAt).getTime() <= new Date(now).getTime();
 }
 
@@ -94,7 +94,7 @@ export function caseMarkers(
   return markers;
 }
 
-export type ServiceNameView = {
+type ServiceNameView = {
   primary: string;
   primaryLang: "zh-Hant" | "en";
   /** EN name when it differs from the zh one. */

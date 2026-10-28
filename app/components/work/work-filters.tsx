@@ -6,7 +6,7 @@ import { getReducedMotionSnapshot } from "../../lib/motion/reduced-motion";
 import { formatIndex, getWorkCopy } from "./project-meta";
 
 /** `"all"` or a `project_category` term slug (`/works?category=<slug>`). */
-export type CategoryFilter = string;
+type CategoryFilter = string;
 
 export interface WorkFilterOption {
   value: CategoryFilter;
@@ -14,7 +14,7 @@ export interface WorkFilterOption {
   count: number;
 }
 
-export function filterHref(locale: Locale, value: CategoryFilter): string {
+function filterHref(locale: Locale, value: CategoryFilter): string {
   const base = localePath(locale, "/works");
   return value === "all"
     ? base

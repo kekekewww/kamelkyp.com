@@ -597,7 +597,7 @@ function AddLink({
 }
 
 /** The footer group these links fill, as Settings → Footer sets it. */
-export type FindMeGroup = { label: LocalizedText; enabled: boolean };
+type FindMeGroup = { label: LocalizedText; enabled: boolean };
 
 function FooterPreview({
   links,

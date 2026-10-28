@@ -17,7 +17,7 @@ import type { Term } from "../schemas/taxonomy";
 import type { EntityType } from "../types";
 import type { EntryFacts, ReadMode, ViewContext } from "./view-models";
 
-export type EntityRow = {
+type EntityRow = {
   id: string;
   json: string;
   featured: number;

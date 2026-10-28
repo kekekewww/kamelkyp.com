@@ -31,7 +31,7 @@ import {
   ProjectFacts,
 } from "./project-meta";
 
-export interface NextWork {
+interface NextWork {
   slug: string;
   title: string;
   categories: CategoryRef[];

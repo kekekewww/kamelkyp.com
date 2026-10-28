@@ -17,7 +17,7 @@ import {
 import { ContentBlockSchema } from "../../../lib/content/block-schema";
 import { editableBlocks } from "../blocks/block-model";
 
-export type ProjectFormResult =
+type ProjectFormResult =
   | {
       ok: true;
       content: ProjectContent;

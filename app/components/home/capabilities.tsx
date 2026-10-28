@@ -1,7 +1,7 @@
 import type { PublicBrand } from "../../lib/cms/public/view-models";
 import type { Locale } from "../../lib/i18n/locale";
 
-export type CapabilityItem = PublicBrand["capabilities"][number];
+type CapabilityItem = PublicBrand["capabilities"][number];
 
 /**
  * Home §3: capability rows, not cards (design-system §6.12). Content comes

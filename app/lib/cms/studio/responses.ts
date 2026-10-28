@@ -16,9 +16,9 @@ import {
 } from "../db/errors";
 import type { ValidationIssue } from "../types";
 
-export type ActionOk<T extends object = object> = { ok: true } & T;
+type ActionOk<T extends object = object> = { ok: true } & T;
 
-export type ActionError = {
+type ActionError = {
   ok: false;
   code: string;
   message: string;

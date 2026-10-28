@@ -5,7 +5,7 @@
  */
 
 const TABLES = { project: "projects", writing: "writings" } as const;
-export type RedirectEntityType = keyof typeof TABLES;
+type RedirectEntityType = keyof typeof TABLES;
 
 /** Current published slug for an old slug, when its target is live. */
 export async function resolveRedirect(

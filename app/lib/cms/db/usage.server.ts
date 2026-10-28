@@ -15,7 +15,7 @@ import type { WritingContent } from "../schemas/writing";
 import type { EntityType, LocalizedBlocks, UsageEntityType } from "../types";
 import { ENTITY_DESCRIPTORS } from "./tables.server";
 
-export type AssetRefHit = { assetId: string; field: string };
+type AssetRefHit = { assetId: string; field: string };
 
 function blockRefs(field: string, blocks: LocalizedBlocks): AssetRefHit[] {
   const hits: AssetRefHit[] = [];
@@ -133,7 +133,7 @@ function insertRows(db: D1Database, rows: UsageRow[]): D1PreparedStatement[] {
 }
 
 /** Statements that replace one entity's usage rows (for inclusion in a batch). */
-export function syncUsageStatements(
+function syncUsageStatements(
   db: D1Database,
   entityType: UsageEntityType,
   entityId: string,

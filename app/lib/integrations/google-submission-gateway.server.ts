@@ -1,12 +1,12 @@
 import { createSignedEnvelope } from "./hmac-envelope";
 
-export interface GoogleSubmissionResult {
+interface GoogleSubmissionResult {
   state: "complete";
   googleResponseId: string;
   notified: true;
 }
 
-export function validateAppsScriptUrl(value: string): string {
+function validateAppsScriptUrl(value: string): string {
   let url: URL;
   try {
     url = new URL(value);

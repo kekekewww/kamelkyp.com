@@ -36,7 +36,7 @@ const KIND_NOUN: Record<UploadKind, string> = {
 const ALLOWED_SUMMARY =
   "Use JPEG, PNG, WebP, AVIF or GIF images; MP3, WAV, AAC, M4A, OGG or FLAC audio; MP4 or WebM video; or PDF documents.";
 
-export type Preflight =
+type Preflight =
   | { ok: true; kind: UploadKind; mimeType: string }
   | { ok: false; message: string };
 
@@ -145,7 +145,7 @@ export interface UploadXhr {
   abort(): void;
 }
 
-export interface UploadInput {
+interface UploadInput {
   file: File;
   /** Canonical type from `preflightUpload`. */
   mimeType: string;
@@ -156,7 +156,7 @@ export interface UploadInput {
   alt: LocalizedText;
 }
 
-export interface UploadOptions {
+interface UploadOptions {
   csrfToken: string;
   onToken?: (token: string) => void;
   onProgress?: (loaded: number, total: number) => void;

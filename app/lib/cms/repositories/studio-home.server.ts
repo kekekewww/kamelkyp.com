@@ -33,7 +33,7 @@ import { serviceNamesOf, termDocumentInfo } from "./terms.server";
 
 // ---- Types ---------------------------------------------------------------------
 
-export type AttentionSeverity = "high" | "medium" | "low";
+type AttentionSeverity = "high" | "medium" | "low";
 
 export type AttentionItem = {
   /** Stable identity, e.g. `contact-email`, `changes:project:<id>`. */
@@ -47,7 +47,7 @@ export type AttentionItem = {
   count?: number;
 };
 
-export type ContentCountRow = {
+type ContentCountRow = {
   type: EntityType;
   label: string;
   href: string;
@@ -57,7 +57,7 @@ export type ContentCountRow = {
   todo: number;
 };
 
-export type RecentChange = {
+type RecentChange = {
   kind: EntityType | "settings" | "social";
   id: string;
   label: string;
@@ -66,7 +66,7 @@ export type RecentChange = {
   href: string;
 };
 
-export type HomepageSummary = {
+type HomepageSummary = {
   showreel: { id: string; label: string; status: EntryStatus } | null;
   featuredProjects: Array<{ id: string; label: string; status: EntryStatus }>;
   featuredProjectLimit: number;
@@ -74,7 +74,7 @@ export type HomepageSummary = {
   sections: { visible: HomepageSection[]; hidden: HomepageSection[] };
 };
 
-export type CommissionQueue = {
+type CommissionQueue = {
   pendingReview: number;
   awaitingDeposit: number;
   inProduction: number;
@@ -104,7 +104,7 @@ type TypeInfo = {
   required: readonly string[];
 };
 
-export const TYPE_INFO: Record<EntityType, TypeInfo> = {
+const TYPE_INFO: Record<EntityType, TypeInfo> = {
   project: {
     table: "projects",
     label: "Projects",

@@ -39,7 +39,7 @@ export interface KeyboardReorderState {
   announcement?: string;
 }
 
-export type KeyboardReorderAction =
+type KeyboardReorderAction =
   | { type: "pick"; id: string }
   | { type: "move"; delta: number }
   /** Drops the picked row; the caller sends the order. */

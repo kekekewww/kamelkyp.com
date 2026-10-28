@@ -46,7 +46,7 @@ let context: AudioContext | null = null;
 const attached = new WeakMap<HTMLMediaElement, AnalyserNode>();
 
 /** Call from a user-gesture handler. Returns null where Web Audio is missing. */
-export function getAudioContext(): AudioContext | null {
+function getAudioContext(): AudioContext | null {
   if (typeof window === "undefined") return null;
   if (context) return context;
   const Ctor =

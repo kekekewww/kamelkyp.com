@@ -77,13 +77,13 @@ export function isCaseStatus(value: string): value is CaseStatus {
   return (CASE_STATUSES as readonly string[]).includes(value);
 }
 
-export type CommissionQuery = {
+type CommissionQuery = {
   status: CaseStatus | null;
   service: ServiceId | null;
   cursor: string | null;
 };
 
-export const COMMISSION_CURSOR_MAX_LENGTH = 512;
+const COMMISSION_CURSOR_MAX_LENGTH = 512;
 
 /** Invalid or empty values are ignored (null), never an error. */
 export function parseCommissionQuery(params: URLSearchParams): CommissionQuery {
@@ -98,7 +98,7 @@ export function parseCommissionQuery(params: URLSearchParams): CommissionQuery {
   };
 }
 
-export const COMMISSIONS_PATH = "/studio/commissions";
+const COMMISSIONS_PATH = "/studio/commissions";
 
 export function commissionQueryHref(query: Partial<CommissionQuery>): string {
   const params = new URLSearchParams();

@@ -5,7 +5,7 @@
  */
 import { useId } from "react";
 
-export interface FieldProps {
+interface FieldProps {
   label: string;
   hint?: React.ReactNode;
   error?: string | null;

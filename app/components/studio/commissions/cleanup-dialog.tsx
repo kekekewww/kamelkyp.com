@@ -42,7 +42,7 @@ const CHECKLIST = [
 
 type ChecklistName = (typeof CHECKLIST)[number]["name"];
 
-export const CLEANUP_ACTION = "/studio/commissions/cleanup";
+const CLEANUP_ACTION = "/studio/commissions/cleanup";
 
 /**
  * The fields to post for a confirmed checklist, or null: nothing before all

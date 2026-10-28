@@ -19,7 +19,7 @@ import type { ProjectSectionId } from "./project-form";
 const IGNORED = new Set(["csrfToken", "intent", "expectedRevision", "confirm"]);
 
 /** Serialized named controls per editor section (`details#section-<id>`). */
-export function sectionSnapshot(form: HTMLFormElement): Map<string, string> {
+function sectionSnapshot(form: HTMLFormElement): Map<string, string> {
   const parts = new Map<string, string[]>();
   for (const element of Array.from(form.elements)) {
     if (

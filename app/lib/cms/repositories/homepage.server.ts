@@ -39,7 +39,7 @@ export type HomepageEntry = {
   todoContent: boolean;
 };
 
-export type ShowreelEntry = HomepageEntry & { playable: boolean };
+type ShowreelEntry = HomepageEntry & { playable: boolean };
 
 export type FeaturedGroup = {
   type: EntityType;
@@ -143,7 +143,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 }
 
 /** Copies only the listed dotted paths from a parsed form. */
-export function pickPaths(
+function pickPaths(
   source: Record<string, unknown>,
   paths: readonly string[],
 ): Record<string, unknown> {

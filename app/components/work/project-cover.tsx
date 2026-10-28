@@ -16,7 +16,7 @@ import type { Locale } from "../../lib/i18n/locale";
  */
 
 /** `hero` = 21:9 on lg+, 16:9 below (project detail). */
-export type CoverAspect = "3:2" | "4:3" | "4:5" | "16:9" | "21:9" | "hero";
+type CoverAspect = "3:2" | "4:3" | "4:5" | "16:9" | "21:9" | "hero";
 
 const W = 1200;
 const H = 800;
@@ -206,12 +206,12 @@ const GEOMETRY: Record<Pattern, (random: () => number) => CoverGeometry> = {
   spectrum: spectrumGeometry,
 };
 
-export function coverPattern(category: string | null | undefined): Pattern {
+function coverPattern(category: string | null | undefined): Pattern {
   return (category && PATTERN_BY_CATEGORY[category]) || "trace";
 }
 
 /** Exported for tests: deterministic geometry for a slug + category. */
-export function coverGeometry(
+function coverGeometry(
   slug: string,
   category: string | null | undefined,
 ): CoverGeometry {
