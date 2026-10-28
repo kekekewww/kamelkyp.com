@@ -1,7 +1,9 @@
 import { expect, test } from "@playwright/test";
+import { behindAccess, expectOwnerGate } from "./helpers/owner-gate";
 
 // The loopback server has no Access identity and no dev owner, so every
-// Studio surface must refuse the request before any data is read.
+// Studio surface must refuse the request before any data is read; a deployed
+// Preview redirects it to the Access login instead.
 const STUDIO_PATHS = [
   "/studio",
   "/studio/projects",
@@ -19,9 +21,10 @@ for (const path of STUDIO_PATHS) {
     request,
   }) => {
     const response = await request.get(path, { maxRedirects: 0 });
-    expect(response.status()).toBe(403);
-    expect(response.headers()["cache-control"]).toContain("no-store");
-    expect(response.headers()["x-robots-tag"]).toBe("noindex, nofollow");
+    expectOwnerGate(response);
+    if (!behindAccess) {
+      expect(response.headers()["x-robots-tag"]).toBe("noindex, nofollow");
+    }
     const body = await response.text();
     expect(body).not.toContain("seed-p-001");
     expect(body).not.toContain("csrfToken");
@@ -34,19 +37,21 @@ test("Studio mutations are refused without an owner identity", async ({
   const upload = await request.put("/api/studio/media/x/content", {
     data: "not a file",
     headers: { "Content-Type": "application/octet-stream" },
+    maxRedirects: 0,
   });
-  expect(upload.status()).toBe(403);
-  expect(upload.headers()["cache-control"]).toContain("no-store");
+  expectOwnerGate(upload);
 
   const register = await request.post("/api/studio/media-register", {
     data: { url: "https://example.com/a.jpg" },
+    maxRedirects: 0,
   });
-  expect(register.status()).toBe(403);
+  expectOwnerGate(register);
 
   const status = await request.post("/studio/commissions/status", {
     form: { caseId: "x", status: "accepted" },
+    maxRedirects: 0,
   });
-  expect(status.status()).toBe(403);
+  expectOwnerGate(status);
 });
 
 test("the public site does not link to the Studio", async ({ request }) => {
