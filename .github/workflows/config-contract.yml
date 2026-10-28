@@ -22,7 +22,7 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
       - run: npm ci
-      - run: npm run test:worker -- tests/worker/migrations.test.ts tests/worker/content-repository.test.ts
+      - run: npm run test:worker -- tests/worker/migrations.test.ts tests/worker/public-terms.test.ts
       - run: npm run test:unit
       - run: npm run typecheck
       - run: npm run build
