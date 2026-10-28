@@ -10,9 +10,9 @@ Sources, in order of precedence:
 4. `docs/information-architecture.md` (the "IA", which components exist).
 5. The current code: `app/styles/motion.css`, `app/styles/tokens.css`, `app/components/media/*`, `app/lib/media/playback-coordinator.ts`, `app/components/layout/site-header.tsx`, `app/root.tsx`, `app/lib/security/headers.server.ts`.
 
-This document supersedes the durations in the current `tokens.css`
-(`--motion-fast: 140ms`, `--motion-normal: 220ms`, `--motion-panel: 320ms`) and
-the whole of the current `motion.css`.
+This document superseded the durations that `tokens.css` had on 2026-09-23
+(`--motion-fast: 140ms`, `--motion-normal: 220ms`, `--motion-panel: 320ms`; wp7 C3 a
+removed those last aliases) and the whole of the `motion.css` of that day.
 
 Colour names used below (`--color-text-primary`, `--color-text-secondary`,
 `--color-text-muted`, `--color-accent`, `--color-accent-audio`, `--color-bg-0/1/2`,
