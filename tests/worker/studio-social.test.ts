@@ -172,7 +172,14 @@ describe("social links store", () => {
       { platform: "youtube", label: label("YouTube"), url: "youtube.com/@k" },
       now,
     );
-    await reorderSocialLinks(env.DB, [other.id, repository.id]);
+    const stored = (await listSocialLinks(env.DB)).map((link) => link.id);
+    expect(
+      await reorderSocialLinks(env.DB, [
+        other.id,
+        ...stored.filter((id) => id !== other.id),
+      ]),
+    ).toBe(true);
+    expect((await listSocialLinks(env.DB))[0]?.id).toBe(other.id);
     expect((await getSocialLink(env.DB, repository.id))?.enabled).toBe(false);
 
     await setSocialLinkEnabled(env.DB, repository.id, true, later);
@@ -199,11 +206,40 @@ describe("social links store", () => {
     );
     const all = (await listSocialLinks(env.DB)).map((link) => link.id);
     const others = all.filter((id) => ![a.id, b.id, c.id].includes(id));
-    await reorderSocialLinks(env.DB, [c.id, ...others, a.id, b.id]);
+    expect(
+      await reorderSocialLinks(env.DB, [c.id, ...others, a.id, b.id]),
+    ).toBe(true);
     const order = (await listSocialLinks(env.DB)).map((link) => link.id);
     expect(order.indexOf(c.id)).toBe(0);
     expect(order.indexOf(a.id)).toBe(order.length - 2);
     expect(order.indexOf(b.id)).toBe(order.length - 1);
+  });
+
+  it("stores an order only when it names exactly the stored links", async () => {
+    for (const name of ["D", "E"]) {
+      await saveSocialLink(
+        env.DB,
+        {
+          platform: "other",
+          label: label(name),
+          url: `https://${name.toLowerCase()}.example`,
+        },
+        now,
+      );
+    }
+    const before = await listSocialLinks(env.DB);
+    const ids = before.map((link) => link.id).reverse();
+    for (const stale of [
+      ids.slice(1), // a link added elsewhere is missing
+      [...ids, "missing"], // a link deleted elsewhere is still listed
+      [ids[0] ?? "", ...ids], // a duplicate
+      [],
+    ]) {
+      expect(await reorderSocialLinks(env.DB, stale)).toBe(false);
+    }
+    expect(await listSocialLinks(env.DB)).toEqual(before);
+    expect(await reorderSocialLinks(env.DB, ids)).toBe(true);
+    expect((await listSocialLinks(env.DB)).map((link) => link.id)).toEqual(ids);
   });
 
   it("deletes a link and reports a missing one", async () => {
@@ -309,6 +345,40 @@ describe("social links action", () => {
     expect(result.status).toBe(422);
     const issues = result.body.issues as Array<{ field: string }>;
     expect(issues.map((issue) => issue.field).sort()).toEqual(["label", "url"]);
+  });
+
+  it("answers a stale order with 409 and leaves the rows as they were", async () => {
+    for (const name of ["F", "G"]) {
+      await saveSocialLink(
+        env.DB,
+        {
+          platform: "other",
+          label: label(name),
+          url: `https://${name.toLowerCase()}.example`,
+        },
+        now,
+      );
+    }
+    // The screen loaded this list; then another tab added a link.
+    const loaded = (await listSocialLinks(env.DB)).map((link) => link.id);
+    await saveSocialLink(
+      env.DB,
+      { platform: "other", label: label("H"), url: "https://h.example" },
+      now,
+    );
+    const stored = await listSocialLinks(env.DB);
+
+    const result = await act({
+      intent: "reorder",
+      ids: JSON.stringify([...loaded].reverse()),
+    });
+    expect(result.status).toBe(409);
+    expect(result.body).toMatchObject({
+      ok: false,
+      code: "stale_revision",
+      message: "The order changed elsewhere. Reload and try again.",
+    });
+    expect(await listSocialLinks(env.DB)).toEqual(stored);
   });
 
   it("refuses malformed reorder lists and unknown intents", async () => {

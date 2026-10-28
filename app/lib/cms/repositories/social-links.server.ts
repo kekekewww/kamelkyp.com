@@ -295,19 +295,36 @@ export async function deleteSocialLink(
   if (result.meta.changes === 0) throw new CmsError("not_found");
 }
 
-/** Positions = index × 10 for the listed ids (one statement, any length). */
+/**
+ * Positions = index × 10 for the listed ids (one statement, any length). The
+ * list must name every stored link exactly once; otherwise a link was added or
+ * deleted elsewhere since the screen loaded, nothing is written and the
+ * result is `false`. The check and the write are one statement.
+ */
 export async function reorderSocialLinks(
   db: D1Database,
   ids: readonly string[],
-): Promise<void> {
-  await db
+): Promise<boolean> {
+  if (new Set(ids).size !== ids.length) return false;
+  if (ids.length === 0) {
+    const row = await db
+      .prepare("SELECT COUNT(*) AS n FROM social_links")
+      .first<{ n: number }>();
+    return (row?.n ?? 0) === 0;
+  }
+  const result = await db
     .prepare(
       `UPDATE social_links
        SET sort_order = (SELECT CAST(j.key AS INTEGER) * 10 FROM json_each(?1) j WHERE j.value = social_links.id)
-       WHERE id IN (SELECT value FROM json_each(?1))`,
+       WHERE (SELECT COUNT(*) FROM social_links) = json_array_length(?1)
+         AND NOT EXISTS (
+           SELECT 1 FROM social_links s
+           WHERE s.id NOT IN (SELECT value FROM json_each(?1))
+         )`,
     )
-    .bind(JSON.stringify([...new Set(ids)]))
+    .bind(JSON.stringify(ids))
     .run();
+  return result.meta.changes === ids.length;
 }
 
 /** `ids` form field: a JSON array of up to 500 id strings, or null. */
@@ -427,7 +444,12 @@ export async function handleSocialAction({
             message: "The new order could not be read. Reload and try again.",
           });
         }
-        await reorderSocialLinks(db, ids);
+        if (!(await reorderSocialLinks(db, ids))) {
+          return actionError("stale_revision", {
+            status: 409,
+            message: "The order changed elsewhere. Reload and try again.",
+          });
+        }
         return actionOk({ intent });
       }
       default:
