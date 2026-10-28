@@ -29,7 +29,7 @@ test("private workflows and failures are never cached", async ({ request }) => {
   const missing = await request.get("/en/not-a-real-page");
 
   expect(commission.headers()["cache-control"]).toContain("no-store");
-  expectOwnerGate(admin);
+  await expectOwnerGate(admin);
   expect(missing.headers()["cache-control"]).toContain("no-store");
   expect(missing.status()).toBe(404);
 });

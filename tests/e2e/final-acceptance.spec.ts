@@ -123,7 +123,7 @@ test("public safety boundaries remain explicit", async ({ page, request }) => {
   expect(await page.locator("footer a").count()).toBeGreaterThan(3);
 
   const admin = await request.get("/admin", { maxRedirects: 0 });
-  expectOwnerGate(admin);
+  await expectOwnerGate(admin);
 
   await page.goto("/en/does-not-exist");
   await expect(

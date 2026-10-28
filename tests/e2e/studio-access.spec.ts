@@ -23,7 +23,7 @@ for (const path of STUDIO_PATHS) {
     request,
   }) => {
     const response = await request.get(path, { maxRedirects: 0 });
-    expectOwnerGate(response);
+    await expectOwnerGate(response);
     if (!behindAccess) {
       expect(response.headers()["x-robots-tag"]).toBe("noindex, nofollow");
     }
@@ -41,25 +41,25 @@ test("Studio mutations are refused without an owner identity", async ({
     headers: { "Content-Type": "application/octet-stream" },
     maxRedirects: 0,
   });
-  expectOwnerGate(upload);
+  await expectOwnerGate(upload, "upload");
 
   const register = await request.post("/api/studio/media-register", {
     data: { url: "https://example.com/a.jpg" },
     maxRedirects: 0,
   });
-  expectOwnerGate(register);
+  await expectOwnerGate(register, "media-register");
 
   const status = await request.post("/studio/commissions/status", {
     form: { caseId: "x", status: "accepted" },
     maxRedirects: 0,
   });
-  expectOwnerGate(status);
+  await expectOwnerGate(status, "commission status");
 
   const student = await request.post("/studio/commissions/student-discount", {
     form: { intent: "accept-student-price", caseId: "KAM-20261001-E2E0000003" },
     maxRedirects: 0,
   });
-  expectOwnerGate(student);
+  await expectOwnerGate(student, "student discount");
 
   const cleanup = await request.post("/studio/commissions/cleanup", {
     form: {
@@ -71,7 +71,7 @@ test("Studio mutations are refused without an owner identity", async ({
     },
     maxRedirects: 0,
   });
-  expectOwnerGate(cleanup);
+  await expectOwnerGate(cleanup, "commission cleanup");
 });
 
 test("the public site does not link to the Studio", async ({ request }) => {

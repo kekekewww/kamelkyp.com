@@ -120,7 +120,11 @@ jobs:
       - name: Test deployed preview
         env:
           PREVIEW_URL: ${{ steps.preview-url.outputs.url }}
+          # Cloudflare Access answers the owner-only paths before the Worker
+          # (docs/runbooks/cloudflare-setup.md §5): the tests then expect its
+          # login redirect to this team domain (tests/e2e/helpers/owner-gate.ts).
           E2E_ACCESS_GATE: "1"
+          ACCESS_TEAM_DOMAIN: ${{ vars.ACCESS_TEAM_DOMAIN }}
         run: npm run test:e2e
       - name: Upload Playwright report on failure
         if: failure()
