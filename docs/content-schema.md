@@ -301,7 +301,7 @@ the former `/admin/services` flow). `SERVICE_CATALOG.basePriceTwd` is deleted. R
 and the marketing page can no longer drift from the quote (today it can: pages read the static catalog, quotes
 read D1).
 
-**Publish metadata and the tie-break (WP2).** Every Studio (and legacy `/admin/services`) publish writes, in the same
+**Publish metadata and the tie-break (WP2).** Every Studio publish (Services → Pricing) writes, in the same
 batch as the `price_versions` row, one immutable `price_version_publications` row: `version_id` (PK, NOT NULL),
 `published_at`, `action` (`publish` | `replace` | `cancel`) and `replaces_version_id` (NULL exactly for
 `publish`). The versions at one `effective_from` form a group won by the latest `published_at`, then `id`
