@@ -42,32 +42,38 @@ export async function refreshFxRate(
   }
   if (!response.ok) throw new Error("fx_upstream_unavailable");
 
+  // Frankfurter v2 single pair: {"date","base":"TWD","quote":"USD","rate"}.
   let body: unknown;
   try {
     body = await response.json();
   } catch {
     throw new Error("fx_response_invalid");
   }
+  const pair = body as {
+    date?: unknown;
+    base?: unknown;
+    quote?: unknown;
+    rate?: unknown;
+  } | null;
   if (
-    !body ||
-    typeof body !== "object" ||
-    typeof (body as { date?: unknown }).date !== "string" ||
-    !/^\d{4}-\d{2}-\d{2}$/.test((body as { date: string }).date) ||
-    !(body as { rates?: unknown }).rates ||
-    typeof (body as { rates: { USD?: unknown } }).rates.USD !== "number"
+    !pair ||
+    typeof pair !== "object" ||
+    typeof pair.date !== "string" ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(pair.date) ||
+    pair.base !== "TWD" ||
+    pair.quote !== "USD" ||
+    typeof pair.rate !== "number"
   ) {
     throw new Error("fx_response_invalid");
   }
 
   let rateScaled: number;
   try {
-    rateScaled = parseRateScaled(
-      String((body as { rates: { USD: number } }).rates.USD),
-    );
+    rateScaled = parseRateScaled(String(pair.rate));
   } catch {
     throw new Error("fx_response_invalid");
   }
-  const rateDate = (body as { date: string }).date;
+  const rateDate = pair.date;
   await db
     .prepare(
       "INSERT INTO fx_rates " +

@@ -180,7 +180,8 @@ const config = {
     ACCESS_AUD: process.env.ACCESS_AUD,
     ACCESS_TEAM_DOMAIN: process.env.ACCESS_TEAM_DOMAIN,
     ADMIN_EMAIL: process.env.ADMIN_EMAIL,
-    FX_API_URL: "https://api.frankfurter.dev/v1/latest?base=TWD&symbols=USD",
+    // v2: Frankfurter v1 serves only ECB currencies, which exclude TWD.
+    FX_API_URL: "https://api.frankfurter.dev/v2/rate/TWD/USD",
     APP_ORIGIN: appOrigin,
     ...(mediaPublicBaseUrl
       ? { MEDIA_PUBLIC_BASE_URL: mediaPublicBaseUrl }
