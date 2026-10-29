@@ -29,6 +29,7 @@
 - [ ] Access 沿用既有 application（不另建）：path 含 `/studio`、`/studio/*`、`/api/studio/*`，Production 另含 `/studio.data`，並保留 `/admin`、`/admin/*`、`/api/admin/*`。
 - [ ] 法務專業審查完成，`LEGAL_REVIEW_CONFIRMED=true`。
 - [ ] GitHub `production` Environment 限制 `main` 且設 required reviewer。
+- [ ] Cloudflare SSL/TLS → Edge Certificates 的 Always Use HTTPS 已開啟（`http://kamelkyp.com/zh` 301 到 https）。
 
 ## D. Production deployment
 

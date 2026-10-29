@@ -109,3 +109,9 @@ jobs:
         run: |
           curl --fail --show-error --silent --retry 5 --retry-all-errors https://kamelkyp.com/health
           curl --fail --show-error --silent --retry 5 --retry-all-errors https://kamelkyp.com/zh > /dev/null
+          # Cloudflare "Always Use HTTPS" (a zone setting, not Worker code) must answer plain http with a 301.
+          http_redirect="$(curl --show-error --silent --retry 5 --retry-all-errors --output /dev/null --write-out '%{http_code} %{redirect_url}' http://kamelkyp.com/zh)"
+          if [ "$http_redirect" != "301 https://kamelkyp.com/zh" ]; then
+            echo "::error::http://kamelkyp.com/zh answered '$http_redirect', expected a 301 to https. Turn on SSL/TLS > Edge Certificates > Always Use HTTPS."
+            exit 1
+          fi

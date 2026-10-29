@@ -129,13 +129,16 @@ Production renderer 會產生：
 {"routes":[{"pattern":"kamelkyp.com","custom_domain":true}]}
 ```
 
-Custom Domain 由 Cloudflare 自動建立 DNS 與憑證。正式部署後確認：
+Custom Domain 由 Cloudflare 自動建立 DNS 與憑證，但 HTTP 與 HTTPS 都會送進 Worker，Worker 本身不把 `http://` 轉到 `https://`。首次上線前在 Cloudflare Dashboard → kamelkyp.com → SSL/TLS → Edge Certificates 開啟 **Always Use HTTPS**（一次性 zone 設定）；沒開時 `http://kamelkyp.com` 會以明文回應頁面，Worker 送出的 HSTS 在 HTTP 回應中也不會被瀏覽器採用。
+
+正式部署後確認：
 
 1. `https://kamelkyp.com/health` 回傳 healthy JSON。
 2. `https://kamelkyp.com/zh` 與 `/en` 可開啟。
 3. `/studio` 與 `/admin` 未登入會由 Access 阻擋；正確 email OTP 後 Worker JWT 驗證仍會檢查 email 與 audience：`/studio` 可開啟，從其他 Studio 頁按側欄 Home 會回到 Studio 首頁，`/admin` 301 到 `/studio`。
 4. Production response 有 HSTS、nonce CSP、`frame-ancestors 'none'`。
 5. Cloudflare Worker secrets 名稱恰為四個核准名稱；Dashboard 只核對名稱，不複製或顯示值。
+6. `http://kamelkyp.com/zh` 回 301 到 `https://kamelkyp.com/zh`（production workflow 的 smoke test 也會檢查）。
 
 Custom Domain 官方文件：<https://developers.cloudflare.com/workers/configuration/routing/custom-domains/>。
 
