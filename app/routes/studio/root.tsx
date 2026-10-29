@@ -4,14 +4,15 @@
  * its session (CSRF token), media config and sidebar counts. Studio styles
  * load only here, never on public pages.
  */
+import { useEffect, useState } from "react";
 import {
   isRouteErrorResponse,
-  Link,
   Outlet,
   useLoaderData,
   useLocation,
   useRouteError,
 } from "react-router";
+import { StudioErrorView } from "../../components/studio/error-view";
 import {
   StudioSessionProvider,
   ToastProvider,
@@ -24,6 +25,7 @@ import {
   studioMiddleware,
   withOwner,
 } from "../../lib/cms/studio/auth.server";
+import { studioSessionExpired } from "../../lib/cms/studio/session.client";
 import studioStyles from "../../styles/studio/base.css?url";
 
 export const middleware = [studioMiddleware];
@@ -71,40 +73,31 @@ export default function StudioRoot() {
 
 export function ErrorBoundary() {
   const error = useRouteError();
-  const status = isRouteErrorResponse(error) ? error.status : 500;
-  const title =
-    status === 403
-      ? "Sign in to open the Studio"
-      : status === 404
-        ? "This Studio page does not exist"
-        : "Something went wrong";
-  const body =
-    status === 403
-      ? "The Studio is protected by Cloudflare Access. Sign in with the owner account, then reload this page."
-      : status === 404
-        ? "Check the address, or go back to the Studio home."
-        : "Reload the page to try again. Unsaved edits are kept in this tab.";
-  return (
-    <div className="studio">
-      <title>{`${status} — KAMEL STUDIO`}</title>
-      <meta name="robots" content="noindex,nofollow" />
-      <main className="studio-page studio-page--narrow" id="studio-main">
-        <section className="studio-stub">
-          <span className="studio-stub__trace" aria-hidden="true" />
-          <p className="studio-section-label">{status} / KAMEL STUDIO</p>
-          <h1 className="studio-stub__title">{title}</h1>
-          <p className="studio-stub__body">{body}</p>
-          {status === 403 ? (
-            <a className="studio-link" href="/studio">
-              Sign in again
-            </a>
-          ) : (
-            <Link className="studio-link" to="/studio">
-              Back to Studio home
-            </Link>
-          )}
-        </section>
-      </main>
-    </div>
-  );
+  const location = useLocation();
+  const routeStatus = isRouteErrorResponse(error) ? error.status : null;
+  const [expired, setExpired] = useState(false);
+
+  // A non-route error on a Studio navigation is usually Access's login
+  // redirect failing under CORS (see `studioSessionExpired`). Check once, on
+  // the client; until it answers the generic view stays up.
+  useEffect(() => {
+    if (routeStatus !== null) return;
+    let cancelled = false;
+    void studioSessionExpired().then((result) => {
+      if (!cancelled) setExpired(result);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [routeStatus]);
+
+  if (routeStatus === null && expired) {
+    return (
+      <StudioErrorView
+        status={403}
+        signInHref={`${location.pathname}${location.search}` || "/studio"}
+      />
+    );
+  }
+  return <StudioErrorView status={routeStatus ?? 500} />;
 }
