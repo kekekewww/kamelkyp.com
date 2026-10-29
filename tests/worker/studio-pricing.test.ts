@@ -195,7 +195,12 @@ describe("pricing index", () => {
       intent: "refresh-fx",
       now,
       fetcher: vi.fn(async () =>
-        Response.json({ date: "2026-10-14", rates: { USD: 0.0326 } }),
+        Response.json({
+          date: "2026-10-14",
+          base: "TWD",
+          quote: "USD",
+          rate: 0.0326,
+        }),
       ) as unknown as typeof fetch,
     });
     expect(status(ok)).toBe(200);

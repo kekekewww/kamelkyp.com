@@ -144,6 +144,10 @@ describe("cloud project configuration", () => {
       const config = await result.readOutput();
       expect(config.name).toBe("kamelkyp-com");
       expect(config.vars.APP_ORIGIN).toBe("https://kamelkyp.com");
+      // Frankfurter v1 serves only ECB currencies, which exclude TWD.
+      expect(config.vars.FX_API_URL).toBe(
+        "https://api.frankfurter.dev/v2/rate/TWD/USD",
+      );
       expect(config.d1_databases[0]).toMatchObject({
         database_name: "kamelkyp-production",
         migrations_dir: "../../migrations",
