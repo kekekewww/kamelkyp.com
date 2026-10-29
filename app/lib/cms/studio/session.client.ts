@@ -7,6 +7,8 @@
  * - `studioFetch()` sends JSON/uploads with the `X-Studio-CSRF` header and, on
  *   a 403, refreshes the token once and retries. A second 403 means the Access
  *   session ended: the caller shows "Session expired. Sign in again, then retry."
+ * - `studioSessionExpired()` tells an expired Access session apart from a real
+ *   failure, for the Studio error screen.
  */
 
 export const STUDIO_CSRF_HEADER = "X-Studio-CSRF";
@@ -76,4 +78,30 @@ export async function studioFetch(
   const second = await send(session.csrfToken);
   if (second.status === 403) throw new SessionExpiredError();
   return second;
+}
+
+/**
+ * True when the Access session has ended. Once it has, Access answers every
+ * Studio request with a 302 to its login host; a client navigation follows
+ * that cross-origin, CORS blocks it and fetch throws, which the router shows
+ * as a generic 500. A `redirect: "manual"` request sees that 302 as an opaque
+ * redirect instead. Only 401/403/opaque redirects count as expiry; a network
+ * error or an OK response is not evidence, so this returns false for both.
+ */
+export async function studioSessionExpired(): Promise<boolean> {
+  try {
+    const response = await fetch("/api/studio/session", {
+      credentials: "same-origin",
+      redirect: "manual",
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    });
+    return (
+      response.type === "opaqueredirect" ||
+      response.status === 401 ||
+      response.status === 403
+    );
+  } catch {
+    return false;
+  }
 }
