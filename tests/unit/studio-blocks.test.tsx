@@ -9,6 +9,7 @@ import {
   serializeBlocks,
   toEditorBlocks,
 } from "../../app/components/studio/blocks/block-model";
+import type { LocalizedBlocks } from "../../app/lib/cms/types";
 import type { ContentBlock } from "../../app/lib/content/block-schema";
 
 const ALL_TYPES: ContentBlock[] = [
@@ -42,10 +43,22 @@ const key = () => {
 
 describe("block model", () => {
   it("round-trips every block type", () => {
-    const items = toEditorBlocks(ALL_TYPES, key);
+    const items = toEditorBlocks(ALL_TYPES, "zh");
     const { blocks, errors } = serializeBlocks(items);
     expect(errors).toEqual({});
     expect(blocks).toEqual(ALL_TYPES);
+  });
+
+  it("keys loaded blocks by seed and position, apart from added blocks", () => {
+    const keys = (items: readonly EditorBlock[]) =>
+      items.map((item) => item.key);
+    const first = keys(toEditorBlocks(ALL_TYPES.slice(0, 3), "zh"));
+    // Another document loaded, a block added: neither shifts the keys.
+    toEditorBlocks(ALL_TYPES, "zh");
+    const added = createEditorBlock("paragraph");
+    expect(keys(toEditorBlocks(ALL_TYPES.slice(0, 3), "zh"))).toEqual(first);
+    expect(first).toEqual(["zh-0", "zh-1", "zh-2"]);
+    expect(added.key).toMatch(/^block-\d+$/);
   });
 
   it("drops empty blocks, blank list lines and outer whitespace", () => {
@@ -99,7 +112,7 @@ describe("block model", () => {
   });
 
   it("copies blocks with fresh keys (translate from the other locale)", () => {
-    const source = toEditorBlocks(ALL_TYPES.slice(0, 2), key);
+    const source = toEditorBlocks(ALL_TYPES.slice(0, 2), "en");
     const copy = copyEditorBlocks(source, key);
     expect(copy.map((item) => item.key)).not.toEqual(
       source.map((item) => item.key),
@@ -109,6 +122,29 @@ describe("block model", () => {
 });
 
 describe("block editor", () => {
+  const renderEditor = (defaultValue: LocalizedBlocks) =>
+    renderToStaticMarkup(
+      <MemoryRouter>
+        <BlockEditor name="body" defaultValue={defaultValue} assets={[]} />
+      </MemoryRouter>,
+    );
+  const blockKeys = (html: string) =>
+    [...html.matchAll(/data-block-key="([^"]*)"/g)].map((match) => match[1]);
+
+  it("renders the same block keys for the same document (server and hydration agree)", () => {
+    const document: LocalizedBlocks = {
+      zh: ALL_TYPES.slice(0, 3),
+      en: ALL_TYPES.slice(3, 5),
+    };
+    const first = blockKeys(renderEditor(document));
+    // Another request in the same Worker isolate.
+    renderEditor({ zh: ALL_TYPES, en: ALL_TYPES });
+    const second = blockKeys(renderEditor(document));
+    expect(first).toHaveLength(5);
+    expect(new Set(first.slice(0, 3)).size).toBe(3);
+    expect(second).toEqual(first);
+  });
+
   it("posts both locales as JSON and opens on ZH", () => {
     const html = renderToStaticMarkup(
       <MemoryRouter>
