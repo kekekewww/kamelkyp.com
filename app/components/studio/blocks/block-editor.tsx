@@ -427,8 +427,8 @@ export function BlockEditor({
 }) {
   const baseId = useId();
   const [blocks, setBlocks] = useState(() => ({
-    zh: toEditorBlocks(defaultValue.zh),
-    en: toEditorBlocks(defaultValue.en),
+    zh: toEditorBlocks(defaultValue.zh, "zh"),
+    en: toEditorBlocks(defaultValue.en, "en"),
   }));
   const [active, setActive] = useState<Locale>("zh");
   const [focusKey, setFocusKey] = useState<string | null>(null);

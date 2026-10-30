@@ -51,17 +51,21 @@ export const BLOCK_LABEL: Record<BlockKind, string> = Object.fromEntries(
   BLOCK_KINDS.map((kind) => [kind.type, kind.label]),
 ) as Record<BlockKind, string>;
 
-let fallbackCounter = 0;
-function defaultBlockKey(): string {
-  fallbackCounter += 1;
-  return `block-${fallbackCounter}`;
+/**
+ * Keys for blocks added or copied while editing. Only browser event handlers
+ * make them, after hydration; loaded blocks are keyed by `toEditorBlocks`.
+ */
+let addedCounter = 0;
+function addedBlockKey(): string {
+  addedCounter += 1;
+  return `block-${addedCounter}`;
 }
 
 type KeyMaker = () => string;
 
 export function createEditorBlock(
   type: BlockKind,
-  makeKey: KeyMaker = defaultBlockKey,
+  makeKey: KeyMaker = addedBlockKey,
 ): EditorBlock {
   const key = makeKey();
   switch (type) {
@@ -84,11 +88,7 @@ export function createEditorBlock(
   }
 }
 
-function toEditorBlock(
-  block: ContentBlock,
-  makeKey: KeyMaker = defaultBlockKey,
-): EditorBlock {
-  const key = makeKey();
+function toEditorBlock(block: ContentBlock, key: string): EditorBlock {
   switch (block.type) {
     case "heading":
       return { key, type: "heading", level: block.level, text: block.text };
@@ -181,17 +181,24 @@ export function editableBlocks(value: unknown): ContentBlock[] {
   });
 }
 
+/**
+ * The loaded blocks, keyed by `seed` (the locale) and position: `zh-0`,
+ * `zh-1`, … The server render and the hydrating render must agree, because
+ * React does not patch a mismatched `data-block-key` while hydrating, and a
+ * module counter keeps counting across requests in a Worker isolate. Added
+ * blocks get `block-<n>` keys, so they never meet these.
+ */
 export function toEditorBlocks(
   blocks: readonly ContentBlock[],
-  makeKey: KeyMaker = defaultBlockKey,
+  seed: string,
 ): EditorBlock[] {
-  return blocks.map((block) => toEditorBlock(block, makeKey));
+  return blocks.map((block, index) => toEditorBlock(block, `${seed}-${index}`));
 }
 
 /** Copies blocks (e.g. ZH → EN to translate) with fresh keys. */
 export function copyEditorBlocks(
   items: readonly EditorBlock[],
-  makeKey: KeyMaker = defaultBlockKey,
+  makeKey: KeyMaker = addedBlockKey,
 ): EditorBlock[] {
   return items.map((item) => ({ ...item, key: makeKey() }));
 }
