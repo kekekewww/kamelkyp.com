@@ -435,7 +435,7 @@ ls app/styles/admin.css app/styles/legacy.css app/routes/admin 2>&1 | grep -c "N
 git grep -n "real-name" -- app                                                    # (d) no CSS hook
 # (e): the wp6 §10 (e) acceptance grep over the four living docs prints nothing (not repeated here, so this plan
 #      spells no personal-name variant)
-git grep -nE "previous(\.current)?\s*!==\s*\"idle\"\s*&&\s*[\w.]+\.state\s*===\s*\"idle\"" -- app
+git grep -nE "previous(\.current)?\s*!==\s*\"idle\"\s*&&\s*[A-Za-z0-9_.]+\.state\s*===\s*\"idle\"" -- app
 git grep -n "maxWorkers" -- vitest.worker.config.ts                                # one line
 ls docs/superpowers/plans | grep -c "^2026-08-10-0[45]-"                          # 2
 git grep -n "until the block editor lands" -- app
