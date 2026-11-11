@@ -224,6 +224,15 @@ try {
 } catch {
   fail("production_build_unreadable");
 }
+// The bypass scan below proves nothing over an empty or JS-less build, so a
+// missing `react-router build` must fail here rather than print "verified".
+if (
+  !buildFiles.some((file) =>
+    [".js", ".mjs", ".cjs", ".html"].includes(extname(file)),
+  )
+) {
+  fail("production_build_empty");
+}
 for (const file of buildFiles) {
   const source = await readFile(file, "utf8");
   if (
