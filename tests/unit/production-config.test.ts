@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const verifier = join(process.cwd(), "scripts", "verify-production-config.mjs");
@@ -31,15 +31,51 @@ const validEnvironment = {
   MEDIA_PUBLIC_BASE_URL: "https://media.kamelkyp.com",
 };
 
+// A minimal stand-in for `react-router build` output (SSR, so no HTML).
+const validBuild: Record<string, string> = {
+  "server/index.js": "export default { fetch() {} };",
+  "client/assets/entry.client-abc123.js": "console.log('client');",
+};
+
+async function writeBuild(
+  buildDirectory: string,
+  files: Record<string, string>,
+) {
+  for (const [path, contents] of Object.entries(files)) {
+    const target = join(buildDirectory, path);
+    await mkdir(dirname(target), { recursive: true });
+    await writeFile(target, contents);
+  }
+}
+
+function runVerifier(
+  directory: string,
+  env: Record<string, string | undefined> = {},
+) {
+  return spawnSync(process.execPath, [verifier], {
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      ...validEnvironment,
+      WRANGLER_CONFIG: join(directory, "wrangler.jsonc"),
+      WRANGLER_SECRETS_FILE: join(directory, ".wrangler.secrets.json"),
+      BUILD_DIRECTORY: join(directory, "build"),
+      ...env,
+    },
+  });
+}
+
 async function verify(
   overrides: Record<string, string | undefined> = {},
   configOverrides: Record<string, unknown> = {},
+  buildFiles: Record<string, string> = validBuild,
 ) {
   const directory = await mkdtemp(join(tmpdir(), "production-config-"));
   const configPath = join(directory, "wrangler.jsonc");
   const secretsPath = join(directory, ".wrangler.secrets.json");
   const buildDirectory = join(directory, "build");
   await mkdir(buildDirectory);
+  await writeBuild(buildDirectory, buildFiles);
   await writeFile(
     configPath,
     JSON.stringify({
@@ -83,17 +119,7 @@ async function verify(
     }),
   );
 
-  const result = spawnSync(process.execPath, [verifier], {
-    encoding: "utf8",
-    env: {
-      ...process.env,
-      ...validEnvironment,
-      ...overrides,
-      WRANGLER_CONFIG: configPath,
-      WRANGLER_SECRETS_FILE: secretsPath,
-      BUILD_DIRECTORY: buildDirectory,
-    },
-  });
+  const result = runVerifier(directory, overrides);
   return { directory, result };
 }
 
@@ -198,21 +224,11 @@ describe("production deployment verifier", () => {
   it("rejects a build containing the Studio dev owner", async () => {
     const { directory } = await verify();
     try {
-      const buildDirectory = join(directory, "build");
       await writeFile(
-        join(buildDirectory, "server.js"),
+        join(directory, "build", "server.js"),
         "if (env.STUDIO_DEV_OWNER_EMAIL) {}",
       );
-      const result = spawnSync(process.execPath, [verifier], {
-        encoding: "utf8",
-        env: {
-          ...process.env,
-          ...validEnvironment,
-          WRANGLER_CONFIG: join(directory, "wrangler.jsonc"),
-          WRANGLER_SECRETS_FILE: join(directory, ".wrangler.secrets.json"),
-          BUILD_DIRECTORY: buildDirectory,
-        },
-      });
+      const result = runVerifier(directory);
       expect(result.status).not.toBe(0);
       expect(result.stderr).toContain("studio_dev_owner_in_production_build");
     } finally {
@@ -224,20 +240,55 @@ describe("production deployment verifier", () => {
     const { directory, result: initial } = await verify();
     try {
       expect(initial.status).toBe(0);
-      const buildDirectory = join(directory, "build");
-      await writeFile(join(buildDirectory, "index.js"), "TEST_ADMIN_BYPASS");
-      const result = spawnSync(process.execPath, [verifier], {
-        encoding: "utf8",
-        env: {
-          ...process.env,
-          ...validEnvironment,
-          WRANGLER_CONFIG: join(directory, "wrangler.jsonc"),
-          WRANGLER_SECRETS_FILE: join(directory, ".wrangler.secrets.json"),
-          BUILD_DIRECTORY: buildDirectory,
-        },
-      });
+      await writeFile(
+        join(directory, "build", "index.js"),
+        "TEST_ADMIN_BYPASS",
+      );
+      const result = runVerifier(directory);
       expect(result.status).not.toBe(0);
       expect(result.stderr).toContain("test_bypass_in_production_build");
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  // An empty or missing build would make the bypass scan above vacuous, so
+  // the verifier must refuse it instead of printing "verified".
+  it("rejects an empty build directory", async () => {
+    const { directory, result } = await verify({}, {}, {});
+    try {
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toContain("production_build_empty");
+      expect(result.stdout).not.toContain("production_config_verified");
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects a build with no JS or HTML output", async () => {
+    const { directory, result } = await verify(
+      {},
+      {},
+      { "client/.vite/manifest.json": "{}", "server/index.js.map": "{}" },
+    );
+    try {
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toContain("production_build_empty");
+      expect(result.stdout).not.toContain("production_config_verified");
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects a missing build directory", async () => {
+    const { directory } = await verify();
+    try {
+      const result = runVerifier(directory, {
+        BUILD_DIRECTORY: join(directory, "no-such-build"),
+      });
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toContain("production_build_unreadable");
+      expect(result.stdout).not.toContain("production_config_verified");
     } finally {
       await rm(directory, { recursive: true, force: true });
     }

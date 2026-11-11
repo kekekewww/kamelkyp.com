@@ -641,8 +641,13 @@ a pointer counts once its `effective_from` has passed. A personal-name variant i
 
 - `brand-guard.server.ts` runs in publish validation for all public text of every entity and in settings saves
   (except `brand.contactEmail` and term documents). A hit is a blocking error naming the field.
-- `tests/unit/brand-audit.test.ts` (P5, since the names disappear only when P5 lands) scans `app/**` (excluding
-  `brand-guard.server.ts` and tests) for the deny list; `tests/e2e/brand.spec.ts` (P5) scans rendered HTML of every public route in both locales; the integration
+- `tests/unit/brand-audit.test.ts` (P5, since the names disappear only when P5 lands) scans `app/**` and
+  `workers/**` (excluding `brand-guard.server.ts` and tests), `public/**`, `scripts/**`, Markdown beside the code,
+  the root `README.md` and `integrations/**` for the deny list. Each line is folded first (NFKC, zero-width and
+  format characters U+200B–U+200F, U+2060–U+2064, U+FEFF dropped, lower case) and compared with the separators
+  `[\s_\-.]` removed, so `KevinYang`, `kevin_yang`, fullwidth or zero-width-split spellings are hits. "Yang" alone
+  is not a hit in the audit (collaborator credits such as "Yang Ming" are shown as written); it is denied next to
+  "Kevin". `tests/e2e/brand.spec.ts` (P5) scans rendered HTML of every public route in both locales; the integration
   package extends `verify-production-config.mjs` to scan `build/client/**` for the names (the contact email is
   excluded while it is flagged).
 

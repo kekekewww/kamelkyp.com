@@ -12,15 +12,49 @@ import { describe, expect, it } from "vitest";
  */
 const EXEMPT = new Set(["app/lib/cms/brand-guard.server.ts"]);
 
-const DENY: ReadonlyArray<{ label: string; pattern: RegExp }> = [
+type Term = { label: string; pattern: RegExp };
+
+/** Invisible format characters that can hide inside a name. */
+const INVISIBLE = /[\u{200B}-\u{200F}\u{2060}-\u{2064}\u{FEFF}]/gu;
+/** Separators that can split or join a name: `KevinYang`, `kevin_yang`. */
+const SEPARATORS = /[\s_\-.]/g;
+
+/**
+ * Matched against the folded line with every separator removed, so spacing,
+ * `_`, `-` or `.` cannot split these.
+ */
+const JOINED: ReadonlyArray<Term> = [
   { label: "楊子賢", pattern: /楊子賢/ },
   { label: "子賢", pattern: /子賢/ },
-  { label: "kevinyaungputra", pattern: /kevinyaungputra/i },
-  { label: "Kevin Yang", pattern: /\bkevin\s+yang\b/i },
-  { label: "Yaung", pattern: /yaung/i },
-  { label: "Kevin", pattern: /\bkevin\b/i },
-  { label: "Yang", pattern: /\byang\b/i },
+  { label: "kevinyaungputra", pattern: /kevinyaungputra/ },
+  { label: "Kevin Yang", pattern: /kevinyang|yangkevin/ },
+  { label: "Yaung", pattern: /yaung/ },
 ];
+/**
+ * Matched as a whole word, separators read as spaces, so "Kevinson" passes.
+ * "Yang" alone is a common surname: collaborator credits such as "Yang Ming"
+ * are shown as written, so Yang is denied only next to Kevin (above).
+ */
+const WORDS: ReadonlyArray<Term> = [{ label: "Kevin", pattern: /\bkevin\b/ }];
+
+/**
+ * NFKC folds fullwidth and other compatibility forms, invisible characters
+ * are dropped, and case is folded before any term is compared.
+ */
+function fold(text: string): string {
+  return text.normalize("NFKC").replace(INVISIBLE, "").toLowerCase();
+}
+
+function matchTerm(line: string): string | null {
+  const folded = fold(line);
+  const joined = folded.replace(SEPARATORS, "");
+  const spaced = folded.replace(SEPARATORS, " ");
+  return (
+    JOINED.find((term) => term.pattern.test(joined))?.label ??
+    WORDS.find((term) => term.pattern.test(spaced))?.label ??
+    null
+  );
+}
 
 const repoPath = (path: string) => path.replace(/^(\.\.\/)+/, "");
 
@@ -52,39 +86,37 @@ const sources: Record<string, string> = {
   ),
 };
 
-// Static public files and repository scripts (WP4), kept in their own map:
-// Vite cannot `?raw`-import the publicDir, so they are read from disk.
+// Static public files and repository scripts (WP4), Markdown beside the code,
+// the root README and the Apps Script relay (all in the content-architecture
+// §6 grep scope), kept in their own map: Vite cannot `?raw`-import the
+// publicDir, so they are read from disk. `docs/` stays out (§6.2: historical
+// specs and plans are kept as records).
 const STATIC_FILES: ReadonlyArray<{ dir: string; pattern: RegExp }> = [
   { dir: "public", pattern: /\.(webmanifest|json|svg|txt|xml)$/ },
-  { dir: "scripts", pattern: /\.mjs$/ },
+  { dir: "scripts", pattern: /\.(mjs|md)$/ },
+  { dir: "app", pattern: /\.md$/ },
+  { dir: "workers", pattern: /\.md$/ },
+  { dir: "integrations", pattern: /\.(gs|js|ts|json|html|md)$/ },
 ];
+const ROOT_FILES = ["README.md"];
 const staticSources: Record<string, string> = Object.fromEntries(
-  STATIC_FILES.flatMap(({ dir, pattern }) =>
-    (readdirSync(dir, { recursive: true }) as string[])
-      .map((name) => `${dir}/${name.replaceAll("\\", "/")}`)
-      .filter((file) => pattern.test(file))
-      .map((file) => [file, readFileSync(file, "utf8") as string]),
-  ),
+  [
+    ...STATIC_FILES.flatMap(({ dir, pattern }) =>
+      (readdirSync(dir, { recursive: true }) as string[])
+        .map((name) => `${dir}/${name.replaceAll("\\", "/")}`)
+        .filter((file) => pattern.test(file)),
+    ),
+    ...ROOT_FILES,
+  ].map((file) => [file, readFileSync(file, "utf8") as string]),
 );
 
-function scanStatic(): string[] {
+function scan(files: Record<string, string>): string[] {
   const hits: string[] = [];
-  for (const [path, source] of Object.entries(staticSources)) {
-    source.split("\n").forEach((line, index) => {
-      const term = DENY.find((entry) => entry.pattern.test(line));
-      if (term) hits.push(`${path}:${index + 1} ${term.label}`);
-    });
-  }
-  return hits.sort();
-}
-
-function scan(): string[] {
-  const hits: string[] = [];
-  for (const [path, source] of Object.entries(sources)) {
+  for (const [path, source] of Object.entries(files)) {
     if (EXEMPT.has(path)) continue;
     source.split("\n").forEach((line, index) => {
-      const term = DENY.find((entry) => entry.pattern.test(line));
-      if (term) hits.push(`${path}:${index + 1} ${term.label}`);
+      const term = matchTerm(line);
+      if (term) hits.push(`${path}:${index + 1} ${term}`);
     });
   }
   return hits.sort();
@@ -100,7 +132,7 @@ describe("brand audit", () => {
   });
 
   it("finds no personal-name variant in app or Worker sources", () => {
-    expect(scan()).toEqual([]);
+    expect(scan(sources)).toEqual([]);
   });
 
   it("no stylesheet keeps a real-name hook", () => {
@@ -116,22 +148,79 @@ describe("brand audit", () => {
     expect(hooks).toEqual([]);
   });
 
-  it("reads the static public files and the scripts", () => {
-    expect(Object.keys(staticSources)).toContain("public/manifest.webmanifest");
-    expect(Object.keys(staticSources)).toContain(
-      "scripts/generate-brand-assets.mjs",
+  it("reads the static public files, scripts, READMEs and the Apps Script relay", () => {
+    expect(Object.keys(staticSources)).toEqual(
+      expect.arrayContaining([
+        "public/manifest.webmanifest",
+        "scripts/generate-brand-assets.mjs",
+        "README.md",
+        "integrations/apps-script/Code.gs",
+        "integrations/apps-script/README.md",
+        "integrations/apps-script/appsscript.json",
+      ]),
     );
   });
 
-  it("finds no personal-name variant in public files or scripts", () => {
-    expect(scanStatic()).toEqual([]);
+  it("finds no personal-name variant in public files, scripts, READMEs or integrations", () => {
+    expect(scan(staticSources)).toEqual([]);
   });
 
-  it("detects a planted variant (the scanner is live)", () => {
-    const planted = ["Kevin Yang", "楊子賢", "kevinyaungputra@example.com"];
-    for (const value of planted) {
-      expect(DENY.some((term) => term.pattern.test(value))).toBe(true);
-    }
-    expect(DENY.some((term) => term.pattern.test("Kamel"))).toBe(false);
+  it.each([
+    ["plain", "Kevin Yang", "Kevin Yang"],
+    ["CJK", "楊子賢", "楊子賢"],
+    ["email", "kevinyaungputra@example.com", "kevinyaungputra"],
+    ["joined", "KevinYang", "Kevin Yang"],
+    ["snake case", "kevin_yang", "Kevin Yang"],
+    ["dotted", "kevin.yang", "Kevin Yang"],
+    ["kebab case", "kevin-yang", "Kevin Yang"],
+    ["surname first", "Yang Kevin", "Kevin Yang"],
+    ["spaced CJK", "楊 子 賢", "楊子賢"],
+    // Escaped so no invisible or lookalike character sits in this file.
+    [
+      "fullwidth",
+      "\u{FF2B}\u{FF45}\u{FF56}\u{FF49}\u{FF4E} \u{FF39}\u{FF41}\u{FF4E}\u{FF47}",
+      "Kevin Yang",
+    ],
+    ["fullwidth alone", "\u{FF4B}\u{FF45}\u{FF56}\u{FF49}\u{FF4E}", "Kevin"],
+    ["ideographic space", "Kevin\u{3000}Yang", "Kevin Yang"],
+    ["zero-width space", "Ke\u{200B}vin", "Kevin"],
+    ["zero-width joiner", "Kevin\u{200D}Yang", "Kevin Yang"],
+    ["word joiner", "Kev\u{2060}in Yang", "Kevin Yang"],
+    ["invisible separator", "Kevin\u{2063}Yang", "Kevin Yang"],
+    ["byte-order mark", "\u{FEFF}kevin", "Kevin"],
+    ["right-to-left mark", "kevin\u{200F}yaung", "Yaung"],
+    ["snake-case word", "by_kevin_", "Kevin"],
+  ])(
+    "detects a planted variant: %s (the scanner is live)",
+    (_, value, label) => {
+      expect(matchTerm(value)).toBe(label);
+    },
+  );
+
+  it.each([
+    "Kamel",
+    // Collaborator credits are shown as written; Yang alone is a surname.
+    "Yang Ming",
+    "yang_ming",
+    "Ming Yang",
+    "楊明",
+    "Kevinson Synth",
+  ])("allows %s", (value) => {
+    expect(matchTerm(value)).toBeNull();
+  });
+
+  it("flags a planted variant in Markdown or the Apps Script relay", () => {
+    expect(
+      scan({
+        "README.md": "Built by \u{FF2B}\u{FF45}\u{FF56}\u{FF49}\u{FF4E}",
+        "integrations/apps-script/Code.gs": "// owner: kevin_yang",
+        "app/notes.md": "Ke\u{200B}vin",
+        "integrations/apps-script/README.md": "Credits: Yang Ming",
+      }),
+    ).toEqual([
+      "README.md:1 Kevin",
+      "app/notes.md:1 Kevin",
+      "integrations/apps-script/Code.gs:1 Kevin Yang",
+    ]);
   });
 });
