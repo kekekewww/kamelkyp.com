@@ -251,7 +251,8 @@ Rules for wave 1:
 - Do not keep merge conflicts in the main checkout (`D:/Developing/kamelkyp.com`): build-config discovery walks up to its
   `package.json`, and a conflicted copy breaks every worktree's build.
 - Commits end with the attribution trailer. Pushing branches, opening PRs, dispatching workflows and deploying happen
-  only with Kevin's go-ahead (§7.2).
+  only with Kevin's go-ahead (§7.2). Agents never merge their own PRs: Kevin merges each one, and only after he has
+  accepted its deployed preview by hand (release-checklist B, A11).
 
 ### 4.3 Integration lane (serialized)
 
@@ -275,13 +276,15 @@ One package at a time, in the merge order of §5. For the package whose turn it 
    scheduled group by design).
 5. If a run ends with every remaining test at `ECONNREFUSED`, rerun once (known wrangler proxy flake). `route_404`
    `[ERROR]` lines are expected app logs.
-6. Push, open (or un-draft) the PR, wait for the required checks `ci` (jobs `quality` and `worker`), `e2e` and
-   `Cloud configuration contract`, merge, and only then start the next package's step 1. The `preview` workflow is
-   **not** a merge requirement: on PR #8 (the last PR) it stopped at "Require trusted Preview configuration"
-   ("required preview deployment configuration is missing", run 38035004782), because the `preview` environment
-   lacks secrets/vars. Until Kevin configures it (A10), record its status in the PR and do not wait for it. Once it is
-   configured, it becomes required, and wp3/wp4/wp5's notes on the deployed-preview run apply. `npm run
-   test:e2e:studio` runs in no workflow, so the PR body carries the lane's local Studio e2e result (suite counts).
+6. Push, open (or un-draft) the PR and wait for the required checks `ci` (jobs `quality` and `worker`), `e2e` and
+   `Cloud configuration contract`. Then hand the PR to Kevin and stop: the agent does **not** merge it (A11). Kevin
+   merges only after the `preview` workflow has deployed the PR and he has accepted that preview by hand
+   (release-checklist B); only then does the next package's step 1 start. The `preview` workflow **is** a merge
+   requirement. On PR #8 it stopped at "Require trusted Preview configuration" ("required preview deployment
+   configuration is missing", run 38035004782) because the `preview` environment lacks secrets/vars; until Kevin
+   configures it (A10), the PR waits with that status recorded in it. A failed, skipped or missing preview never
+   allows a merge without it. wp3/wp4/wp5's notes on the deployed-preview run apply. `npm run test:e2e:studio` runs
+   in no workflow, so the PR body carries the lane's local Studio e2e result (suite counts).
 
 At most one loopback run and one Studio run exist on the machine at any time. The two suites use different ports, but
 run them one after the other anyway: both are CPU heavy, and wp6's p6 spec throttles the CPU on purpose.
@@ -309,8 +312,8 @@ Record the base SHA in the PR. Then:
    legacy `/admin` still live; Access paths `/studio`, `/studio/*`, `/studio.data`, `/api/studio/*` are on the
    **existing** Access application; the Studio Operations screens and the sidebar Home link are confirmed in
    production; the wp5 §8.1 read-only queries have run and any rows are handled per §7.1 D4.
-5. Merge, dispatch the production deploy, run wp5 §6.5 post-deploy checks; roll back by redeploying the previous Worker
-   if they fail.
+5. Kevin merges (after accepting the wp5 preview, release-checklist B, A11) and dispatches the production deploy
+   (A8); then run wp5 §6.5 post-deploy checks; roll back by redeploying the previous Worker if they fail.
 
 ### 4.5 Timeline
 
@@ -481,6 +484,7 @@ Already open and not changed by any package: the brand contact address (content-
 | A7 | Write, have reviewed and publish the terms in Studio → Terms. Until common, privacy and the service document are published for a locale, that locale's commission wizard answers 404 and the category chooser shows the empty state (wp2's intended fail-safe) | after the wp2 deploy |
 | A8 | Dispatch the production deploy after the wp5 merge and run wp5 §6.5 post-deploy checks | after merge 6 |
 | A9 | After pulling wp2 and wp3, apply local migrations for hand-run dev servers: `npx wrangler d1 migrations apply kamelkyp-com --local --config wrangler.base.jsonc` (the Studio harness does this itself) | after merges 3–4 |
+| A11 | Accept each PR's deployed preview by hand (release-checklist B), then merge the PR. Agents never merge their own PRs; a preview that failed, was skipped or did not run blocks the merge | lane step 6, every PR |
 
 Order on the critical path: A10 → A3 → A4 → A5 → A7 (terms; until then every commission form is closed, so publish
 them before announcing the site) → A6 → wp5 merge → A8 → wp7 merge → one more production deploy.
